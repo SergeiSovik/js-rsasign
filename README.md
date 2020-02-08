@@ -72,6 +72,20 @@ _Note: don't forget to change README.md_
 2. Replace all 'js-lite' with '{NewRepo}'
 3. Edit NOTICE
 
+# Update
+## Merge
+To merge changes from template library
+```
+git fetch upstream
+git merge upstream/master
+```
+## Errors
+If you get error 'fatal: refusing to merge unrelated histories'
+```
+git merge upstream/master --allow-unrelated-histories
+```
+After this you will have to remove conflicts using VSC
+
 # Install
 Read full installation process before executing any command
 
