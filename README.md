@@ -7,6 +7,8 @@ Full version can be found at [PWA Library](https://github.com/SergioRando/PWA-Li
 # Template
 Read full installation process before executing any command
 
+Install only if u need to test this template before tamplating yours own project
+
 ## 1. GitHub account
 Register one GitHub account, if u dont have it already
 
