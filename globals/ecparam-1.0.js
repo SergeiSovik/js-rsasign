@@ -1,9 +1,8 @@
-/* ecparam-1.0.0.js (c) 2013 Kenji Urushima | kjur.github.com/jsrsasign/license
- */
 /*
  * ecparam.js - Elliptic Curve Cryptography Curve Parameter Definition class
  *
- * Copyright (c) 2013 Kenji Urushima (kenji.urushima@gmail.com)
+ * Original work Copyright (c) 2013 Kenji Urushima (kenji.urushima@gmail.com)
+ * Modified work Copyright (c) 2020 Sergio Rando <sergio.rando@yahoo.com>
  *
  * This software is licensed under the terms of the MIT License.
  * https://kjur.github.io/jsrsasign/license
@@ -12,12 +11,13 @@
  * included in all copies or substantial portions of the Software.
  */
 
+"use strict";
+
 /**
  * @fileOverview
  * @name ecparam-1.1.js
  * @author Kenji Urushima kenji.urushima@gmail.com
  * @version 1.0.0 (2013-Jul-17)
- * @since jsrsasign 4.0
  * @license <a href="https://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
 
@@ -26,8 +26,6 @@ if (typeof KJUR.crypto == "undefined" || !KJUR.crypto) KJUR.crypto = {};
 
 /**
  * static object for elliptic curve names and parameters
- * @name KJUR.crypto.ECParameterDB
- * @class static object for elliptic curve names and parameters
  * @description
  * This class provides parameters for named elliptic curves.
  * Currently it supoprts following curve names and aliases however 
@@ -48,8 +46,8 @@ if (typeof KJUR.crypto == "undefined" || !KJUR.crypto) KJUR.crypto = {};
  * You can register new curves by using 'register' method.
  */
 KJUR.crypto.ECParameterDB = new function() {
-    var db = {};
-    var aliasDB = {};
+    let db = {};
+    let aliasDB = {};
 
     function hex2bi(hex) {
         return new BigInteger(hex, 16);
@@ -58,17 +56,16 @@ KJUR.crypto.ECParameterDB = new function() {
     /**
      * get curve inforamtion associative array for curve name or alias
      * @name getByName
-     * @memberOf KJUR.crypto.ECParameterDB
      * @function
-     * @param {String} nameOrAlias curve name or alias name
+     * @param {string} nameOrAlias curve name or alias name
      * @return {Array} associative array of curve parameters
      * @example
-     * var param = KJUR.crypto.ECParameterDB.getByName('prime256v1');
-     * var keylen = param['keylen'];
-     * var n = param['n'];
+     * let param = KJUR.crypto.ECParameterDB.getByName('prime256v1');
+     * let keylen = param['keylen'];
+     * let n = param['n'];
      */
     this.getByName = function(nameOrAlias) {
-	var name = nameOrAlias;
+	let name = nameOrAlias;
 	if (typeof aliasDB[name] != "undefined") {
 	    name = aliasDB[nameOrAlias];
         }
@@ -80,31 +77,28 @@ KJUR.crypto.ECParameterDB = new function() {
 
     /**
      * register new curve
-     * @name regist
-     * @memberOf KJUR.crypto.ECParameterDB
-     * @function
-     * @param {String} name name of curve
-     * @param {Integer} keylen key length
-     * @param {String} pHex hexadecimal value of p
-     * @param {String} aHex hexadecimal value of a
-     * @param {String} bHex hexadecimal value of b
-     * @param {String} nHex hexadecimal value of n
-     * @param {String} hHex hexadecimal value of h
-     * @param {String} gxHex hexadecimal value of Gx
-     * @param {String} gyHex hexadecimal value of Gy
+     * @param {string} name name of curve
+     * @param {number} keylen key length
+     * @param {string} pHex hexadecimal value of p
+     * @param {string} aHex hexadecimal value of a
+     * @param {string} bHex hexadecimal value of b
+     * @param {string} nHex hexadecimal value of n
+     * @param {string} hHex hexadecimal value of h
+     * @param {string} gxHex hexadecimal value of Gx
+     * @param {string} gyHex hexadecimal value of Gy
      * @param {Array} aliasList array of string for curve names aliases
-     * @param {String} oid Object Identifier for the curve
-     * @param {String} info information string for the curve
+     * @param {string} oid Object Identifier for the curve
+     * @param {string} info information string for the curve
      */
     this.regist = function(name, keylen, pHex, aHex, bHex, nHex, hHex, gxHex, gyHex, aliasList, oid, info) {
         db[name] = {};
-	var p = hex2bi(pHex);
-	var a = hex2bi(aHex);
-	var b = hex2bi(bHex);
-	var n = hex2bi(nHex);
-	var h = hex2bi(hHex);
-        var curve = new ECCurveFp(p, a, b);
-        var G = curve.decodePointHex("04" + gxHex + gyHex);
+	let p = hex2bi(pHex);
+	let a = hex2bi(aHex);
+	let b = hex2bi(bHex);
+	let n = hex2bi(nHex);
+	let h = hex2bi(hHex);
+        let curve = new ECCurveFp(p, a, b);
+        let G = curve.decodePointHex("04" + gxHex + gyHex);
 	db[name]['name'] = name;
 	db[name]['keylen'] = keylen;
         db[name]['curve'] = curve;
@@ -114,7 +108,7 @@ KJUR.crypto.ECParameterDB = new function() {
         db[name]['oid'] = oid;
         db[name]['info'] = info;
 
-        for (var i = 0; i < aliasList.length; i++) {
+        for (let i = 0; i < aliasList.length; i++) {
 	    aliasDB[aliasList[i]] = name;
         }
     };

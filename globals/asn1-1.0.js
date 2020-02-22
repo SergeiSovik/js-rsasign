@@ -1,7 +1,7 @@
 /*
  * asn1.js - ASN.1 DER encoder classes
  *
- * Original work Copyright (c) Copyright (c) 2013-2018 Kenji Urushima (kenji.urushima@gmail.com)
+ * Original work Copyright (c) 2013-2018 Kenji Urushima (kenji.urushima@gmail.com)
  * Modified work Copyright (c) 2020 Sergio Rando <sergio.rando@yahoo.com>
  *
  * This software is licensed under the terms of the MIT License.
@@ -14,12 +14,74 @@
 "use strict";
 
 import { BigInteger } from "./../../js-bn/modules/jsbn.js"
-import { hextopem } from "./../globals/base64x-1.1.js"
+import { hextopem, utf8tohex, stohex } from "./base64x-1.1.js"
+import { name2oid } from "./asn1oid.js"
+
+/** 
+ * <p>
+ * This module provides following name spaces:
+ * <ul>
+ * <li>{@link asn1-1.0.js} - ASN.1 primitive hexadecimal encoder</li>
+ * <li>{@link asn1x509-1.0.js} - ASN.1 structure for X.509 certificate and CRL</li>
+ * <li>{@link crypto-1.1.js} - Java Cryptographic Extension(JCE) style MessageDigest/Signature 
+ * class and utilities</li>
+ * </ul>
+ * </p> 
+ * NOTE: Please ignore method summary and document of this namespace. This caused by a bug of jsdoc2.
+ */
 
 /**
- * @param {number} i 
- * @returns {string}
+ * ASN.1 module
+ * <p>
+ * This is ITU-T X.690 ASN.1 DER encoder module and
+ * class structure and methods is very similar to 
+ * org.bouncycastle.asn1 package of 
+ * well known BouncyCaslte Cryptography Library.
+ * <h4>PROVIDING ASN.1 PRIMITIVES</h4>
+ * Here are ASN.1 DER primitive classes.
+ * <ul>
+ * <li>0x01 {@link DERBoolean}</li>
+ * <li>0x02 {@link DERInteger}</li>
+ * <li>0x03 {@link DERBitString}</li>
+ * <li>0x04 {@link DEROctetString}</li>
+ * <li>0x05 {@link DERNull}</li>
+ * <li>0x06 {@link DERObjectIdentifier}</li>
+ * <li>0x0a {@link DEREnumerated}</li>
+ * <li>0x0c {@link DERUTF8String}</li>
+ * <li>0x12 {@link DERNumericString}</li>
+ * <li>0x13 {@link DERPrintableString}</li>
+ * <li>0x14 {@link DERTeletexString}</li>
+ * <li>0x16 {@link DERIA5String}</li>
+ * <li>0x17 {@link DERUTCTime}</li>
+ * <li>0x18 {@link DERGeneralizedTime}</li>
+ * <li>0x30 {@link DERSequence}</li>
+ * <li>0x31 {@link DERSet}</li>
+ * </ul>
+ * <h4>OTHER ASN.1 CLASSES</h4>
+ * <ul>
+ * <li>{@link ASN1Object}</li>
+ * <li>{@link DERAbstractString}</li>
+ * <li>{@link DERAbstractTime}</li>
+ * <li>{@link DERAbstractStructured}</li>
+ * <li>{@link DERTaggedObject}</li>
+ * </ul>
+ * <h4>SUB MODULES</h4>
+ * <ul>
+ * <li>{@link asn1cades-1.0.js} - CAdES long term signature format</li>
+ * <li>{@link asn1cms-1.0.js} - Cryptographic Message Syntax</li>
+ * <li>{@link asn1csr-1.0.js} - Certificate Signing Request (CSR/PKCS#10)</li>
+ * <li>{@link asn1tsp-1.0.js} - RFC 3161 Timestamping Protocol Format</li>
+ * <li>{@link asn1x509-1.0.js} - RFC 5280 X.509 certificate and CRL</li>
+ * </ul>
+ * </p>
+ * NOTE: Please ignore method summary and document of this namespace. 
+ * This caused by a bug of jsdoc2.
  */
+
+/**
+  * @param {number} i 
+  * @returns {string}
+  */
 export function integerToByteHex(i) {
 	let h = i.toString(16);
 	if ((h.length % 2) == 1) h = '0' + h;
@@ -55,7 +117,7 @@ export function bigIntToMinTwosComplementsHex(bigIntegerValue) {
 			hMask += 'f';
 		}
 		let biMask = new BigInteger(hMask, 16);
-		let biNeg = biMask.xor(bigIntegerValue).add(BigInteger.ONE);
+		let biNeg = biMask.xor(bigIntegerValue).add(BigInteger.ONE());
 		h = biNeg.toString(16).replace(/^-/, '');
 	}
 	return h;
@@ -70,7 +132,7 @@ export function bigIntToMinTwosComplementsHex(bigIntegerValue) {
  * This method converts a hexadecimal string to a PEM string with
  * a specified header. Its line break will be CRLF("\r\n").
  * @example
- * let pem = ASN1Util.getPEMStringFromHex('616161', 'RSA PRIVATE KEY');
+ * let pem  = getPEMStringFromHex('616161', 'RSA PRIVATE KEY');
  * // value of pem will be:
  * -----BEGIN PRIVATE KEY-----
  * YWFh
@@ -82,9 +144,8 @@ export function getPEMStringFromHex(dataHex, pemHeader) {
 
 /**
  * generate ASN1Object specifed by JSON parameters
- * @param {*} param JSON parameter to generate ASN1Object
+ * @param {Object} param JSON parameter to generate ASN1Object
  * @return {ASN1Object} generated object
- * @since asn1 1.0.3
  * @description
  * generate any ASN1Object specified by JSON param
  * including ASN.1 primitive or structured.
@@ -128,6 +189,7 @@ export function getPEMStringFromHex(dataHex, pemHeader) {
  *                   ]});
  */
 export function newObject(param) {
+	if (param === null) return new DERNull();
 	let keys = Object.keys(param);
 	if (keys.length != 1)
 		throw "key of param shall be only one.";
@@ -152,8 +214,8 @@ export function newObject(param) {
 	if (key == "gentime") return new DERGeneralizedTime(param[key]);
 
 	if (key == "seq") {
-		let paramList = param[key];
-		let a = [];
+		let paramList = /** @type {Array<Object>} */ ( param[key] );
+		/** @type {Array<ASN1Object>} */ let a = [];
 		for (let i = 0; i < paramList.length; i++) {
 			let asn1Obj = newObject(paramList[i]);
 			a.push(asn1Obj);
@@ -162,8 +224,8 @@ export function newObject(param) {
 	}
 
 	if (key == "set") {
-		let paramList = param[key];
-		let a = [];
+		let paramList = /** @type {Array<Object>} */ ( param[key] );
+		/** @type {Array<ASN1Object>} */ let a = [];
 		for (let i = 0; i < paramList.length; i++) {
 			let asn1Obj = newObject(paramList[i]);
 			a.push(asn1Obj);
@@ -173,28 +235,34 @@ export function newObject(param) {
 
 	if (key == "tag") {
 		let tagParam = param[key];
-		if (Object.prototype.toString.call(tagParam) === '[object Array]' && tagParam.length == 3) {
-			let obj = newObject(tagParam[2]);
-			return new DERTaggedObject({ 'tag': tagParam[0], 'explicit': tagParam[1], 'obj': obj });
+		if (Object.prototype.toString.call(tagParam) === '[object Array]' &&
+			tagParam.length == 3) {
+			let obj = newObject(/** @type {Object} */ ( tagParam[2] ));
+			return new DERTaggedObject({
+				'tag': tagParam[0],
+				'explicit': tagParam[1],
+				'obj': obj
+			});
 		} else {
-			let newParam = {};
+			/** @dict */ let newParam = {};
 			if (tagParam['explicit'] !== undefined)
 				newParam['explicit'] = tagParam['explicit'];
 			if (tagParam['tag'] !== undefined)
 				newParam['tag'] = tagParam['tag'];
 			if (tagParam['obj'] === undefined)
 				throw "obj shall be specified for 'tag'.";
-			newParam['obj'] = newObject(tagParam['obj']);
+			newParam['obj'] = newObject(/** @type {Object} */ ( tagParam['obj'] ));
 			return new DERTaggedObject(newParam);
 		}
 	}
+
+	return null;
 }
 
 /**
  * get encoded hexadecimal string of ASN1Object specifed by JSON parameters
- * @param {*} param JSON parameter to generate ASN1Object
- * @return hexadecimal string of ASN1Object
- * @since asn1 1.0.4
+ * @param {Object} param JSON parameter to generate ASN1Object
+ * @return {string} hexadecimal string of ASN1Object
  * @description
  * As for ASN.1 object representation of JSON object,
  * please see {@link newObject}.
@@ -210,7 +278,6 @@ export function jsonToASN1HEX(param) {
  * get dot noted oid number string from hexadecimal value of OID
  * @param {string} hex hexadecimal value of object identifier
  * @return {string} dot noted string of object identifier
- * @since jsrsasign 4.8.3 asn1 1.0.7
  * @description
  * This static method converts from hexadecimal string representation of 
  * ASN.1 value of object identifier to oid number string.
@@ -218,7 +285,6 @@ export function jsonToASN1HEX(param) {
  * oidHexToInt('550406') &rarr; "2.5.4.6"
  */
 export function oidHexToInt(hex) {
-	let s = "";
 	let i01 = parseInt(hex.substr(0, 2), 16);
 	let i0 = Math.floor(i01 / 40);
 	let i1 = i01 % 40;
@@ -234,11 +300,15 @@ export function oidHexToInt(hex) {
 			s = s + "." + bi.toString(10);
 			binbuf = "";
 		}
-	};
+	}
 
 	return s;
 }
 
+/**
+ * @param {number} i 
+ * @returns {string}
+ */
 function itox(i) {
 	let h = i.toString(16);
 	if (h.length == 1) h = '0' + h;
@@ -247,6 +317,7 @@ function itox(i) {
 
 /**
  * @param {string} roid 
+ * @returns {string}
  */
 function roidtox(roid) {
 	let h = '';
@@ -269,7 +340,6 @@ function roidtox(roid) {
  * get hexadecimal value of object identifier from dot noted oid value
  * @param {string} oidString dot noted string of object identifier
  * @return {string} hexadecimal value of object identifier
- * @since jsrsasign 4.8.3 asn1 1.0.7
  * @description
  * This static method converts from object identifier value string.
  * to hexadecimal string representation of it.
@@ -282,7 +352,7 @@ export function oidIntToHex(oidString) {
 	}
 	let h = '';
 	let a = oidString.split('.');
-	let i0 = parseInt(a[0]) * 40 + parseInt(a[1]);
+	let i0 = parseInt(a[0], 10) * 40 + parseInt(a[1], 10);
 	h += itox(i0);
 	a.splice(0, 2);
 	for (let i = 0; i < a.length; i++) {
@@ -299,13 +369,14 @@ export function oidIntToHex(oidString) {
  * @property {string} hT hexadecimal string of ASN.1 TLV tag(T)
  * @property {string} hL hexadecimal string of ASN.1 TLV length(L)
  * @property {string} hV hexadecimal string of ASN.1 TLV value(V)
+ * @description
  */
 export class ASN1Object {
 	constructor() {
-	    /** @protected @type {boolean} */ this.isModified = true;
-	    /** @protected @type {string | null} */ this.hTLV = null;
-	    /** @protected @type {string | null} */ this.hT = '00';
-	    /** @protected @type {string} */ this.hL = '00';
+		/** @protected */ this.isModified = true;
+		/** @protected @type {string | null} */ this.hTLV = null;
+		/** @protected @type {string} */ this.hT = '00';
+		/** @protected @type {string} */ this.hL = '00';
 		/** @protected @type {string} */ this.hV = '';
 	}
 
@@ -318,7 +389,7 @@ export class ASN1Object {
 			throw "this.hV is null or undefined.";
 		}
 		if (this.hV.length % 2 == 1) {
-			throw "value hex must be even length: n=" + hV.length + ",v=" + this.hV;
+			throw "value hex must be even length: n=" + this.hV.length + ",v=" + this.hV;
 		}
 		let n = this.hV.length / 2;
 		let hN = n.toString(16);
@@ -368,7 +439,7 @@ export class ASN1Object {
 
 /**
  * base class for ASN.1 DER string classes
- * @param {*} params associative array of parameters (ex. {'str': 'aaa'})
+ * @abstract
  * @property {string} s internal string of value
  * @description
  * <br/>
@@ -381,26 +452,29 @@ export class ASN1Object {
  * NOTE: 'params' can be omitted.
  */
 export class DERAbstractString extends ASN1Object {
+	/**
+	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 */
 	constructor(params) {
 		super();
 
-		/** @private @type {string} */ this.s = null;
-		/** @private */ this.hV = null;
+		/** @protected @type {string | null} */ this.s = null;
+		/** @protected @type {string | null} */ this.hV = null;
 
 		if (typeof params != "undefined") {
 			if (typeof params == "string") {
 				this.setString(params);
 			} else if (typeof params['str'] != "undefined") {
-				this.setString(params['str']);
+				this.setString(String(params['str']));
 			} else if (typeof params['hex'] != "undefined") {
-				this.setStringHex(params['hex']);
+				this.setStringHex(String(params['hex']));
 			}
-		}
+		}	
 	}
 
     /**
      * get string value of this string object
-     * @return {string} string value of this string object
+     * @return {string | null} string value of this string object
      */
 	getString() {
 		return this.s;
@@ -446,24 +520,23 @@ export class DERAbstractString extends ASN1Object {
 
 /**
  * base class for ASN.1 DER Generalized/UTCTime class
- * @param {*} params associative array of parameters (ex. {'str': '130430235959Z'})
- * @description
- * @see ASN1Object - superclass
+ * @abstract
  */
 export class DERAbstractTime extends ASN1Object {
-	constructor(params) {
+	constructor() {
 		super();
-
-		/** @private */ this.s = null;
-		/** @private */ this.date = null;
+	
+		/** @protected @type {string | null} */ this.s = null;
+		/** @protected @type {Date | null} */ this.date = null;
 	}
 
-    /**
+	/**
 	 * @private
 	 * @param {Date} d 
+	 * @returns {Date}
 	 */
-	localDateToUTC(d) {
-		utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+	static localDateToUTC(d) {
+		let utc = d.getTime() + (d.getTimezoneOffset() * 60000);
 		let utcDate = new Date(utc);
 		return utcDate;
 	}
@@ -473,25 +546,24 @@ export class DERAbstractTime extends ASN1Object {
 	 * @private
      * @param {Date} dateObject 
      * @param {string} type 'utc' or 'gen'
-     * @param {boolean} withMillis flag for with millisections or not
+     * @param {boolean=} withMillis flag for with millisections or not
      * @description
      * 'withMillis' flag is supported from asn1 1.0.6.
      */
 	formatDate(dateObject, type, withMillis) {
-		let pad = this.zeroPadding;
-		let d = this.localDateToUTC(dateObject);
+		let d = DERAbstractTime.localDateToUTC(dateObject);
 		let year = String(d.getFullYear());
 		if (type == 'utc') year = year.substr(2, 2);
-		let month = pad(String(d.getMonth() + 1), 2);
-		let day = pad(String(d.getDate()), 2);
-		let hour = pad(String(d.getHours()), 2);
-		let min = pad(String(d.getMinutes()), 2);
-		let sec = pad(String(d.getSeconds()), 2);
+		let month = DERAbstractTime.zeroPadding(String(d.getMonth() + 1), 2);
+		let day = DERAbstractTime.zeroPadding(String(d.getDate()), 2);
+		let hour = DERAbstractTime.zeroPadding(String(d.getHours()), 2);
+		let min = DERAbstractTime.zeroPadding(String(d.getMinutes()), 2);
+		let sec = DERAbstractTime.zeroPadding(String(d.getSeconds()), 2);
 		let s = year + month + day + hour + min + sec;
 		if (withMillis === true) {
 			let millis = d.getMilliseconds();
 			if (millis != 0) {
-				let sMillis = pad(String(millis), 3);
+				let sMillis = DERAbstractTime.zeroPadding(String(millis), 3);
 				sMillis = sMillis.replace(/[0]+$/, "");
 				s = s + "." + sMillis;
 			}
@@ -504,15 +576,14 @@ export class DERAbstractTime extends ASN1Object {
 	 * @param {string} s 
 	 * @param {number} len 
 	 */
-	zeroPadding(s, len) {
+	static zeroPadding(s, len) {
 		if (s.length >= len) return s;
 		return new Array(len - s.length + 1).join('0') + s;
 	}
 
-	// --- PUBLIC METHODS --------------------
     /**
      * get string value of this string object
-     * @return {string} string value of this time object
+     * @return {string | null} string value of this time object
      */
 	getString() {
 		return this.s;
@@ -543,6 +614,13 @@ export class DERAbstractTime extends ASN1Object {
 		this.setByDate(dateObject);
 	}
 
+	/**
+     * set value by a Date object<br/>
+	 * @abstract
+     * @param {Date} dateObject Date object to set ASN.1 value(V)
+     */
+	setByDate(dateObject) {}
+
 	/** @override */
 	getFreshValueHex() {
 		return this.hV;
@@ -551,26 +629,28 @@ export class DERAbstractTime extends ASN1Object {
 
 /**
  * base class for ASN.1 DER structured class
- * @property {*} asn1Array internal array of ASN1Object
- * @description
- * @see ASN1Object - superclass
+ * @abstract
+ * @property {Array<ASN1Object>} asn1Array internal array of ASN1Object
  */
 export class DERAbstractStructured extends ASN1Object {
+	/**
+	 * @param {Object=} params
+	 */
 	constructor(params) {
 		super();
 
-		/** @private @type {Array} */ this.asn1Array = new Array();
+		/** @protected @type {Array<ASN1Object>} */ this.asn1Array = [];
+
 		if (typeof params != "undefined") {
 			if (typeof params['array'] != "undefined") {
-				this.asn1Array = params['array'];
+				this.asn1Array = /** @type {Array<ASN1Object>} */ ( params['array'] );
 			}
 		}
-
 	}
 
     /**
      * set value by array of ASN1Object
-     * @param {array} asn1ObjectArray array of ASN1Object to set
+     * @param {Array<ASN1Object>} asn1ObjectArray array of ASN1Object to set
      */
 	setByASN1ObjectArray(asn1ObjectArray) {
 		this.hTLV = null;
@@ -589,17 +669,60 @@ export class DERAbstractStructured extends ASN1Object {
 	}
 }
 
-
 /**
  * class for ASN.1 DER Boolean
- * @description
- * @see ASN1Object - superclass
  */
-export class DERBoolean extends ASN1Object() {
-	constructor() {
+export class DERBoolean extends ASN1Object {
+	/**
+	 * @param {Object=} params
+	 */
+	constructor(params) {
 		super();
+
 		this.hT = "01";
 		this.hTLV = "0101ff";
+
+		if (typeof params != "undefined") {
+			if (typeof params['bool'] != "undefined") {
+				this.setByBoolean(params['bool']);
+			} else if (typeof params == "boolean") {
+				this.setByBoolean(params ? true : false);
+			} else if (typeof params['hex'] != "undefined") {
+				this.setValueHex(String(params['hex']));
+			}
+		}
+	}
+
+    /**
+     * set value by boolean value
+     * @param {boolean} boolValue boolean value to set
+     */
+	setByBoolean(boolValue) {
+		this.hV = boolValue ? 'ff' : '00';
+		this.hTLV = '0101' + this.hV;
+	}
+
+    /**
+     * set value by integer value
+     * @param {string} newHexString hexadecimal string of integer value
+     * @description
+     * <br/>
+     * NOTE: Value shall be represented by minimum octet length of
+     * two's complement representation.
+     * @example
+     * new DERBoolean(true);
+     * new DERBoolean({'bool': true});
+     * new DERBoolean({'hex': 'ff'});
+     */
+	setValueHex(newHexString) {
+		this.hTLV = null;
+		this.isModified = true;
+		this.hV = newHexString;
+	}
+
+	/** @override */
+	getFreshValueHex() {
+		return this.hV;
 	}
 }
 
@@ -617,6 +740,9 @@ export class DERBoolean extends ASN1Object() {
  * NOTE: 'params' can be omitted.
  */
 export class DERInteger extends ASN1Object {
+	/**
+	 * @param {(* | number)=} params
+	 */
 	constructor(params) {
 		super();
 
@@ -630,7 +756,7 @@ export class DERInteger extends ASN1Object {
 			} else if (typeof params == "number") {
 				this.setByInteger(params);
 			} else if (typeof params['hex'] != "undefined") {
-				this.setValueHex(params['hex']);
+				this.setValueHex(String(params['hex']));
 			}
 		}
 	}
@@ -642,12 +768,12 @@ export class DERInteger extends ASN1Object {
 	setByBigInteger(bigIntegerValue) {
 		this.hTLV = null;
 		this.isModified = true;
-		this.hV = ASN1Util.bigIntToMinTwosComplementsHex(bigIntegerValue);
+		this.hV = bigIntToMinTwosComplementsHex(bigIntegerValue);
 	}
 
     /**
      * set value by integer value
-     * @param {number} integer value to set
+     * @param {number} intValue integer value to set
      */
 	setByInteger(intValue) {
 		let bi = new BigInteger(String(intValue), 10);
@@ -656,7 +782,7 @@ export class DERInteger extends ASN1Object {
 
     /**
      * set value by integer value
-     * @param {string} hexadecimal string of integer value
+     * @param {string} newHexString hexadecimal string of integer value
      * @description
      * <br/>
      * NOTE: Value shall be represented by minimum octet length of
@@ -667,6 +793,8 @@ export class DERInteger extends ASN1Object {
      * new DERInteger({'hex': '1fad'});
      */
 	setValueHex(newHexString) {
+		this.hTLV = null;
+		this.isModified = true;
 		this.hV = newHexString;
 	}
 
@@ -686,7 +814,7 @@ export class DERInteger extends ASN1Object {
  * <li>bin - specify binary string (ex. '10111')</li>
  * <li>array - specify array of boolean (ex. [true,false,true,true])</li>
  * <li>hex - specify hexadecimal string of ASN.1 value(V) including unused bits</li>
- * <li>obj - specify {@link ASN1Util.newObject} 
+ * <li>obj - specify {@link newObject} 
  * argument for "BitString encapsulates" structure.</li>
  * </ul>
  * NOTE1: 'params' can be omitted.<br/>
@@ -712,11 +840,15 @@ export class DERInteger extends ASN1Object {
  * //   } 
  */
 export class DERBitString extends ASN1Object {
+	/**
+	 * @param {(Object | string)=} params
+	 */
 	constructor(params) {
 		if (params !== undefined && typeof params['obj'] !== "undefined") {
-			let o = ASN1Util.newObject(params['obj']);
+			let o = newObject(params['obj']);
 			params['hex'] = "00" + o.getEncodedHex();
 		}
+
 		super();
 
 		this.hT = "03";
@@ -791,7 +923,7 @@ export class DERBitString extends ASN1Object {
 
     /**
      * set ASN.1 TLV value(V) by an array of boolean<br/>
-     * @param {array} booleanArray array of boolean (ex. [true, false, true])
+     * @param {Array<boolean>} booleanArray array of boolean (ex. [true, false, true])
      * @description
      * NOTE: Trailing falses will be ignored in the ASN.1 DER Object.
      * @example
@@ -813,14 +945,14 @@ export class DERBitString extends ASN1Object {
     /**
      * generate an array of falses with specified length<br/>
      * @param {number} nLength length of array to generate
-     * @return {array} array of boolean falses
+     * @return {Array<boolean>} array of boolean falses
      * @description
      * This static method may be useful to initialize boolean array.
      * @example
      * o = new DERBitString();
      * o.newFalseArray(3) &rarr; [false, false, false]
      */
-	newFalseArray(nLength) {
+	static newFalseArray(nLength) {
 		let a = new Array(nLength);
 		for (let i = 0; i < nLength; i++) {
 			a[i] = false;
@@ -836,7 +968,6 @@ export class DERBitString extends ASN1Object {
 
 /**
  * class for ASN.1 DER OctetString<br/>
- * @param {*} params associative array of parameters (ex. {'str': 'aaa'})
  * @description
  * This class provides ASN.1 OctetString simple type.<br/>
  * Supported "params" attributes are:
@@ -844,12 +975,11 @@ export class DERBitString extends ASN1Object {
  * <li>str - to set a string as a value</li>
  * <li>hex - to set a hexadecimal string as a value</li>
  * <li>obj - to set a encapsulated ASN.1 value by JSON object 
- * which is defined in {@link ASN1Util.newObject}</li>
+ * which is defined in {@link newObject}</li>
  * </ul>
  * NOTE: A parameter 'obj' have been supported 
  * for "OCTET STRING, encapsulates" structure.
  * since asn1 1.0.11, jsrsasign 6.1.1 (2016-Sep-25).
- * @see DERAbstractString - superclass
  * @example
  * // default constructor
  * o = new DEROctetString();
@@ -868,11 +998,15 @@ export class DERBitString extends ASN1Object {
  * //   } 
  */
 export class DEROctetString extends DERAbstractString {
+	/**
+	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 */
 	constructor(params) {
 		if (params !== undefined && typeof params['obj'] !== "undefined") {
-			let o = ASN1Util.newObject(params['obj']);
+			let o = newObject(params['obj']);
 			params['hex'] = o.getEncodedHex();
 		}
+
 		super(params);
 
 		this.hT = "04";
@@ -881,11 +1015,12 @@ export class DEROctetString extends DERAbstractString {
 
 /**
  * class for ASN.1 DER Null
- * @description
- * @see ASN1Object - superclass
  */
 export class DERNull extends ASN1Object {
-	constructor() {
+	/**
+	 * @param {*=} params 
+	 */
+	constructor(params) {
 		super();
 
 		this.hT = "05";
@@ -895,7 +1030,6 @@ export class DERNull extends ASN1Object {
 
 /**
  * class for ASN.1 DER ObjectIdentifier
- * @param {*} params associative array of parameters (ex. {'oid': '2.5.4.5'})
  * @description
  * <br/>
  * As for argument 'params' for constructor, you can specify one of
@@ -907,11 +1041,14 @@ export class DERNull extends ASN1Object {
  * NOTE: 'params' can be omitted.
  */
 export class DERObjectIdentifier extends ASN1Object {
+	/**
+	 * @param {(Object | string)=} params dictionary of parameters (ex. {'oid': '2.5.4.5'})
+	 */
 	constructor(params) {
 		super();
 
 		this.hT = "06";
-
+		
 		if (params !== undefined) {
 			if (typeof params === "string") {
 				if (params.match(/^[0-2].[0-9.]+$/)) {
@@ -920,11 +1057,11 @@ export class DERObjectIdentifier extends ASN1Object {
 					this.setValueName(params);
 				}
 			} else if (params['oid'] !== undefined) {
-				this.setValueOidString(params['oid']);
+				this.setValueOidString(String(params['oid']));
 			} else if (params['hex'] !== undefined) {
-				this.setValueHex(params['hex']);
+				this.setValueHex(String(params['hex']));
 			} else if (params['name'] !== undefined) {
-				this.setValueName(params['name']);
+				this.setValueName(String(params['name']));
 			}
 		}
 	}
@@ -936,7 +1073,7 @@ export class DERObjectIdentifier extends ASN1Object {
 	setValueHex(newHexString) {
 		this.hTLV = null;
 		this.isModified = true;
-		this.s = null;
+		//this.s = null;
 		this.hV = newHexString;
 	}
 
@@ -953,7 +1090,7 @@ export class DERObjectIdentifier extends ASN1Object {
 		}
 		let h = '';
 		let a = oidString.split('.');
-		let i0 = parseInt(a[0]) * 40 + parseInt(a[1]);
+		let i0 = parseInt(a[0], 10) * 40 + parseInt(a[1], 10);
 		h += itox(i0);
 		a.splice(0, 2);
 		for (let i = 0; i < a.length; i++) {
@@ -961,23 +1098,22 @@ export class DERObjectIdentifier extends ASN1Object {
 		}
 		this.hTLV = null;
 		this.isModified = true;
-		this.s = null;
+		//this.s = null;
 		this.hV = h;
 	}
 
     /**
      * set value by a OID name
      * @param {string} oidName OID name (ex. 'serverAuth')
-     * @since 1.0.1
      * @description
-     * OID name shall be defined in 'x509.OID.name2oidList'.
+     * OID name shall be defined in 'name2oidList'.
      * Otherwise raise error.
      * @example
      * o = new DERObjectIdentifier();
      * o.setValueName("serverAuth");
      */
 	setValueName(oidName) {
-		let oid = x509.OID.name2oid(oidName);
+		let oid = name2oid(oidName);
 		if (oid !== '') {
 			this.setValueOidString(oid);
 		} else {
@@ -1008,6 +1144,9 @@ export class DERObjectIdentifier extends ASN1Object {
  * new DEREnumerated({hex: '1fad'});
  */
 export class DEREnumerated extends ASN1Object {
+	/**
+	 * @param {(* | number)=} params 
+	 */
 	constructor(params) {
 		super();
 
@@ -1019,7 +1158,7 @@ export class DEREnumerated extends ASN1Object {
 			} else if (typeof params == "number") {
 				this.setByInteger(params);
 			} else if (typeof params['hex'] != "undefined") {
-				this.setValueHex(params['hex']);
+				this.setValueHex(String(params['hex']));
 			}
 		}
 	}
@@ -1036,7 +1175,7 @@ export class DEREnumerated extends ASN1Object {
 
     /**
      * set value by integer value
-     * @param {number} integer value to set
+     * @param {number} intValue integer value to set
      */
 	setByInteger(intValue) {
 		let bi = new BigInteger(String(intValue), 10);
@@ -1045,7 +1184,7 @@ export class DEREnumerated extends ASN1Object {
 
     /**
      * set value by integer value
-     * @param {string} hexadecimal string of integer value
+     * @param {string} newHexString hexadecimal string of integer value
      * @description
      * <br/>
      * NOTE: Value shall be represented by minimum octet length of
@@ -1063,11 +1202,12 @@ export class DEREnumerated extends ASN1Object {
 
 /**
  * class for ASN.1 DER UTF8String
- * @param {*} params associative array of parameters (ex. {'str': 'aaa'})
  * @description
- * @see DERAbstractString - superclass
  */
 export class DERUTF8String extends DERAbstractString {
+	/**
+	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 */
 	constructor(params) {
 		super(params);
 
@@ -1077,11 +1217,12 @@ export class DERUTF8String extends DERAbstractString {
 
 /**
  * class for ASN.1 DER NumericString
- * @param {*} params associative array of parameters (ex. {'str': 'aaa'})
  * @description
- * @see DERAbstractString - superclass
  */
 export class DERNumericString extends DERAbstractString {
+	/**
+	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 */
 	constructor(params) {
 		super(params);
 
@@ -1091,11 +1232,12 @@ export class DERNumericString extends DERAbstractString {
 
 /**
  * class for ASN.1 DER PrintableString
- * @param {*} params associative array of parameters (ex. {'str': 'aaa'})
  * @description
- * @see DERAbstractString - superclass
  */
 export class DERPrintableString extends DERAbstractString {
+	/**
+	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 */
 	constructor(params) {
 		super(params);
 
@@ -1105,11 +1247,12 @@ export class DERPrintableString extends DERAbstractString {
 
 /**
  * class for ASN.1 DER TeletexString
- * @param {*} params associative array of parameters (ex. {'str': 'aaa'})
  * @description
- * @see DERAbstractString - superclass
  */
 export class DERTeletexString extends DERAbstractString {
+	/**
+	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 */
 	constructor(params) {
 		super(params);
 
@@ -1119,11 +1262,12 @@ export class DERTeletexString extends DERAbstractString {
 
 /**
  * class for ASN.1 DER IA5String
- * @param {*} params associative array of parameters (ex. {'str': 'aaa'})
  * @description
- * @see DERAbstractString - superclass
  */
 export class DERIA5String extends DERAbstractString {
+	/**
+	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 */
 	constructor(params) {
 		super(params);
 
@@ -1133,7 +1277,6 @@ export class DERIA5String extends DERAbstractString {
 
 /**
  * class for ASN.1 DER UTCTime
- * @param {*} params associative array of parameters (ex. {'str': '130430235959Z'})
  * @description
  * <br/>
  * As for argument 'params' for constructor, you can specify one of
@@ -1154,18 +1297,22 @@ export class DERIA5String extends DERAbstractString {
  * d4 = new DERUTCTime('130430125959Z');
  */
 export class DERUTCTime extends DERAbstractTime {
+	/**
+	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': '130430235959Z'})
+	 */
 	constructor(params) {
-		super(params);
+		super();
 
 		this.hT = "17";
+		/** @type {string} */ this.s;
 
 		if (params !== undefined) {
 			if (params['str'] !== undefined) {
 				this.setString(params['str']);
 			} else if (typeof params == "string" && params.match(/^[0-9]{12}Z$/)) {
 				this.setString(params);
-			} else if (params['hex'] !== undefined) {
-				this.setStringHex(params['hex']);
+			//} else if (params['hex'] !== undefined) {
+			//	this.setStringHex(String(params['hex']));
 			} else if (params['date'] !== undefined) {
 				this.setByDate(params['date']);
 			}
@@ -1200,7 +1347,6 @@ export class DERUTCTime extends DERAbstractTime {
 
 /**
  * class for ASN.1 DER GeneralizedTime
- * @param {*} params associative array of parameters (ex. {'str': '20130430235959Z'})
  * @property {boolean} withMillis flag to show milliseconds or not
  * @description
  * <br/>
@@ -1216,19 +1362,23 @@ export class DERUTCTime extends DERAbstractTime {
  * NOTE2: 'withMillis' property is supported from asn1 1.0.6.
  */
 export class DERGeneralizedTime extends DERAbstractTime {
+	/**
+	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': '20130430235959Z'})
+	 */
 	constructor(params) {
-		super(params);
+		super();
 
 		this.hT = "18";
 		this.withMillis = false;
+		/** @type {string} */ this.s;
 
 		if (params !== undefined) {
 			if (params['str'] !== undefined) {
 				this.setString(params['str']);
 			} else if (typeof params == "string" && params.match(/^[0-9]{14}Z$/)) {
 				this.setString(params);
-			} else if (params['hex'] !== undefined) {
-				this.setStringHex(params['hex']);
+			//} else if (params['hex'] !== undefined) {
+			//	this.setStringHex(String(params['hex']));
 			} else if (params['date'] !== undefined) {
 				this.setByDate(params['date']);
 			}
@@ -1279,6 +1429,9 @@ export class DERGeneralizedTime extends DERAbstractTime {
  * NOTE: 'params' can be omitted.
  */
 export class DERSequence extends DERAbstractStructured {
+	/**
+	 * @param {Object=} params
+	 */
 	constructor(params) {
 		super(params);
 
@@ -1311,6 +1464,9 @@ export class DERSequence extends DERAbstractStructured {
  * NOTE2: sortflag is supported since 1.0.5.
  */
 export class DERSet extends DERAbstractStructured {
+	/**
+	 * @param {Object=} params
+	 */
 	constructor(params) {
 		super(params);
 
@@ -1359,23 +1515,26 @@ export class DERSet extends DERAbstractStructured {
  * hex = d2.getEncodedHex();
  */
 export class DERTaggedObject extends ASN1Object {
+	/**
+	 * @param {Object} params 
+	 */
 	constructor(params) {
 		super();
 
 		this.hT = "a0";
-		this.hV = '';
-		this.isExplicit = true;
-		this.asn1Object = null;
+		/** @type {string | null} */ this.hV = '';
+		/** @type {boolean} */ this.isExplicit = true;
+		/** @type {ASN1Object | null} */ this.asn1Object = null;
 
 		if (typeof params != "undefined") {
 			if (typeof params['tag'] != "undefined") {
-				this.hT = params['tag'];
+				this.hT = String(params['tag']);
 			}
 			if (typeof params['explicit'] != "undefined") {
-				this.isExplicit = params['explicit'];
+				this.isExplicit = params['explicit'] ? true : false;
 			}
-			if (typeof params['obj'] != "undefined") {
-				this.asn1Object = params['obj'];
+			if (typeof params['obj'] != "undefined" && params['obj'] instanceof ASN1Object) {
+				this.asn1Object = /** @type {ASN1Object} */ ( params['obj'] );
 				this.setASN1Object(this.isExplicit, this.hT, this.asn1Object);
 			}
 		}
@@ -1384,7 +1543,7 @@ export class DERTaggedObject extends ASN1Object {
     /**
      * set value by an ASN1Object
      * @param {boolean} isExplicitFlag flag for explicit/implicit tag
-     * @param {number} tagNoHex hexadecimal string of ASN.1 tag
+     * @param {string} tagNoHex hexadecimal string of ASN.1 tag
      * @param {ASN1Object} asn1Object ASN.1 to encapsulate
      */
 	setASN1Object(isExplicitFlag, tagNoHex, asn1Object) {

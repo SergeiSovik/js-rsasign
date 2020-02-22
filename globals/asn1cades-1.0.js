@@ -1,9 +1,8 @@
-/* asn1cades-1.0.3.js (c) 2014-2017 Kenji Urushima | kjur.github.com/jsrsasign/license
- */
 /*
  * asn1cades.js - ASN.1 DER encoder classes for RFC 5126 CAdES long term signature
  *
- * Copyright (c) 2014-2017 Kenji Urushima (kenji.urushima@gmail.com)
+ * Original work Copyright (c) 2014-2017 Kenji Urushima (kenji.urushima@gmail.com)
+ * Modified work Copyright (c) 2020 Sergio Rando <sergio.rando@yahoo.com>
  *
  * This software is licensed under the terms of the MIT License.
  * https://kjur.github.io/jsrsasign/license
@@ -12,25 +11,30 @@
  * included in all copies or substantial portions of the Software.
  */
 
+"use strict";
+
+import { DEROctetString, DERObjectIdentifier, DERSequence } from "./asn1-1.0.js"
+import { AlgorithmIdentifier } from "./asn1x509-1.0.js"
+import { hashHex } from "./crypto-1.1.js"
+
 /**
  * @fileOverview
  * @name asn1cades-1.0.js
  * @author Kenji Urushima kenji.urushima@gmail.com
  * @version jsrsasign 7.2.1 asn1cades 1.0.3 (2017-Jun-03)
- * @since jsrsasign 4.7.0
  * @license <a href="https://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
 
 /** 
- * kjur's class library name space
+ * kjur's module
  * // already documented in asn1-1.0.js
  * @name KJUR
- * @namespace kjur's class library name space
+ * @namespace kjur's module
  */
 if (typeof KJUR == "undefined" || !KJUR) KJUR = {};
 
 /**
- * kjur's ASN.1 class library name space
+ * kjur's ASN.1 module
  * // already documented in asn1-1.0.js
  * @name KJUR.asn1
  * @namespace
@@ -40,7 +44,7 @@ if (typeof KJUR.asn1 == "undefined" || !KJUR.asn1) KJUR.asn1 = {};
 /**
  * kjur's ASN.1 class for RFC 5126 CAdES long term signature
  * <p>
- * This name space provides 
+ * This module provides 
  * <a href="https://tools.ietf.org/html/rfc5126">RFC 5126
  * CAdES(CMS Advanced Electronic Signature)</a> generator.
  *
@@ -183,11 +187,7 @@ if (typeof KJUR.asn1.cades == "undefined" || !KJUR.asn1.cades) KJUR.asn1.cades =
 
 /**
  * class for RFC 5126 CAdES SignaturePolicyIdentifier attribute
- * @name KJUR.asn1.cades.SignaturePolicyIdentifier
- * @class class for RFC 5126 CAdES SignaturePolicyIdentifier attribute
- * @param {Array} params associative array of parameters
- * @extends KJUR.asn1.cms.Attribute
- * @since jsrsasign 4.7.0 asn1cades 1.0.0
+ * @param {Object} params dictionary of parameters
  * @description
  * <pre>
  * SignaturePolicyIdentifier ::= CHOICE {
@@ -204,7 +204,7 @@ if (typeof KJUR.asn1.cades == "undefined" || !KJUR.asn1.cades) KJUR.asn1.cades =
  * SigPolicyHash ::= OtherHashAlgAndValue
  * </pre>
  * @example
- * var o = new KJUR.asn1.cades.SignaturePolicyIdentifier({
+ * let o = new KJUR.asn1.cades.SignaturePolicyIdentifier({
  *   oid: '1.2.3.4.5',
  *   hash: {alg: 'sha1', hash: 'a1a2a3a4...'}
  * });
@@ -247,22 +247,22 @@ if (typeof KJUR.asn1.cades == "undefined" || !KJUR.asn1.cades) KJUR.asn1.cades =
  *    utf8String       UTF8String     (SIZE (1..200)) }
  */
 KJUR.asn1.cades.SignaturePolicyIdentifier = function(params) {
-    var _KJUR = KJUR,
-	_KJUR_asn1 = _KJUR.asn1,
-	_DERObjectIdentifier = _KJUR_asn1.DERObjectIdentifier,
-	_DERSequence = _KJUR_asn1.DERSequence,
-	_KJUR_asn1_cades = _KJUR_asn1.cades,
-	_OtherHashAlgAndValue = _KJUR_asn1_cades.OtherHashAlgAndValue;
+
+
+
+
+	KJUR.asn1.cades = KJUR.asn1.cades,
+	OtherHashAlgAndValue = KJUR.asn1.cades.OtherHashAlgAndValue;
 	
-    _KJUR_asn1_cades.SignaturePolicyIdentifier.superclass.constructor.call(this);
+    KJUR.asn1.cades.SignaturePolicyIdentifier.superclass.constructor.call(this);
     this.attrTypeOid = "1.2.840.113549.1.9.16.2.15";
 
     if (params !== undefined) {
-        if (typeof params.oid == "string" &&
-            typeof params.hash == "object") {
-            var dOid = new _DERObjectIdentifier({oid: params.oid});
-            var dHash = new _OtherHashAlgAndValue(params.hash);
-            var seq = new _DERSequence({array: [dOid, dHash]});
+        if (typeof params['oid'] == "string" &&
+            typeof params['hash'] == "object") {
+            let dOid = new DERObjectIdentifier({oid: params.oid});
+            let dHash = new OtherHashAlgAndValue(params['hash']);
+            let seq = new DERSequence({array: [dOid, dHash]});
             this.valueList = [seq];
         }
     }
@@ -272,11 +272,7 @@ YAHOO.lang.extend(KJUR.asn1.cades.SignaturePolicyIdentifier,
 
 /**
  * class for OtherHashAlgAndValue ASN.1 object
- * @name KJUR.asn1.cades.OtherHashAlgAndValue
- * @class class for OtherHashAlgAndValue ASN.1 object
- * @param {Array} params associative array of parameters
- * @extends KJUR.asn1.ASN1Object
- * @since jsrsasign 4.7.0 asn1cades 1.0.0
+ * @param {Object} params dictionary of parameters
  * @description
  * <pre>
  * OtherHashAlgAndValue ::= SEQUENCE {
@@ -286,31 +282,31 @@ YAHOO.lang.extend(KJUR.asn1.cades.SignaturePolicyIdentifier,
  * </pre>
  */
 KJUR.asn1.cades.OtherHashAlgAndValue = function(params) {
-    var _KJUR = KJUR,
-	_KJUR_asn1 = _KJUR.asn1,
-	_DERSequence = _KJUR_asn1.DERSequence,
-	_DEROctetString = _KJUR_asn1.DEROctetString,
-	_KJUR_asn1_x509 = _KJUR_asn1.x509,
-	_AlgorithmIdentifier = _KJUR_asn1_x509.AlgorithmIdentifier,
-	_KJUR_asn1_cades = _KJUR_asn1.cades,
-	_OtherHashAlgAndValue = _KJUR_asn1_cades.OtherHashAlgAndValue;
 
-    _OtherHashAlgAndValue.superclass.constructor.call(this);
+
+
+
+	KJUR.asn1.x509 = KJUR.asn1.x509,
+	AlgorithmIdentifier = AlgorithmIdentifier,
+	KJUR.asn1.cades = KJUR.asn1.cades,
+	OtherHashAlgAndValue = KJUR.asn1.cades.OtherHashAlgAndValue;
+
+    OtherHashAlgAndValue.superclass.constructor.call(this);
 
     this.dAlg = null;
     this.dHash = null;
 
     this.getEncodedHex = function() {
-        var seq = new _DERSequence({array: [this.dAlg, this.dHash]});
+        let seq = new DERSequence({array: [this.dAlg, this.dHash]});
         this.hTLV = seq.getEncodedHex();
         return this.hTLV;
     };
 
     if (params !== undefined) {
-        if (typeof params.alg == "string" &&
-            typeof params.hash == "string") {
-            this.dAlg = new _AlgorithmIdentifier({name: params.alg});
-            this.dHash = new _DEROctetString({hex: params.hash});
+        if (typeof params['alg'] == "string" &&
+            typeof params['hash'] == "string") {
+            this.dAlg = new AlgorithmIdentifier({name: params.alg});
+            this.dHash = new DEROctetString({hex: params.hash});
         }
     }
 };
@@ -318,11 +314,7 @@ YAHOO.lang.extend(KJUR.asn1.cades.OtherHashAlgAndValue, KJUR.asn1.ASN1Object);
 
 /**
  * class for RFC 5126 CAdES SignatureTimeStamp attribute
- * @name KJUR.asn1.cades.SignatureTimeStamp
- * @class class for RFC 5126 CAdES SignatureTimeStamp attribute
- * @param {Array} params associative array of parameters
- * @extends KJUR.asn1.cms.Attribute
- * @since jsrsasign 4.7.0 asn1cades 1.0.0
+ * @param {Object} params dictionary of parameters
  * @description
  * <pre>
  * id-aa-signatureTimeStampToken OBJECT IDENTIFIER ::=
@@ -331,34 +323,34 @@ YAHOO.lang.extend(KJUR.asn1.cades.OtherHashAlgAndValue, KJUR.asn1.ASN1Object);
  * </pre>
  */
 KJUR.asn1.cades.SignatureTimeStamp = function(params) {
-    var _KJUR = KJUR,
-	_KJUR_asn1 = _KJUR.asn1,
-	_ASN1Object = _KJUR_asn1.ASN1Object,
-	_KJUR_asn1_x509 = _KJUR_asn1.x509,
-	_KJUR_asn1_cades = _KJUR_asn1.cades;
 
-    _KJUR_asn1_cades.SignatureTimeStamp.superclass.constructor.call(this);
+
+	_ASN1Object = KJUR.asn1.ASN1Object,
+	KJUR.asn1.x509 = KJUR.asn1.x509,
+	KJUR.asn1.cades = KJUR.asn1.cades;
+
+    KJUR.asn1.cades.SignatureTimeStamp.superclass.constructor.call(this);
     this.attrTypeOid = "1.2.840.113549.1.9.16.2.14";
     this.tstHex = null;
 
     if (params !== undefined) {
-        if (params.res !== undefined) {
-            if (typeof params.res == "string" &&
+        if (params['res'] !== undefined) {
+            if (typeof params['res'] == "string" &&
                 params.res.match(/^[0-9A-Fa-f]+$/)) {
-            } else if (params.res instanceof _ASN1Object) {
+            } else if (params['res'] instanceof _ASN1Object) {
             } else {
                 throw "res param shall be ASN1Object or hex string";
             }
         }
-        if (params.tst !== undefined) {
-            if (typeof params.tst == "string" &&
+        if (params['tst'] !== undefined) {
+            if (typeof params['tst'] == "string" &&
                 params.tst.match(/^[0-9A-Fa-f]+$/)) {
-                var d = new _ASN1Object();
-                this.tstHex = params.tst;
+                let d = new _ASN1Object();
+                this.tstHex = params['tst'];
                 d.hTLV = this.tstHex;
                 d.getEncodedHex();
                 this.valueList = [d];
-            } else if (params.tst instanceof _ASN1Object) {
+            } else if (params['tst'] instanceof _ASN1Object) {
             } else {
                 throw "tst param shall be ASN1Object or hex string";
             }
@@ -370,11 +362,7 @@ YAHOO.lang.extend(KJUR.asn1.cades.SignatureTimeStamp,
 
 /**
  * class for RFC 5126 CAdES CompleteCertificateRefs attribute
- * @name KJUR.asn1.cades.CompleteCertificateRefs
- * @class class for RFC 5126 CAdES CompleteCertificateRefs attribute
- * @param {Array} params associative array of parameters
- * @extends KJUR.asn1.cms.Attribute
- * @since jsrsasign 4.7.0 asn1cades 1.0.0
+ * @param {Object} params dictionary of parameters
  * @description
  * <pre>
  * id-aa-ets-certificateRefs OBJECT IDENTIFIER = 
@@ -385,33 +373,30 @@ YAHOO.lang.extend(KJUR.asn1.cades.SignatureTimeStamp,
  * o = new KJUR.asn1.cades.CompleteCertificateRefs([certPEM1,certPEM2]);
  */
 KJUR.asn1.cades.CompleteCertificateRefs = function(params) {
-    var _KJUR = KJUR,
-	_KJUR_asn1 = _KJUR.asn1,
-	_KJUR_asn1_cades = _KJUR_asn1.cades;
 
-    _KJUR_asn1_cades.CompleteCertificateRefs.superclass.constructor.call(this);
+
+	KJUR.asn1.cades = KJUR.asn1.cades;
+
+    KJUR.asn1.cades.CompleteCertificateRefs.superclass.constructor.call(this);
     this.attrTypeOid = "1.2.840.113549.1.9.16.2.21";
 
     /**
      * set value by array
-     * @name setByArray
-     * @memberOf KJUR.asn1.cades.CompleteCertificateRefs
-     * @function
      * @param {Array} a array of {@link KJUR.asn1.cades.OtherCertID} argument
      * @return unspecified
      * @description
      */
     this.setByArray = function(a) {
         this.valueList = [];
-        for (var i = 0; i < a.length; i++) {
-            var o = new _KJUR_asn1_cades.OtherCertID(a[i]);
+        for (let i = 0; i < a.length; i++) {
+            let o = new KJUR.asn1.cades.OtherCertID(a[i]);
             this.valueList.push(o);
         }
     };
 
     if (params !== undefined) {
         if (typeof params == "object" &&
-            typeof params.length == "number") {
+            typeof params['length'] == "number") {
             this.setByArray(params);
         }
     }
@@ -421,11 +406,7 @@ YAHOO.lang.extend(KJUR.asn1.cades.CompleteCertificateRefs,
 
 /**
  * class for OtherCertID ASN.1 object
- * @name KJUR.asn1.cades.OtherCertID
- * @class class for OtherCertID ASN.1 object
- * @param {Array} params associative array of parameters
- * @extends KJUR.asn1.ASN1Object
- * @since jsrsasign 4.7.0 asn1cades 1.0.0
+ * @param {Object} params dictionary of parameters
  * @description
  * <pre>
  * OtherCertID ::= SEQUENCE {
@@ -437,12 +418,12 @@ YAHOO.lang.extend(KJUR.asn1.cades.CompleteCertificateRefs,
  * o = new KJUR.asn1.cades.OtherCertID({cert:certPEM, hasis: false});
  */
 KJUR.asn1.cades.OtherCertID = function(params) {
-    var _KJUR = KJUR,
-	_KJUR_asn1 = _KJUR.asn1,
-	_KJUR_asn1_cms = _KJUR_asn1.cms,
-	_KJUR_asn1_cades = _KJUR_asn1.cades;
 
-    _KJUR_asn1_cades.OtherCertID.superclass.constructor.call(this);
+
+	KJUR.asn1.cms = KJUR.asn1.cms,
+	KJUR.asn1.cades = KJUR.asn1.cades;
+
+    KJUR.asn1.cades.OtherCertID.superclass.constructor.call(this);
 
     this.hasIssuerSerial = true;
     this.dOtherCertHash = null;
@@ -450,10 +431,7 @@ KJUR.asn1.cades.OtherCertID = function(params) {
 
     /**
      * set value by PEM string of certificate
-     * @name setByCertPEM
-     * @memberOf KJUR.asn1.cades.OtherCertID
-     * @function
-     * @param {String} certPEM PEM string of certificate
+     * @param {string} certPEM PEM string of certificate
      * @return unspecified
      * @description
      * This method will set value by a PEM string of a certificate.
@@ -461,20 +439,20 @@ KJUR.asn1.cades.OtherCertID = function(params) {
      * which depends on hasIssuerSerial flag.
      */
     this.setByCertPEM = function(certPEM) {
-        this.dOtherCertHash = new _KJUR_asn1_cades.OtherHash(certPEM);
+        this.dOtherCertHash = new KJUR.asn1.cades.OtherHash(certPEM);
         if (this.hasIssuerSerial)
             this.dIssuerSerial = 
-	        new _KJUR_asn1_cms.IssuerAndSerialNumber(certPEM);
+	        new KJUR.asn1.cms.IssuerAndSerialNumber(certPEM);
     };
 
     this.getEncodedHex = function() {
         if (this.hTLV != null) return this.hTLV;
         if (this.dOtherCertHash == null)
             throw "otherCertHash not set";
-        var a = [this.dOtherCertHash];
+        let a = [this.dOtherCertHash];
         if (this.dIssuerSerial != null)
             a.push(this.dIssuerSerial);
-        var seq = new _KJUR_asn1.DERSequence({array: a});
+        let seq = new KJUR.asn1.DERSequence({array: a});
         this.hTLV = seq.getEncodedHex();
         return this.hTLV;
     };
@@ -485,10 +463,10 @@ KJUR.asn1.cades.OtherCertID = function(params) {
             this.setByCertPEM(params);
         }
         if (typeof params == "object") {
-            if (params.hasis === false)
+            if (params['hasis'] === false)
                 this.hasIssuerSerial = false;
-            if (typeof params.cert == "string")
-                this.setByCertPEM(params.cert);
+            if (typeof params['cert'] == "string")
+                this.setByCertPEM(params['cert']);
         }
     }
 };
@@ -496,11 +474,7 @@ YAHOO.lang.extend(KJUR.asn1.cades.OtherCertID, KJUR.asn1.ASN1Object);
 
 /**
  * class for OtherHash ASN.1 object
- * @name KJUR.asn1.cades.OtherHash
- * @class class for OtherHash ASN.1 object
- * @param {Array} params associative array of parameters
- * @extends KJUR.asn1.ASN1Object
- * @since jsrsasign 4.7.0 asn1cades 1.0.0
+ * @param {Object} params dictionary of parameters
  * @description
  * <pre>
  * OtherHash ::= CHOICE {
@@ -516,24 +490,21 @@ YAHOO.lang.extend(KJUR.asn1.cades.OtherCertID, KJUR.asn1.ASN1Object);
  * o = new KJUR.asn1.cades.OtherHash({cert: certPEM});
  */
 KJUR.asn1.cades.OtherHash = function(params) {
-    var _KJUR = KJUR,
-	_KJUR_asn1 = _KJUR.asn1,
-	_KJUR_asn1_cms = _KJUR_asn1.cms,
-	_KJUR_asn1_cades = _KJUR_asn1.cades,
-	_OtherHashAlgAndValue = _KJUR_asn1_cades.OtherHashAlgAndValue,
-	_hashHex = _KJUR.crypto.Util.hashHex;
 
-    _KJUR_asn1_cades.OtherHash.superclass.constructor.call(this);
+
+	KJUR.asn1.cms = KJUR.asn1.cms,
+	KJUR.asn1.cades = KJUR.asn1.cades,
+	OtherHashAlgAndValue = KJUR.asn1.cades.OtherHashAlgAndValue,
+	hashHex = hashHex;
+
+    KJUR.asn1.cades.OtherHash.superclass.constructor.call(this);
 
     this.alg = 'sha256';
     this.dOtherHash = null;
 
     /**
      * set value by PEM string of certificate
-     * @name setByCertPEM
-     * @memberOf KJUR.asn1.cades.OtherHash
-     * @function
-     * @param {String} certPEM PEM string of certificate
+     * @param {string} certPEM PEM string of certificate
      * @return unspecified
      * @description
      * This method will set value by a PEM string of a certificate.
@@ -543,10 +514,10 @@ KJUR.asn1.cades.OtherHash = function(params) {
     this.setByCertPEM = function(certPEM) {
         if (certPEM.indexOf("-----BEGIN ") == -1)
             throw "certPEM not to seem PEM format";
-        var hex = pemtohex(certPEM);
-        var hash = _hashHex(hex, this.alg);
+        let hex = pemtohex(certPEM);
+        let hash = hashHex(hex, this.alg);
         this.dOtherHash = 
-            new _OtherHashAlgAndValue({alg: this.alg, hash: hash});
+            new OtherHashAlgAndValue({alg: this.alg, hash: hash});
     };
 
     this.getEncodedHex = function() {
@@ -560,17 +531,17 @@ KJUR.asn1.cades.OtherHash = function(params) {
             if (params.indexOf("-----BEGIN ") != -1) {
                 this.setByCertPEM(params);
             } else if (params.match(/^[0-9A-Fa-f]+$/)) {
-                this.dOtherHash = new _KJUR_asn1.DEROctetString({hex: params});
+                this.dOtherHash = new KJUR.asn1.DEROctetString({hex: params});
             } else {
                 throw "unsupported string value for params";
             }
         } else if (typeof params == "object") {
-            if (typeof params.cert == "string") {
-                if (typeof params.alg == "string")
-                    this.alg = params.alg;
-                this.setByCertPEM(params.cert);
+            if (typeof params['cert'] == "string") {
+                if (typeof params['alg'] == "string")
+                    this.alg = params['alg'];
+                this.setByCertPEM(params['cert']);
             } else {
-                this.dOtherHash = new _OtherHashAlgAndValue(params);
+                this.dOtherHash = new OtherHashAlgAndValue(params);
             }
         }
     }
@@ -581,11 +552,7 @@ YAHOO.lang.extend(KJUR.asn1.cades.OtherHash, KJUR.asn1.ASN1Object);
 // == BEGIN UTILITIES =====================================================
 
 /**
- * CAdES utiliteis class
- * @name KJUR.asn1.cades.CAdESUtil
- * @class CAdES utilities class
- * @since jsrsasign 4.7.0 asn1cades 1.0.0
- */
+ * CAdES utiliteis class */
 KJUR.asn1.cades.CAdESUtil = new function() {
 };
 /*
@@ -595,10 +562,7 @@ KJUR.asn1.cades.CAdESUtil.addSigTS = function(dCMS, siIdx, sigTSHex) {
 };
 /**
  * parse CMS SignedData to add unsigned attributes
- * @name parseSignedDataForAddingUnsigned
- * @memberOf KJUR.asn1.cades.CAdESUtil
- * @function
- * @param {String} hex hexadecimal string of ContentInfo of CMS SignedData
+ * @param {string} hex hexadecimal string of ContentInfo of CMS SignedData
  * @return {Object} associative array of parsed data
  * @description
  * This method will parse a hexadecimal string of 
@@ -620,41 +584,41 @@ KJUR.asn1.cades.CAdESUtil.addSigTS = function(dCMS, siIdx, sigTSHex) {
  * sd = info.obj;
  */
 KJUR.asn1.cades.CAdESUtil.parseSignedDataForAddingUnsigned = function(hex) {
-    var _ASN1HEX = ASN1HEX,
+    let _ASN1HEX = ASN1HEX,
 	_getChildIdx = _ASN1HEX.getChildIdx,
 	_getTLV = _ASN1HEX.getTLV,
 	_getTLVbyList = _ASN1HEX.getTLVbyList,
 	_getIdxbyList = _ASN1HEX.getIdxbyList,
-	_KJUR = KJUR,
-	_KJUR_asn1 = _KJUR.asn1,
-	_ASN1Object = _KJUR_asn1.ASN1Object,
-	_KJUR_asn1_cms = _KJUR_asn1.cms,
-	_SignedData = _KJUR_asn1_cms.SignedData,
-	_KJUR_asn1_cades = _KJUR_asn1.cades,
-	_CAdESUtil = _KJUR_asn1_cades.CAdESUtil;
+	KJUR = KJUR,
+
+	_ASN1Object = KJUR.asn1.ASN1Object,
+	KJUR.asn1.cms = KJUR.asn1.cms,
+	_SignedData = KJUR.asn1.cms.SignedData,
+	KJUR.asn1.cades = KJUR.asn1.cades,
+	_CAdESUtil = KJUR.asn1.cades.CAdESUtil;
     
-    var r = {};
+    let r = {};
 
     // 1. not oid signed-data then error
     if (_getTLVbyList(hex, 0, [0]) != "06092a864886f70d010702")
         throw "hex is not CMS SignedData";
 
-    var iSD = _getIdxbyList(hex, 0, [1, 0]);
-    var aSDChildIdx = _getChildIdx(hex, iSD);
+    let iSD = _getIdxbyList(hex, 0, [1, 0]);
+    let aSDChildIdx = _getChildIdx(hex, iSD);
     if (aSDChildIdx.length < 4)
         throw "num of SignedData elem shall be 4 at least";
 
     // 2. HEXs of SignedData children
     // 2.1. SignedData.CMSVersion
-    var iVersion = aSDChildIdx.shift();
+    let iVersion = aSDChildIdx.shift();
     r.version = _getTLV(hex, iVersion);
 
     // 2.2. SignedData.DigestAlgorithms
-    var iAlgs = aSDChildIdx.shift();
+    let iAlgs = aSDChildIdx.shift();
     r.algs = _getTLV(hex, iAlgs);
 
     // 2.3. SignedData.EncapContentInfo
-    var iEncapContent = aSDChildIdx.shift();
+    let iEncapContent = aSDChildIdx.shift();
     r.encapcontent = _getTLV(hex, iEncapContent);
 
     // 2.4. [0]Certs 
@@ -662,7 +626,7 @@ KJUR.asn1.cades.CAdESUtil.parseSignedDataForAddingUnsigned = function(hex) {
     r.revs = null;
     r.si = [];
 
-    var iNext = aSDChildIdx.shift();
+    let iNext = aSDChildIdx.shift();
     if (hex.substr(iNext, 2) == "a0") {
         r.certs = _getTLV(hex, iNext);
         iNext = aSDChildIdx.shift();
@@ -675,21 +639,21 @@ KJUR.asn1.cades.CAdESUtil.parseSignedDataForAddingUnsigned = function(hex) {
     }
 
     // 2.6. SignerInfos
-    var iSignerInfos = iNext;
+    let iSignerInfos = iNext;
     if (hex.substr(iSignerInfos, 2) != "31")
         throw "Can't find signerInfos";
 
-    var aSIIndex = _getChildIdx(hex, iSignerInfos);
+    let aSIIndex = _getChildIdx(hex, iSignerInfos);
     //alert(aSIIndex.join("-"));
 
-    for (var i = 0; i < aSIIndex.length; i++) {
-        var iSI = aSIIndex[i];
-        var pSI = _CAdESUtil.parseSignerInfoForAddingUnsigned(hex, iSI, i);
+    for (let i = 0; i < aSIIndex.length; i++) {
+        let iSI = aSIIndex[i];
+        let pSI = _CAdESUtil.parseSignerInfoForAddingUnsigned(hex, iSI, i);
         r.si[i] = pSI;
     }
 
     // x. obj(SignedData)
-    var tmp = null;
+    let tmp = null;
     r.obj = new _SignedData();
 
     tmp = new _ASN1Object();
@@ -709,7 +673,7 @@ KJUR.asn1.cades.CAdESUtil.parseSignedDataForAddingUnsigned = function(hex) {
     r.obj.dCerts = tmp;
 
     r.obj.signerInfoList = [];
-    for (var i = 0; i < r.si.length; i++) {
+    for (let i = 0; i < r.si.length; i++) {
         r.obj.signerInfoList.push(r.si[i].obj);
     }
 
@@ -718,10 +682,7 @@ KJUR.asn1.cades.CAdESUtil.parseSignedDataForAddingUnsigned = function(hex) {
 
 /**
  * parse SignerInfo to add unsigned attributes
- * @name parseSignerInfoForAddingUnsigned
- * @memberOf KJUR.asn1.cades.CAdESUtil
- * @function
- * @param {String} hex hexadecimal string of SignerInfo
+ * @param {string} hex hexadecimal string of SignerInfo
  * @return {Object} associative array of parsed data
  * @description
  * This method will parse a hexadecimal string of 
@@ -744,51 +705,51 @@ KJUR.asn1.cades.CAdESUtil.parseSignedDataForAddingUnsigned = function(hex) {
  * for CAdES-T and not for CAdES-C.
  */
 KJUR.asn1.cades.CAdESUtil.parseSignerInfoForAddingUnsigned = function(hex, iSI, nth) {
-    var _ASN1HEX = ASN1HEX,
+    let _ASN1HEX = ASN1HEX,
 	_getChildIdx = _ASN1HEX.getChildIdx,
 	_getTLV = _ASN1HEX.getTLV,
 	_getV = _ASN1HEX.getV,
-	_KJUR = KJUR,
-	_KJUR_asn1 = _KJUR.asn1,
-	_ASN1Object = _KJUR_asn1.ASN1Object,
-	_KJUR_asn1_cms = _KJUR_asn1.cms,
-	_AttributeList = _KJUR_asn1_cms.AttributeList,
-	_SignerInfo = _KJUR_asn1_cms.SignerInfo;
+	KJUR = KJUR,
 
-    var r = {};
-    var aSIChildIdx = _getChildIdx(hex, iSI);
+	_ASN1Object = KJUR.asn1.ASN1Object,
+	KJUR.asn1.cms = KJUR.asn1.cms,
+	_AttributeList = KJUR.asn1.cms.AttributeList,
+	_SignerInfo = KJUR.asn1.cms.SignerInfo;
+
+    let r = {};
+    let aSIChildIdx = _getChildIdx(hex, iSI);
     //alert(aSIChildIdx.join("="));
 
     if (aSIChildIdx.length != 6)
         throw "not supported items for SignerInfo (!=6)"; 
 
     // 1. SignerInfo.CMSVersion
-    var iVersion = aSIChildIdx.shift();
+    let iVersion = aSIChildIdx.shift();
     r.version = _getTLV(hex, iVersion);
 
     // 2. SignerIdentifier(IssuerAndSerialNumber)
-    var iIdentifier = aSIChildIdx.shift();
+    let iIdentifier = aSIChildIdx.shift();
     r.si = _getTLV(hex, iIdentifier);
 
     // 3. DigestAlgorithm
-    var iDigestAlg = aSIChildIdx.shift();
+    let iDigestAlg = aSIChildIdx.shift();
     r.digalg = _getTLV(hex, iDigestAlg);
 
     // 4. SignedAttrs
-    var iSignedAttrs = aSIChildIdx.shift();
+    let iSignedAttrs = aSIChildIdx.shift();
     r.sattrs = _getTLV(hex, iSignedAttrs);
 
     // 5. SigAlg
-    var iSigAlg = aSIChildIdx.shift();
+    let iSigAlg = aSIChildIdx.shift();
     r.sigalg = _getTLV(hex, iSigAlg);
 
     // 6. Signature
-    var iSig = aSIChildIdx.shift();
+    let iSig = aSIChildIdx.shift();
     r.sig = _getTLV(hex, iSig);
     r.sigval = _getV(hex, iSig);
 
     // 7. obj(SignerInfo)
-    var tmp = null;
+    let tmp = null;
     r.obj = new _SignerInfo();
 
     tmp = new _ASN1Object();

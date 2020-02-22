@@ -1,9 +1,8 @@
-/* jwsjs-2.2.1 (c) 2010-2018 Kenji Urushima | kjur.github.com/jsrsasign/license
- */
 /*
  * jwsjs.js - JSON Web Signature JSON Serialization (JWSJS) Class
  *
- * Copyright (c) 2010-2018 Kenji Urushima (kenji.urushima@gmail.com)
+ * Original work Copyright (c) 2010-2018 Kenji Urushima (kenji.urushima@gmail.com)
+ * Modified work Copyright (c) 2020 Sergio Rando <sergio.rando@yahoo.com>
  *
  * This software is licensed under the terms of the MIT License.
  * https://kjur.github.io/jsrsasign/license/
@@ -12,12 +11,13 @@
  * included in all copies or substantial portions of the Software.
  */
 
+"use strict";
+
 /**
  * @fileOverview
  * @name jwsjs-2.0.js
  * @author Kenji Urushima kenji.urushima@gmail.com
  * @version jsrsasign 8.0.0 jwsjs 2.2.1 (2018-Mar-24)
- * @since jsjws 1.2, jsrsasign 4.8.0
  * @license <a href="https://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
 
@@ -29,7 +29,7 @@ if (typeof KJUR.jws == "undefined" || !KJUR.jws) KJUR.jws = {};
  * @class JSON Web Signature JSON Serialization (JWSJS) class
  * @name KJUR.jws.JWSJS
  * @property {array of String} aHeader array of Encoded JWS Headers
- * @property {String} sPayload Encoded JWS payload
+ * @property {string} sPayload Encoded JWS payload
  * @property {array of String} aSignature array of Encoded JWS signature value
  * @author Kenji Urushima
  * @version 2.1.0 (2016 Sep 6)
@@ -69,10 +69,10 @@ if (typeof KJUR.jws == "undefined" || !KJUR.jws) KJUR.jws = {};
  * 
  */
 KJUR.jws.JWSJS = function() {
-    var _KJUR = KJUR,
-	_KJUR_jws = _KJUR.jws,
-	_KJUR_jws_JWS = _KJUR_jws.JWS,
-	_readSafeJSONString = _KJUR_jws_JWS.readSafeJSONString;
+
+	KJUR.jws = KJUR.jws,
+	KJUR.jws.JWS = KJUR.jws.JWS,
+	_readSafeJSONString = KJUR.jws.JWS.readSafeJSONString;
 
     this.aHeader = [];
     this.sPayload = "";
@@ -81,9 +81,6 @@ KJUR.jws.JWSJS = function() {
     // == initialize ==========================================================
     /**
      * (re-)initialize this object.<br/>
-     * @name init
-     * @memberOf KJUR.jws.JWSJS#
-     * @function
      */
     this.init = function() {
 	this.aHeader = [];
@@ -93,18 +90,15 @@ KJUR.jws.JWSJS = function() {
 
     /**
      * (re-)initialize and set first signature with JWS.<br/>
-     * @name initWithJWS
-     * @memberOf KJUR.jws.JWSJS#
-     * @param {String} sJWS JWS signature to set
-     * @function
-     * @example
+     * @param {string} sJWS JWS signature to set
+         * @example
      * jwsjs1 = new KJUR.jws.JWSJWS();
      * jwsjs1.initWithJWS("eyJ...");
      */
     this.initWithJWS = function(sJWS) {
 	this.init();
 
-	var a = sJWS.split(".");
+	let a = sJWS.split(".");
 	if (a.length != 3)
 	    throw "malformed input JWS";
 
@@ -116,13 +110,10 @@ KJUR.jws.JWSJS = function() {
     // == add signature =======================================================
     /**
      * add a signature to existing JWS-JS by algorithm, header and key.<br/>
-     * @name addSignature
-     * @memberOf KJUR.jws.JWSJS#
-     * @function
-     * @param {String} alg JWS algorithm. If null, alg in header will be used.
+     * @param {string} alg JWS algorithm. If null, alg in header will be used.
      * @param {Object} spHead string or object of JWS Header to add.
      * @param {Object} key JWS key to sign. key object, PEM private key or HMAC key
-     * @param {String} pass optional password for encrypted PEM private key
+     * @param {string} pass optional password for encrypted PEM private key
      * @throw if signature append failed.
      * @example
      * // initialize
@@ -143,15 +134,15 @@ KJUR.jws.JWSJS = function() {
 	if (this.sPayload === undefined || this.sPayload === null)
 	    throw "there's no JSON-JS signature to add.";
 
-	var sigLen = this.aHeader.length;
+	let sigLen = this.aHeader.length;
 	if (this.aHeader.length != this.aSignature.length)
 	    throw "aHeader.length != aSignature.length";
 
 	try {
-	    var sJWS = KJUR.jws.JWS.sign(alg, spHead, this.sPayload, key, pass);
-	    var a = sJWS.split(".");
-	    var sHeader2 = a[0];
-	    var sSignature2 = a[2];
+	    let sJWS = KJUR.jws.JWS.sign(alg, spHead, this.sPayload, key, pass);
+	    let a = sJWS.split(".");
+	    let sHeader2 = a[0];
+	    let sSignature2 = a[2];
 	    this.aHeader.push(a[0]);
 	    this.aSignature.push(a[2]);
 	} catch(ex) {
@@ -164,12 +155,8 @@ KJUR.jws.JWSJS = function() {
     // == verify signature ====================================================
     /**
      * verify all signature of JWS-JS object by array of key and acceptAlgs.<br/>
-     * @name verifyAll
-     * @memberOf KJUR.jws.JWSJS#
-     * @function
      * @param {array of key and acceptAlgs} aKeyAlg a array of key and acceptAlgs
      * @return true if all signatures are valid otherwise false
-     * @since jwsjs 2.1.0 jsrsasign 5.1.0
      * @example
      * jwsjs1 = new KJUR.jws.JWSJS();
      * jwsjs1.readJWSJS("{headers: [...], payload: "eyJ...", signatures: [...]}");
@@ -181,10 +168,10 @@ KJUR.jws.JWSJS = function() {
 	    this.aSignature.length !== aKeyAlg.length)
 	    return false;
 
-	for (var i = 0; i < aKeyAlg.length; i++) {
-	    var keyAlg = aKeyAlg[i];
+	for (let i = 0; i < aKeyAlg.length; i++) {
+	    let keyAlg = aKeyAlg[i];
 	    if (keyAlg.length  !== 2) return false;
-	    var result = this.verifyNth(i, keyAlg[0], keyAlg[1]);
+	    let result = this.verifyNth(i, keyAlg[0], keyAlg[1]);
 	    if (result === false) return false;
 	}
 	return true;
@@ -192,14 +179,10 @@ KJUR.jws.JWSJS = function() {
 
     /**
      * verify Nth signature of JWS-JS object by key and acceptAlgs.<br/>
-     * @name verifyNth
-     * @memberOf KJUR.jws.JWSJS#
-     * @function
-     * @param {Integer} idx nth index of JWS-JS signature to verify
+     * @param {number} idx nth index of JWS-JS signature to verify
      * @param {Object} key key to verify
      * @param {array of String} acceptAlgs array of acceptable signature algorithms
      * @return true if signature is valid otherwise false
-     * @since jwsjs 2.1.0 jsrsasign 5.1.0
      * @example
      * jwsjs1 = new KJUR.jws.JWSJS();
      * jwsjs1.readJWSJS("{headers: [...], payload: "eyJ...", signatures: [...]}");
@@ -209,12 +192,12 @@ KJUR.jws.JWSJS = function() {
     this.verifyNth = function(idx, key, acceptAlgs) {
 	if (this.aHeader.length <= idx || this.aSignature.length <= idx)
 	    return false;
-	var sHeader = this.aHeader[idx];
-	var sSignature = this.aSignature[idx];
-	var sJWS = sHeader + "." + this.sPayload + "." + sSignature;
-	var result = false;
+	let sHeader = this.aHeader[idx];
+	let sSignature = this.aSignature[idx];
+	let sJWS = sHeader + "." + this.sPayload + "." + sSignature;
+	let result = false;
 	try {
-	    result = _KJUR_jws_JWS.verify(sJWS, key, acceptAlgs);
+	    result = KJUR.jws.JWS.verify(sJWS, key, acceptAlgs);
 	} catch (ex) {
 	    return false;
 	}
@@ -223,9 +206,6 @@ KJUR.jws.JWSJS = function() {
 
     /**
      * read JWS-JS string or object<br/>
-     * @name readJWSJS
-     * @memberOf KJUR.jws.JWSJS#
-     * @function
      * @param {Object} spJWSJS string or JSON object of JWS-JS to load.
      * @throw if sJWSJS is malformed or not JSON string.
      * @description
@@ -242,7 +222,7 @@ KJUR.jws.JWSJS = function() {
      */
     this.readJWSJS = function(spJWSJS) {
 	if (typeof spJWSJS === "string") {
-	    var oJWSJS = _readSafeJSONString(spJWSJS);
+	    let oJWSJS = _readSafeJSONString(spJWSJS);
 	    if (oJWSJS == null) throw "argument is not safe JSON object string";
 
 	    this.aHeader = oJWSJS.headers;
@@ -274,9 +254,6 @@ KJUR.jws.JWSJS = function() {
     // == utility =============================================================
     /**
      * get JSON object for this JWS-JS object.<br/>
-     * @name getJSON
-     * @memberOf KJUR.jws.JWSJS#
-     * @function
      * @example
      * jwsj1 = new KJUR.jws.JWSJS();
      * // do some jwsj1 operation then get result by getJSON()
@@ -291,9 +268,6 @@ KJUR.jws.JWSJS = function() {
 
     /**
      * check if this JWS-JS object is empty.<br/>
-     * @name isEmpty
-     * @memberOf KJUR.jws.JWSJS#
-     * @function
      * @return 1 if there is no signatures in this object, otherwise 0.
      */
     this.isEmpty = function() {

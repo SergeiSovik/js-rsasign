@@ -19,7 +19,7 @@ $(error Use make only inside Project dir, submake requires variable imports)
 endif
 
 # List of Libraries to include
-LIB_LIST=js-bn
+LIB_LIST=js-bn js-crypto
 
 # Main entry point
 # This file executed after all modules
@@ -37,24 +37,27 @@ endef
 
 # List of excluded modules
 define EXCLUDES
-	modules/asn1cades-1.0.js
-	modules/asn1cms-1.0.js
-	modules/asn1csr-1.0.js
-	modules/asn1hex-1.1.js
-	modules/asn1ocsp-1.0.js
-	modules/asn1tsp-1.0.js
-	modules/asn1x509-1.0.js
-	modules/crypto-1.1.js
-	modules/dsa-2.0.js
-	modules/ecdsa-modified-1.0.js
-	modules/ecparam-1.0.js
-	modules/jws-3.3.js
-	modules/jwsjs-2.0.js
-	modules/keyutil-1.0.js
-	modules/nodeutil-1.0.js
-	modules/rsapem-1.1.js
-	modules/rsasign-1.2.js
-	modules/x509-1.1.js
+	globals/asn1cades-1.0.js
+	globals/asn1cms-1.0.js
+	globals/asn1csr-1.0.js
+	globals/asn1hex-1.1.js
+	globals/asn1ocsp-1.0.js
+	globals/asn1tsp-1.0.js
+	globals/asn1x509-1.0.js
+	globals/crypto-1.1.js
+	globals/dsa-2.0.js
+	globals/ecdsa-modified-1.0.js
+	globals/ecparam-1.0.js
+	globals/jws-3.3.js
+	globals/jwsjs-2.0.js
+	globals/keyutil-1.0.js
+	globals/nodeutil-1.0.js
+	globals/rsapem-1.1.js
+	globals/rsasign-1.2.js
+	globals/x509-1.1.js
+	globals/ec-patch.js
+	globals/ecdsa-modified-1.0.js
+	globals/rsaex.js
 endef
 
 # Detect Current Dir Name (js-example)

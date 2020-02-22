@@ -1,6 +1,8 @@
 /*
  * base64x.js - Base64url and supplementary functions for Tom Wu's base64.js library
  *
+ * version: 1.1.14 (2018-Apr-21)
+ *
  * Original work Copyright (c) 2012-2018 Kenji Urushima (kenji.urushima@gmail.com)
  * Modified work Copyright (c) 2020 Sergio Rando <sergio.rando@yahoo.com>
  *
@@ -15,15 +17,29 @@
 
 import { hex2b64, b64toBA, b64tohex } from "./../../js-bn/modules/base64.js"
 
-// ==== string / byte array ================================
+/**
+ * <br/>
+ * This module provides static methods for string utility.
+ * <dl>
+ * <dt><b>STRING TYPE CHECKERS</b>
+ * <dd>
+ * <ul>
+ * <li>{@link isInteger} - check whether argument is an integer</li>
+ * <li>{@link isHex} - check whether argument is a hexadecimal string</li>
+ * <li>{@link isBase64} - check whether argument is a Base64 encoded string</li>
+ * <li>{@link isBase64URL} - check whether argument is a Base64URL encoded string</li>
+ * <li>{@link isIntegerArray} - check whether argument is an array of integers</li>
+ * </ul>
+ * </dl>
+ */
+
 /**
  * convert a string to an array of character codes
- * @name stoBA
  * @param {string} s
  * @return {Array<number>} 
  */
 export function stoBA(s) {
-	let a = new Array();
+	/** @type {Array<number>} */ let a = new Array();
 	for (let i = 0; i < s.length; i++) {
 		a[i] = s.charCodeAt(i);
 	}
@@ -32,7 +48,6 @@ export function stoBA(s) {
 
 /**
  * convert an array of character codes to a string
- * @name BAtos
  * @param {Array<number>} a array of character codes
  * @return {string} s
  */
@@ -44,10 +59,8 @@ export function BAtos(a) {
 	return s;
 }
 
-// ==== byte array / hex ================================
 /**
  * convert an array of bytes(Number) to hexadecimal string.<br/>
- * @name BAtohex
  * @param {Array<number>} a array of bytes
  * @return {string} hexadecimal string
  */
@@ -61,11 +74,9 @@ export function BAtohex(a) {
 	return s;
 }
 
-// ==== string / hex ================================
 /**
  * convert a ASCII string to a hexadecimal string of ASCII codes.<br/>
  * NOTE: This can't be used for non ASCII characters.
- * @name stohex
  * @param {string} s ASCII string
  * @return {string} hexadecimal string
  */
@@ -73,11 +84,9 @@ export function stohex(s) {
 	return BAtohex(stoBA(s));
 }
 
-// ==== string / base64 ================================
 /**
  * convert a ASCII string to a Base64 encoded string.<br/>
  * NOTE: This can't be used for non ASCII characters.
- * @name stob64
  * @param {string} s ASCII string
  * @return {string} Base64 encoded string
  */
@@ -85,11 +94,9 @@ export function stob64(s) {
 	return hex2b64(stohex(s));
 }
 
-// ==== string / base64url ================================
 /**
  * convert a ASCII string to a Base64URL encoded string.<br/>
  * NOTE: This can't be used for non ASCII characters.
- * @name stob64u
  * @param {string} s ASCII string
  * @return {string} Base64URL encoded string
  */
@@ -100,7 +107,6 @@ export function stob64u(s) {
 /**
  * convert a Base64URL encoded string to a ASCII string.<br/>
  * NOTE: This can't be used for Base64URL encoded non ASCII characters.
- * @name b64utos
  * @param {string} s Base64URL encoded string
  * @return {string} ASCII string
  */
@@ -108,10 +114,8 @@ export function b64utos(s) {
 	return BAtos(b64toBA(b64utob64(s)));
 }
 
-// ==== base64 / base64url ================================
 /**
  * convert a Base64 encoded string to a Base64URL encoded string.<br/>
- * @name b64tob64u
  * @param {string} s Base64 encoded string
  * @return {string} Base64URL encoded string
  * @example
@@ -126,7 +130,6 @@ export function b64tob64u(s) {
 
 /**
  * convert a Base64URL encoded string to a Base64 encoded string.<br/>
- * @name b64utob64
  * @param {string} s Base64URL encoded string
  * @return {string} Base64 encoded string
  * @example
@@ -140,10 +143,8 @@ export function b64utob64(s) {
 	return s;
 }
 
-// ==== hex / base64url ================================
 /**
  * convert a hexadecimal string to a Base64URL encoded string.<br/>
- * @name hextob64u
  * @param {string} s hexadecimal string
  * @return {string} Base64URL encoded string
  * @description
@@ -158,7 +159,6 @@ export function hextob64u(s) {
 
 /**
  * convert a Base64URL encoded string to a hexadecimal string.<br/>
- * @name b64utohex
  * @param {string} s Base64URL encoded string
  * @return {string} hexadecimal string
  */
@@ -166,14 +166,10 @@ export function b64utohex(s) {
 	return b64tohex(b64utob64(s));
 }
 
-// ==== utf8 / base64url ================================
-
 /**
  * convert a UTF-8 encoded string including CJK or Latin to a Base64URL encoded string.<br/>
- * @name utf8tob64u
  * @param {string} s UTF-8 encoded string
  * @return {string} Base64URL encoded string
- * @since 1.1
  */
 export let utf8tob64u = (typeof Buffer === 'function') ?
 	function (s) {
@@ -184,11 +180,8 @@ export let utf8tob64u = (typeof Buffer === 'function') ?
 
 /**
  * convert a Base64URL encoded string to a UTF-8 encoded string including CJK or Latin.<br/>
- * @name b64utoutf8
- * @function
  * @param {string} s Base64URL encoded string
  * @return {string} UTF-8 encoded string
- * @since 1.1
  */
 export let b64utoutf8 = (typeof Buffer === 'function') ?
 	function (s) {
@@ -197,13 +190,10 @@ export let b64utoutf8 = (typeof Buffer === 'function') ?
 		return decodeURIComponent(hextouricmp(b64utohex(s)));
 	};
 
-// ==== utf8 / base64url ================================
 /**
  * convert a UTF-8 encoded string including CJK or Latin to a Base64 encoded string.<br/>
- * @name utf8tob64
  * @param {string} s UTF-8 encoded string
  * @return {string} Base64 encoded string
- * @since 1.1.1
  */
 export function utf8tob64(s) {
 	return hex2b64(uricmptohex(encodeURIComponentAll(s)));
@@ -211,23 +201,17 @@ export function utf8tob64(s) {
 
 /**
  * convert a Base64 encoded string to a UTF-8 encoded string including CJK or Latin.<br/>
- * @name b64toutf8
- * @function
  * @param {string} s Base64 encoded string
  * @return {string} UTF-8 encoded string
- * @since 1.1.1
  */
 export function b64toutf8(s) {
 	return decodeURIComponent(hextouricmp(b64tohex(s)));
 }
 
-// ==== utf8 / hex ================================
 /**
  * convert a UTF-8 encoded string including CJK or Latin to a hexadecimal encoded string.<br/>
- * @name utf8tohex
  * @param {string} s UTF-8 encoded string
  * @return {string} hexadecimal encoded string
- * @since 1.1.1
  */
 export function utf8tohex(s) {
 	return uricmptohex(encodeURIComponentAll(s));
@@ -237,10 +221,8 @@ export function utf8tohex(s) {
  * convert a hexadecimal encoded string to a UTF-8 encoded string including CJK or Latin.<br/>
  * Note that when input is improper hexadecimal string as UTF-8 string, this function returns
  * 'null'.
- * @name hextoutf8
  * @param {string} s hexadecimal encoded string
  * @return {string} UTF-8 encoded string or null
- * @since 1.1.1
  */
 export function hextoutf8(s) {
 	return decodeURIComponent(hextouricmp(s));
@@ -248,10 +230,8 @@ export function hextoutf8(s) {
 
 /**
  * convert a hexadecimal encoded string to raw string including non printable characters.<br/>
- * @name hextorstr
  * @param {string} sHex hexadecimal encoded string
  * @return {string} raw string
- * @since 1.1.2
  * @example
  * hextorstr("610061") &rarr; "a\x00a"
  */
@@ -265,10 +245,8 @@ export function hextorstr(sHex) {
 
 /**
  * convert a raw string including non printable characters to hexadecimal encoded string.<br/>
- * @name rstrtohex
  * @param {string} s raw string
  * @return {string} hexadecimal encoded string
- * @since 1.1.2
  * @example
  * rstrtohex("a\x00a") &rarr; "610061"
  */
@@ -280,14 +258,10 @@ export function rstrtohex(s) {
 	return result;
 }
 
-// ==== hex / b64nl =======================================
-
 /**
  * convert a hexadecimal string to Base64 encoded string<br/>
- * @name hextob64
  * @param {string} s hexadecimal string
  * @return {string} resulted Base64 encoded string
- * @since base64x 1.1.3
  * @description
  * This function converts from a hexadecimal string to Base64 encoded
  * string without new lines.
@@ -300,10 +274,8 @@ export function hextob64(s) {
 
 /**
  * convert a hexadecimal string to Base64 encoded string with new lines<br/>
- * @name hextob64nl
  * @param {string} s hexadecimal string
  * @return {string} resulted Base64 encoded string with new lines
- * @since base64x 1.1.3
  * @description
  * This function converts from a hexadecimal string to Base64 encoded
  * string with new lines for each 64 characters. This is useful for
@@ -323,10 +295,8 @@ export function hextob64nl(s) {
 
 /**
  * convert a Base64 encoded string with new lines to a hexadecimal string<br/>
- * @name b64nltohex
  * @param {string} s Base64 encoded string with new lines
  * @return {string} hexadecimal string
- * @since base64x 1.1.3
  * @description
  * This function converts from a Base64 encoded
  * string with new lines to a hexadecimal string.
@@ -346,15 +316,11 @@ export function b64nltohex(s) {
 	return hex;
 }
 
-// ==== hex / pem =========================================
-
 /**
  * get PEM string from hexadecimal data and header string
- * @name hextopem
  * @param {string} dataHex hexadecimal string of PEM body
  * @param {string} pemHeader PEM header string (ex. 'RSA PRIVATE KEY')
  * @return {string} PEM formatted string of input data
- * @since jsrasign 7.2.1 base64x 1.1.12
  * @description
  * This function converts a hexadecimal string to a PEM string with
  * a specified header. Its line break will be CRLF("\r\n").
@@ -373,11 +339,9 @@ export function hextopem(dataHex, pemHeader) {
 
 /**
  * get hexacedimal string from PEM format data<br/>
- * @name pemtohex
  * @param {string} s PEM formatted string
  * @param {string} sHead PEM header string without BEGIN/END(OPTION)
  * @return {string} hexadecimal string data of PEM contents
- * @since jsrsasign 7.2.1 base64x 1.1.12
  * @description
  * This static method gets a hexacedimal string of contents 
  * from PEM format data. You can explicitly specify PEM header 
@@ -406,14 +370,10 @@ export function pemtohex(s, sHead) {
 	return b64nltohex(s);
 }
 
-// ==== hex / ArrayBuffer =================================
-
 /**
  * convert a hexadecimal string to an ArrayBuffer<br/>
- * @name hextoArrayBuffer
  * @param {string} hex hexadecimal string
  * @return {ArrayBuffer} ArrayBuffer
- * @since jsrsasign 6.1.4 base64x 1.1.8
  * @description
  * This function converts from a hexadecimal string to an ArrayBuffer.
  * @example
@@ -433,14 +393,10 @@ export function hextoArrayBuffer(hex) {
 	return buffer;
 }
 
-// ==== ArrayBuffer / hex =================================
-
 /**
  * convert an ArrayBuffer to a hexadecimal string<br/>
- * @name ArrayBuffertohex
  * @param {ArrayBuffer} buffer ArrayBuffer
  * @return {string} hexadecimal string
- * @since jsrsasign 6.1.4 base64x 1.1.8
  * @description
  * This function converts from an ArrayBuffer to a hexadecimal string.
  * @example
@@ -462,13 +418,10 @@ export function ArrayBuffertohex(buffer) {
 	return hex;
 }
 
-// ==== zulu / int =================================
 /**
  * GeneralizedTime or UTCTime string to milliseconds from Unix origin<br>
- * @name zulutomsec
  * @param {string} s GeneralizedTime or UTCTime string (ex. 20170412235959.384Z)
  * @return {number} milliseconds from Unix origin time (i.e. Jan 1, 1970 0:00:00 UTC)
- * @since jsrsasign 7.1.3 base64x 1.1.9
  * @description
  * This function converts from GeneralizedTime string (i.e. YYYYMMDDHHmmSSZ) or
  * UTCTime string (i.e. YYMMDDHHmmSSZ) to milliseconds from Unix origin time
@@ -519,10 +472,8 @@ export function zulutomsec(s) {
 
 /**
  * GeneralizedTime or UTCTime string to seconds from Unix origin<br>
- * @name zulutosec
  * @param {string} s GeneralizedTime or UTCTime string (ex. 20170412235959.384Z)
  * @return {number} seconds from Unix origin time (i.e. Jan 1, 1970 0:00:00 UTC)
- * @since jsrsasign 7.1.3 base64x 1.1.9
  * @description
  * This function converts from GeneralizedTime string (i.e. YYYYMMDDHHmmSSZ) or
  * UTCTime string (i.e. YYMMDDHHmmSSZ) to seconds from Unix origin time
@@ -540,14 +491,10 @@ export function zulutosec(s) {
 	return ~~(msec / 1000);
 }
 
-// ==== zulu / Date =================================
-
 /**
  * GeneralizedTime or UTCTime string to Date object<br>
- * @name zulutodate
  * @param {string} s GeneralizedTime or UTCTime string (ex. 20170412235959.384Z)
  * @return {Date} Date object for specified time
- * @since jsrsasign 7.1.3 base64x 1.1.9
  * @description
  * This function converts from GeneralizedTime string (i.e. YYYYMMDDHHmmSSZ) or
  * UTCTime string (i.e. YYMMDDHHmmSSZ) to Date object.
@@ -565,16 +512,12 @@ export function zulutodate(s) {
 	return new Date(zulutomsec(s));
 }
 
-// ==== Date / zulu =================================
-
 /**
  * Date object to zulu time string<br>
- * @name datetozulu
  * @param {Date} d Date object for specified time
  * @param {boolean} flagUTCTime if this is true year will be YY otherwise YYYY
  * @param {boolean} flagMilli if this is true result concludes milliseconds
  * @return {string} GeneralizedTime or UTCTime string (ex. 20170412235959.384Z)
- * @since jsrsasign 7.2.0 base64x 1.1.11
  * @description
  * This function converts from Date object to GeneralizedTime string (i.e. YYYYMMDDHHmmSSZ) or
  * UTCTime string (i.e. YYMMDDHHmmSSZ).
@@ -615,13 +558,10 @@ export function datetozulu(d, flagUTCTime, flagMilli) {
 	return s;
 }
 
-// ==== URIComponent / hex ================================
 /**
  * convert a URLComponent string such like "%67%68" to a hexadecimal string.<br/>
- * @name uricmptohex
  * @param {string} s URIComponent string such like "%67%68"
  * @return {string} hexadecimal string
- * @since 1.1
  */
 export function uricmptohex(s) {
 	return s.replace(/%/g, "");
@@ -629,26 +569,20 @@ export function uricmptohex(s) {
 
 /**
  * convert a hexadecimal string to a URLComponent string such like "%67%68".<br/>
- * @name hextouricmp
  * @param {string} s hexadecimal string
  * @return {string} URIComponent string such like "%67%68"
- * @since 1.1
  */
 export function hextouricmp(s) {
 	return s.replace(/(..)/g, "%$1");
 }
 
-// ==== hex / ipv6 =================================
-
 /**
  * convert any IPv6 address to a 16 byte hexadecimal string
- * @param {string} s string of IPv6 address
+ * @param s string of IPv6 address
  * @return {string} 16 byte hexadecimal string of IPv6 address
  * @description
  * This function converts any IPv6 address representation string
  * to a 16 byte hexadecimal string of address.
- * @example
- * 
  */
 export function ipv6tohex(s) {
 	let msgMalformedAddress = "malformed IPv6 address";
@@ -675,10 +609,8 @@ export function ipv6tohex(s) {
 
 /**
  * convert a 16 byte hexadecimal string to RFC 5952 canonicalized IPv6 address<br/>
- * @name hextoipv6
  * @param {string} s hexadecimal string of 16 byte IPv6 address
  * @return {string} IPv6 address string canonicalized by RFC 5952
- * @since jsrsasign 8.0.10 base64x 1.1.13
  * @description
  * This function converts a 16 byte hexadecimal string to 
  * <a href="https://tools.ietf.org/html/rfc5952">RFC 5952</a>
@@ -722,14 +654,10 @@ export function hextoipv6(s) {
 	return s.slice(1, -1);
 }
 
-// ==== hex / ip =================================
-
 /**
  * convert a hexadecimal string to IP addresss<br/>
- * @name hextoip
  * @param {string} s hexadecimal string of IP address
  * @return {string} IP address string
- * @since jsrsasign 8.0.10 base64x 1.1.13
  * @description
  * This function converts a hexadecimal string of IPv4 or 
  * IPv6 address to IPv4 or IPv6 address string.
@@ -766,10 +694,8 @@ export function hextoip(s) {
 
 /**
  * convert IPv4/v6 addresss to a hexadecimal string<br/>
- * @name iptohex
  * @param {string} s IPv4/v6 address string
  * @return {string} hexadecimal string of IP address
- * @since jsrsasign 8.0.12 base64x 1.1.14
  * @description
  * This function converts IPv4 or IPv6 address string to
  * a hexadecimal string of IPv4 or IPv6 address.
@@ -802,17 +728,14 @@ export function iptohex(s) {
 	}
 }
 
-// ==== URIComponent ================================
 /**
  * convert UTFa hexadecimal string to a URLComponent string such like "%67%68".<br/>
  * Note that these "<code>0-9A-Za-z!'()*-._~</code>" characters will not
  * converted to "%xx" format by builtin 'encodeURIComponent()' function.
  * However this 'encodeURIComponentAll()' function will convert 
  * all of characters into "%xx" format.
- * @name encodeURIComponentAll
  * @param {string} u8 hexadecimal string
  * @return {string} URIComponent string such like "%67%68"
- * @since 1.1
  */
 export function encodeURIComponentAll(u8) {
 	let s = encodeURIComponent(u8);
@@ -828,11 +751,9 @@ export function encodeURIComponentAll(u8) {
 	return s2;
 }
 
-// ==== new lines ================================
 /**
  * convert all DOS new line("\r\n") to UNIX new line("\n") in 
  * a String "s".
- * @name newline_toUnix
  * @param {string} s string 
  * @return {string} converted string
  */
@@ -844,7 +765,6 @@ export function newline_toUnix(s) {
 /**
  * convert all UNIX new line("\r\n") to DOS new line("\n") in 
  * a String "s".
- * @name newline_toDos
  * @param {string} s string 
  * @return {string} converted string
  */
@@ -854,14 +774,10 @@ export function newline_toDos(s) {
 	return s;
 }
 
-// ==== string type checker ===================
-
 /**
  * check whether a string is an integer string or not<br/>
- * @name isInteger
  * @param {string} s input string
  * @return {boolean} true if a string "s" is an integer string otherwise false
- * @since base64x 1.1.7 jsrsasign 5.0.13
  * @example
  * isInteger("12345") &rarr; true
  * isInteger("123ab") &rarr; false
@@ -878,10 +794,8 @@ export function isInteger(s) {
 
 /**
  * check whether a string is an hexadecimal string or not<br/>
- * @name isHex
  * @param {string} s input string
  * @return {boolean} true if a string "s" is an hexadecimal string otherwise false
- * @since base64x 1.1.7 jsrsasign 5.0.13
  * @example
  * isHex("1234") &rarr; true
  * isHex("12ab") &rarr; true
@@ -890,7 +804,8 @@ export function isInteger(s) {
  * isHex("121") &rarr; false -- odd length
  */
 export function isHex(s) {
-	if (s.length % 2 == 0 && (s.match(/^[0-9a-f]+$/) || s.match(/^[0-9A-F]+$/))) {
+	if (s.length % 2 == 0 &&
+		(s.match(/^[0-9a-f]+$/) || s.match(/^[0-9A-F]+$/))) {
 		return true;
 	} else {
 		return false;
@@ -900,10 +815,8 @@ export function isHex(s) {
 /**
  * check whether a string is a base64 encoded string or not<br/>
  * Input string can conclude new lines or space characters.
- * @name isBase64
  * @param {string} s input string
  * @return {boolean} true if a string "s" is a base64 encoded string otherwise false
- * @since base64x 1.1.7 jsrsasign 5.0.13
  * @example
  * isBase64("YWE=") &rarr; true
  * isBase64("YW_=") &rarr; false
@@ -921,10 +834,8 @@ export function isBase64(s) {
 /**
  * check whether a string is a base64url encoded string or not<br/>
  * Input string can conclude new lines or space characters.
- * @name isBase64URL
  * @param {string} s input string
  * @return {boolean} true if a string "s" is a base64url encoded string otherwise false
- * @since base64x 1.1.7 jsrsasign 5.0.13
  * @example
  * isBase64URL("YWE") &rarr; true
  * isBase64URL("YW-") &rarr; true
@@ -939,10 +850,8 @@ export function isBase64URL(s) {
 /**
  * check whether a string is a string of integer array or not<br/>
  * Input string can conclude new lines or space characters.
- * @name isIntegerArray
  * @param {string} s input string
  * @return {boolean} true if a string "s" is a string of integer array otherwise false
- * @since base64x 1.1.7 jsrsasign 5.0.13
  * @example
  * isIntegerArray("[1,2,3]") &rarr; true
  * isIntegerArray("  [1, 2, 3  ] ") &rarr; true
@@ -957,14 +866,10 @@ export function isIntegerArray(s) {
 	}
 }
 
-// ==== others ================================
-
 /**
  * canonicalize hexadecimal string of positive integer<br/>
- * @name hextoposhex
  * @param {string} s hexadecimal string 
  * @return {string} canonicalized hexadecimal string of positive integer
- * @since base64x 1.1.10 jsrsasign 7.1.4
  * @description
  * This method canonicalize a hexadecimal string of positive integer
  * for two's complement representation.
@@ -988,10 +893,8 @@ export function hextoposhex(s) {
 
 /**
  * convert string of integer array to hexadecimal string.<br/>
- * @name intarystrtohex
  * @param {string} s string of integer array
  * @return {string} hexadecimal string
- * @since base64x 1.1.6 jsrsasign 5.0.2
  * @throws "malformed integer array string: *" for wrong input
  * @description
  * This function converts a string of JavaScript integer array to
@@ -1022,11 +925,9 @@ export function intarystrtohex(s) {
 
 /**
  * find index of string where two string differs
- * @name strdiffidx
  * @param {string} s1 string to compare
  * @param {string} s2 string to compare
  * @return {number} string index of where character differs. Return -1 if same.
- * @since jsrsasign 4.9.0 base64x 1.1.5
  * @example
  * strdiffidx("abcdefg", "abcd4fg") -> 4
  * strdiffidx("abcdefg", "abcdefg") -> -1

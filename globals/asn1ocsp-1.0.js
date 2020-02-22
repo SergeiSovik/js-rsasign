@@ -1,9 +1,8 @@
-/* asn1ocsp-1.0.3.js (c) 2016 Kenji Urushima | kjur.github.com/jsrsasign/license
- */
 /*
  * asn1ocsp.js - ASN.1 DER encoder classes for OCSP protocol
  *
- * Copyright (c) 2016-2017 Kenji Urushima (kenji.urushima@gmail.com)
+ * Original work Copyright (c) 2016-2017 Kenji Urushima (kenji.urushima@gmail.com)
+ * Modified work Copyright (c) 2020 Sergio Rando <sergio.rando@yahoo.com>
  *
  * This software is licensed under the terms of the MIT License.
  * https://kjur.github.io/jsrsasign/license
@@ -12,12 +11,17 @@
  * included in all copies or substantial portions of the Software.
  */
 
+"use strict";
+
+import { DERInteger, DEROctetString, DERSequence } from "./asn1-1.0.js"
+import { AlgorithmIdentifier } from "./asn1x509-1.0.js"
+import { hashHex } from "./crypto-1.1.js"
+
 /**
  * @fileOverview
  * @name asn1ocsp-1.0.js
  * @author Kenji Urushima kenji.urushima@gmail.com
  * @version jsrsasign 7.2.1 asn1ocsp 1.0.3 (2017-Jun-03)
- * @since jsrsasign 6.1.0
  * @license <a href="https://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
 
@@ -27,7 +31,7 @@ if (typeof KJUR.asn1 == "undefined" || !KJUR.asn1) KJUR.asn1 = {};
 /**
  * ASN.1 classes for OCSP protocol<br/>
  * <p>
- * This name space provides 
+ * This module provides 
  * <a href="https://tools.ietf.org/html/rfc6960">RFC 6960
  * Online Certificate Status Protocol (OCSP)</a> ASN.1 request and response generator.
  *
@@ -58,11 +62,7 @@ KJUR.asn1.ocsp.DEFAULT_HASH = "sha1";
 
 /**
  * ASN.1 CertID class for OCSP<br/>
- * @name KJUR.asn1.ocsp.CertID
- * @class ASN.1 CertID class for OCSP
- * @param {Array} params associative array of parameters
- * @extends KJUR.asn1.ASN1Object
- * @since jsrsasign 6.1.0 asn1ocsp 1.0.0
+ * @param {Object} params dictionary of parameters
  * @description
  * CertID ASN.1 class is defined in 
  * <a href="https://tools.ietf.org/html/rfc6960#section-4.1.1">RFC 6960 4.1.1</a>. 
@@ -84,21 +84,21 @@ KJUR.asn1.ocsp.DEFAULT_HASH = "sha1";
  * o = new KJUR.asn1.ocsp.CertID({namehash: "1a...", keyhash: "ad...", serial: "1234", alg: "sha256"});
  */
 KJUR.asn1.ocsp.CertID = function(params) {
-    var _KJUR = KJUR,
-	_KJUR_asn1 = _KJUR.asn1,
-	_DEROctetString = _KJUR_asn1.DEROctetString,
-	_DERInteger = _KJUR_asn1.DERInteger,
-	_DERSequence = _KJUR_asn1.DERSequence,
-	_KJUR_asn1_x509 = _KJUR_asn1.x509,
-	_AlgorithmIdentifier = _KJUR_asn1_x509.AlgorithmIdentifier,
-	_KJUR_asn1_ocsp = _KJUR_asn1.ocsp,
-	_DEFAULT_HASH = _KJUR_asn1_ocsp.DEFAULT_HASH,
-	_KJUR_crypto = _KJUR.crypto,
-	_hashHex = _KJUR_crypto.Util.hashHex,
+
+
+
+
+
+	KJUR.asn1.x509 = KJUR.asn1.x509,
+	AlgorithmIdentifier = AlgorithmIdentifier,
+	KJUR.asn1.ocsp = KJUR.asn1.ocsp,
+	_DEFAULT_HASH = KJUR.asn1.ocsp.DEFAULT_HASH,
+	KJUR.crypto = KJUR.crypto,
+	hashHex = hashHex,
 	_X509 = X509,
 	_ASN1HEX = ASN1HEX;
 
-    _KJUR_asn1_ocsp.CertID.superclass.constructor.call(this);
+    KJUR.asn1.ocsp.CertID.superclass.constructor.call(this);
 
     this.dHashAlg = null;
     this.dIssuerNameHash = null;
@@ -107,14 +107,10 @@ KJUR.asn1.ocsp.CertID = function(params) {
 
     /**
      * set CertID ASN.1 object by values.<br/>
-     * @name setByValue
-     * @memberOf KJUR.asn1.ocsp.CertID#
-     * @function
-     * @param {String} issuerNameHashHex hexadecimal string of hash value of issuer name
-     * @param {String} issuerKeyHashHex hexadecimal string of hash value of issuer public key
-     * @param {String} serialNumberHex hexadecimal string of certificate serial number to be verified
-     * @param {String} algName hash algorithm name used for above arguments (ex. "sha1") DEFAULT: sha1
-     * @since jsrsasign 6.1.0 asn1ocsp 1.0.0
+     * @param {string} issuerNameHashHex hexadecimal string of hash value of issuer name
+     * @param {string} issuerKeyHashHex hexadecimal string of hash value of issuer public key
+     * @param {string} serialNumberHex hexadecimal string of certificate serial number to be verified
+     * @param {string} algName hash algorithm name used for above arguments (ex. "sha1") DEFAULT: sha1
      * @example
      * o = new KJUR.asn1.ocsp.CertID();
      * o.setByValue("1fac...", "fd3a...", "1234"); // sha1 is used by default
@@ -123,21 +119,17 @@ KJUR.asn1.ocsp.CertID = function(params) {
     this.setByValue = function(issuerNameHashHex, issuerKeyHashHex,
 			       serialNumberHex, algName) {
 	if (algName === undefined) algName = _DEFAULT_HASH;
-	this.dHashAlg =        new _AlgorithmIdentifier({name: algName});
-	this.dIssuerNameHash = new _DEROctetString({hex: issuerNameHashHex});
-	this.dIssuerKeyHash =  new _DEROctetString({hex: issuerKeyHashHex});
-	this.dSerialNumber =   new _DERInteger({hex: serialNumberHex});
+	this.dHashAlg =        new AlgorithmIdentifier({name: algName});
+	this.dIssuerNameHash = new DEROctetString({hex: issuerNameHashHex});
+	this.dIssuerKeyHash =  new DEROctetString({hex: issuerKeyHashHex});
+	this.dSerialNumber =   new DERInteger({hex: serialNumberHex});
     };
 
     /**
      * set CertID ASN.1 object by PEM certificates.<br/>
-     * @name setByCert
-     * @memberOf KJUR.asn1.ocsp.CertID#
-     * @function
-     * @param {String} issuerCert string of PEM issuer certificate
-     * @param {String} subjectCert string of PEM subject certificate to be verified by OCSP
-     * @param {String} algName hash algorithm name used for above arguments (ex. "sha1") DEFAULT: sha1
-     * @since jsrsasign 6.1.0 asn1ocsp 1.0.0
+     * @param {string} issuerCert string of PEM issuer certificate
+     * @param {string} subjectCert string of PEM subject certificate to be verified by OCSP
+     * @param {string} algName hash algorithm name used for above arguments (ex. "sha1") DEFAULT: sha1
      * @example
      * o = new KJUR.asn1.ocsp.CertID();
      * o.setByCert("-----BEGIN...", "-----BEGIN..."); // sha1 is used by default
@@ -146,17 +138,17 @@ KJUR.asn1.ocsp.CertID = function(params) {
     this.setByCert = function(issuerCert, subjectCert, algName) {
 	if (algName === undefined) algName = _DEFAULT_HASH;
 
-	var xSbj = new _X509();
+	let xSbj = new _X509();
 	xSbj.readCertPEM(subjectCert);
-	var xIss = new _X509();
+	let xIss = new _X509();
 	xIss.readCertPEM(issuerCert);
 
-	var hISS_SPKI = xIss.getPublicKeyHex();
-	var issuerKeyHex = _ASN1HEX.getTLVbyList(hISS_SPKI, 0, [1, 0], "30");
+	let hISS_SPKI = xIss.getPublicKeyHex();
+	let issuerKeyHex = _ASN1HEX.getTLVbyList(hISS_SPKI, 0, [1, 0], "30");
 
-	var serialNumberHex = xSbj.getSerialNumberHex();
-	var issuerNameHashHex = _hashHex(xIss.getSubjectHex(), algName);
-	var issuerKeyHashHex = _hashHex(issuerKeyHex, algName);
+	let serialNumberHex = xSbj.getSerialNumberHex();
+	let issuerNameHashHex = hashHex(xIss.getSubjectHex(), algName);
+	let issuerKeyHashHex = hashHex(issuerKeyHex, algName);
 	this.setByValue(issuerNameHashHex, issuerKeyHashHex,
 			serialNumberHex, algName);
 	this.hoge = xSbj.getSerialNumberHex();
@@ -169,24 +161,24 @@ KJUR.asn1.ocsp.CertID = function(params) {
 	    this.dSerialNumber === null)
 	    throw "not yet set values";
 
-	var a = [this.dHashAlg, this.dIssuerNameHash,
+	let a = [this.dHashAlg, this.dIssuerNameHash,
 		 this.dIssuerKeyHash, this.dSerialNumber];
-	var seq = new _DERSequence({array: a});
+	let seq = new DERSequence({array: a});
         this.hTLV = seq.getEncodedHex();
         return this.hTLV;
     };
 
     if (params !== undefined) {
-	var p = params;
+	let p = params;
 	if (p.issuerCert !== undefined &&
 	    p.subjectCert !== undefined) {
-	    var alg = _DEFAULT_HASH;
+	    let alg = _DEFAULT_HASH;
 	    if (p.alg === undefined) alg = undefined;
 	    this.setByCert(p.issuerCert, p.subjectCert, alg);
 	} else if (p.namehash !== undefined &&
 		   p.keyhash !== undefined &&
 		   p.serial !== undefined) {
-	    var alg = _DEFAULT_HASH;
+	    let alg = _DEFAULT_HASH;
 	    if (p.alg === undefined) alg = undefined;
 	    this.setByValue(p.namehash, p.keyhash, p.serial, alg);
 	} else {
@@ -198,11 +190,7 @@ YAHOO.lang.extend(KJUR.asn1.ocsp.CertID, KJUR.asn1.ASN1Object);
 
 /**
  * ASN.1 Request class for OCSP<br/>
- * @name KJUR.asn1.ocsp.Request
- * @class ASN.1 Request class for OCSP
- * @param {Array} params associative array of parameters
- * @extends KJUR.asn1.ASN1Object
- * @since jsrsasign 6.1.0 asn1ocsp 1.0.0
+ * @param {Object} params dictionary of parameters
  * @description
  * Request ASN.1 class is defined in 
  * <a href="https://tools.ietf.org/html/rfc6960#section-4.1.1">RFC 6960 4.1.1</a>. 
@@ -223,17 +211,17 @@ YAHOO.lang.extend(KJUR.asn1.ocsp.CertID, KJUR.asn1.ASN1Object);
  * o = new KJUR.asn1.ocsp.Request({namehash: "1a...", keyhash: "ad...", serial: "1234", alg: "sha256"});
  */
 KJUR.asn1.ocsp.Request = function(params) {
-    var _KJUR = KJUR,
-	_KJUR_asn1 = _KJUR.asn1,
-	_DERSequence = _KJUR_asn1.DERSequence,
-	_KJUR_asn1_ocsp = _KJUR_asn1.ocsp;
+
+
+
+	KJUR.asn1.ocsp = KJUR.asn1.ocsp;
     
-    _KJUR_asn1_ocsp.Request.superclass.constructor.call(this);
+    KJUR.asn1.ocsp.Request.superclass.constructor.call(this);
     this.dReqCert = null;
     this.dExt = null;
     
     this.getEncodedHex = function() {
-	var a = [];
+	let a = [];
 
 	// 1. reqCert
 	if (this.dReqCert === null)
@@ -243,13 +231,13 @@ KJUR.asn1.ocsp.Request = function(params) {
 	// 2. singleRequestExtensions (not supported yet)
 
 	// 3. construct SEQUENCE
-	var seq = new _DERSequence({array: a});
+	let seq = new DERSequence({array: a});
         this.hTLV = seq.getEncodedHex();
         return this.hTLV;
     };
 
     if (typeof params !== "undefined") {
-	var o = new _KJUR_asn1_ocsp.CertID(params);
+	let o = new KJUR.asn1.ocsp.CertID(params);
 	this.dReqCert = o;
     }
 };
@@ -257,11 +245,7 @@ YAHOO.lang.extend(KJUR.asn1.ocsp.Request, KJUR.asn1.ASN1Object);
 
 /**
  * ASN.1 TBSRequest class for OCSP<br/>
- * @name KJUR.asn1.ocsp.TBSRequest
- * @class ASN.1 TBSRequest class for OCSP
- * @param {Array} params associative array of parameters
- * @extends KJUR.asn1.ASN1Object
- * @since jsrsasign 6.1.0 asn1ocsp 1.0.0
+ * @param {Object} params dictionary of parameters
  * @description
  * TBSRequest ASN.1 class is defined in 
  * <a href="https://tools.ietf.org/html/rfc6960#section-4.1.1">RFC 6960 4.1.1</a>. 
@@ -282,12 +266,12 @@ YAHOO.lang.extend(KJUR.asn1.ocsp.Request, KJUR.asn1.ASN1Object);
  * ]});
  */
 KJUR.asn1.ocsp.TBSRequest = function(params) {
-    var _KJUR = KJUR,
-	_KJUR_asn1 = _KJUR.asn1,
-	_DERSequence = _KJUR_asn1.DERSequence,
-	_KJUR_asn1_ocsp = _KJUR_asn1.ocsp;
 
-    _KJUR_asn1_ocsp.TBSRequest.superclass.constructor.call(this);
+
+
+	KJUR.asn1.ocsp = KJUR.asn1.ocsp;
+
+    KJUR.asn1.ocsp.TBSRequest.superclass.constructor.call(this);
     this.version = 0;
     this.dRequestorName = null;
     this.dRequestList = [];
@@ -295,11 +279,7 @@ KJUR.asn1.ocsp.TBSRequest = function(params) {
 
     /**
      * set TBSRequest ASN.1 object by array of parameters.<br/>
-     * @name setRequestListByParam
-     * @memberOf KJUR.asn1.ocsp.TBSRequest#
-     * @function
      * @param {Array} aParams array of parameters for Request class
-     * @since jsrsasign 6.1.0 asn1ocsp 1.0.0
      * @example
      * o = new KJUR.asn1.ocsp.TBSRequest();
      * o.setRequestListByParam([
@@ -308,16 +288,16 @@ KJUR.asn1.ocsp.TBSRequest = function(params) {
      * ]);
      */
     this.setRequestListByParam = function(aParams) {
-	var a = [];
-	for (var i = 0; i < aParams.length; i++) {
-	    var dReq = new _KJUR_asn1_ocsp.Request(aParams[0]);
+	let a = [];
+	for (let i = 0; i < aParams.length; i++) {
+	    let dReq = new KJUR.asn1.ocsp.Request(aParams[0]);
 	    a.push(dReq);
 	}
 	this.dRequestList = a;
     };
 
     this.getEncodedHex = function() {
-	var a = [];
+	let a = [];
 
 	// 1. version
 	if (this.version !== 0)
@@ -328,8 +308,8 @@ KJUR.asn1.ocsp.TBSRequest = function(params) {
 	    throw "requestorName not supported";
 
 	// 3. requestList
-	var seqRequestList = 
-	    new _DERSequence({array: this.dRequestList});
+	let seqRequestList = 
+	    new DERSequence({array: this.dRequestList});
 	a.push(seqRequestList);
 
 	// 4. requestExtensions
@@ -337,14 +317,14 @@ KJUR.asn1.ocsp.TBSRequest = function(params) {
 	    throw "requestExtensions not supported";
 
 	// 5. construct SEQUENCE
-	var seq = new _DERSequence({array: a});
+	let seq = new DERSequence({array: a});
         this.hTLV = seq.getEncodedHex();
         return this.hTLV;
     };
 
     if (params !== undefined) {
-	if (params.reqList !== undefined)
-	    this.setRequestListByParam(params.reqList);
+	if (params['reqList'] !== undefined)
+	    this.setRequestListByParam(params['reqList']);
     }
 };
 YAHOO.lang.extend(KJUR.asn1.ocsp.TBSRequest, KJUR.asn1.ASN1Object);
@@ -352,11 +332,7 @@ YAHOO.lang.extend(KJUR.asn1.ocsp.TBSRequest, KJUR.asn1.ASN1Object);
 
 /**
  * ASN.1 OCSPRequest class for OCSP<br/>
- * @name KJUR.asn1.ocsp.OCSPRequest
- * @class ASN.1 OCSPRequest class for OCSP
- * @param {Array} params associative array of parameters
- * @extends KJUR.asn1.ASN1Object
- * @since jsrsasign 6.1.0 asn1ocsp 1.0.0
+ * @param {Object} params dictionary of parameters
  * @description
  * OCSPRequest ASN.1 class is defined in 
  * <a href="https://tools.ietf.org/html/rfc6960#section-4.1.1">RFC 6960 4.1.1</a>. 
@@ -376,17 +352,17 @@ YAHOO.lang.extend(KJUR.asn1.ocsp.TBSRequest, KJUR.asn1.ASN1Object);
  * ]});
  */
 KJUR.asn1.ocsp.OCSPRequest = function(params) {
-    var _KJUR = KJUR,
-	_KJUR_asn1 = _KJUR.asn1,
-	_DERSequence = _KJUR_asn1.DERSequence,
-	_KJUR_asn1_ocsp = _KJUR_asn1.ocsp;
 
-    _KJUR_asn1_ocsp.OCSPRequest.superclass.constructor.call(this);
+
+
+	KJUR.asn1.ocsp = KJUR.asn1.ocsp;
+
+    KJUR.asn1.ocsp.OCSPRequest.superclass.constructor.call(this);
     this.dTbsRequest = null;
     this.dOptionalSignature = null;
 
     this.getEncodedHex = function() {
-	var a = [];
+	let a = [];
 
 	// 1. tbsRequest
 	if (this.dTbsRequest !== null) {
@@ -400,14 +376,14 @@ KJUR.asn1.ocsp.OCSPRequest = function(params) {
 	    throw "optionalSignature not supported";
 
 	// 3. construct SEQUENCE
-	var seq = new _DERSequence({array: a});
+	let seq = new DERSequence({array: a});
         this.hTLV = seq.getEncodedHex();
         return this.hTLV;
     };
 
     if (params !== undefined) {
-	if (params.reqList !== undefined) {
-	    var o = new _KJUR_asn1_ocsp.TBSRequest(params);
+	if (params['reqList'] !== undefined) {
+	    let o = new KJUR.asn1.ocsp.TBSRequest(params);
 	    this.dTbsRequest = o;
 	}
     }
@@ -415,11 +391,7 @@ KJUR.asn1.ocsp.OCSPRequest = function(params) {
 YAHOO.lang.extend(KJUR.asn1.ocsp.OCSPRequest, KJUR.asn1.ASN1Object);
 
 /**
- * Utility class for OCSP<br/>
- * @name KJUR.asn1.ocsp.OCSPUtil
- * @class Utility class for OCSP
- * @since jsrsasign 6.1.0 asn1ocsp 1.0.0
- * @description
+ * Utility class for OCSP<br/> * @description
  * This class provides utility static methods for OCSP.
  * <ul>
  * <li>{@link KJUR.asn1.ocsp.OCSPUtil.getRequestHex} - generates hexadecimal string of OCSP request</li>
@@ -429,14 +401,10 @@ KJUR.asn1.ocsp.OCSPUtil = {};
 
 /**
  * generates hexadecimal string of OCSP request<br/>
- * @name getRequestHex
- * @memberOf KJUR.asn1.ocsp.OCSPUtil
- * @function
- * @param {String} issuerCert string of PEM issuer certificate
- * @param {String} subjectCert string of PEM subject certificate to be verified by OCSP
- * @param {String} algName hash algorithm name used for above arguments (ex. "sha1") DEFAULT: sha1
- * @return {String} hexadecimal string of generated OCSP request
- * @since jsrsasign 6.1.0 asn1ocsp 1.0.0
+ * @param {string} issuerCert string of PEM issuer certificate
+ * @param {string} subjectCert string of PEM subject certificate to be verified by OCSP
+ * @param {string} algName hash algorithm name used for above arguments (ex. "sha1") DEFAULT: sha1
+ * @return {string} hexadecimal string of generated OCSP request
  * @description
  * This static method generates hexadecimal string of OCSP request.
  * @example
@@ -444,24 +412,20 @@ KJUR.asn1.ocsp.OCSPUtil = {};
  * hReq = KJUR.asn1.ocsp.OCSPUtil.getRequestHex("-----BEGIN...", "-----BEGIN...");
  */
 KJUR.asn1.ocsp.OCSPUtil.getRequestHex = function(issuerCert, subjectCert, alg) {
-    var _KJUR = KJUR,
-	_KJUR_asn1 = _KJUR.asn1,
-	_KJUR_asn1_ocsp = _KJUR_asn1.ocsp;
 
-    if (alg === undefined) alg = _KJUR_asn1_ocsp.DEFAULT_HASH;
-    var param = {alg: alg, issuerCert: issuerCert, subjectCert: subjectCert};
-    var o = new _KJUR_asn1_ocsp.OCSPRequest({reqList: [param]});
+
+	KJUR.asn1.ocsp = KJUR.asn1.ocsp;
+
+    if (alg === undefined) alg = KJUR.asn1.ocsp.DEFAULT_HASH;
+    let param = {alg: alg, issuerCert: issuerCert, subjectCert: subjectCert};
+    let o = new KJUR.asn1.ocsp.OCSPRequest({reqList: [param]});
     return o.getEncodedHex();
 };
 
 /**
  * parse OCSPResponse<br/>
- * @name getOCSPResponseInfo
- * @memberOf KJUR.asn1.ocsp.OCSPUtil
- * @function
- * @param {String} h hexadecimal string of DER OCSPResponse
+ * @param {string} h hexadecimal string of DER OCSPResponse
  * @return {Object} JSON object of parsed OCSPResponse
- * @since jsrsasign 6.1.0 asn1ocsp 1.0.1
  * @description
  * This static method parse a hexadecimal string of DER OCSPResponse and
  * returns JSON object of its parsed result.
@@ -476,22 +440,22 @@ KJUR.asn1.ocsp.OCSPUtil.getRequestHex = function(issuerCert, subjectCert, alg) {
  * info = KJUR.asn1.ocsp.OCSPUtil.getOCSPResponseInfo("3082...");
  */
 KJUR.asn1.ocsp.OCSPUtil.getOCSPResponseInfo = function(h) {
-    var _ASN1HEX = ASN1HEX;
-    var _getVbyList = _ASN1HEX.getVbyList;
-    var _getIdxbyList = _ASN1HEX.getIdxbyList;
-    var _getVbyList = _ASN1HEX.getVbyList;
-    var _getV = _ASN1HEX.getV;
+    let _ASN1HEX = ASN1HEX;
+    let _getVbyList = _ASN1HEX.getVbyList;
+    let _getIdxbyList = _ASN1HEX.getIdxbyList;
+    let _getVbyList = _ASN1HEX.getVbyList;
+    let _getV = _ASN1HEX.getV;
 
-    var result = {};
+    let result = {};
     try {
-	var v = _getVbyList(h, 0, [0], "0a");
+	let v = _getVbyList(h, 0, [0], "0a");
 	result.responseStatus = parseInt(v, 16);
     } catch(ex) {};
     if (result.responseStatus !== 0) return result;
 
     try {
 	// certStatus
-	var idxCertStatus = _getIdxbyList(h, 0, [1,0,1,0,0,2,0,1]);
+	let idxCertStatus = _getIdxbyList(h, 0, [1,0,1,0,0,2,0,1]);
 	if (h.substr(idxCertStatus, 2) === "80") {
 	    result.certStatus = "good";
 	} else if (h.substr(idxCertStatus, 2) === "a1") {
@@ -505,13 +469,13 @@ KJUR.asn1.ocsp.OCSPUtil.getOCSPResponseInfo = function(h) {
 
     // thisUpdate
     try {
-	var idxThisUpdate = _getIdxbyList(h, 0, [1,0,1,0,0,2,0,2]);
+	let idxThisUpdate = _getIdxbyList(h, 0, [1,0,1,0,0,2,0,2]);
 	result.thisUpdate = hextoutf8(_getV(h, idxThisUpdate));
     } catch (ex) {};
 
     // nextUpdate
     try {
-	var idxEncapNextUpdate = _getIdxbyList(h, 0, [1,0,1,0,0,2,0,3]);
+	let idxEncapNextUpdate = _getIdxbyList(h, 0, [1,0,1,0,0,2,0,3]);
 	if (h.substr(idxEncapNextUpdate, 2) === "a0") {
 	    result.nextUpdate = 
 		hextoutf8(_getVbyList(h, idxEncapNextUpdate, [0]));

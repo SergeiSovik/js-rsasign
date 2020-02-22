@@ -1,9 +1,8 @@
-/* x509-1.1.20.js (c) 2012-2018 Kenji Urushima | kjur.github.io/jsrsasign/license
- */
 /*
  * x509.js - X509 class to read subject public key from certificate.
  *
- * Copyright (c) 2010-2018 Kenji Urushima (kenji.urushima@gmail.com)
+ * Original work Copyright (c) 2010-2018 Kenji Urushima (kenji.urushima@gmail.com)
+ * Modified work Copyright (c) 2020 Sergio Rando <sergio.rando@yahoo.com>
  *
  * This software is licensed under the terms of the MIT License.
  * https://kjur.github.io/jsrsasign/license
@@ -12,20 +11,24 @@
  * included in all copies or substantial portions of the Software.
  */
 
+"use strict";
+
+import { oidHexToInt } from "./asn1-1.0.js"
+import { name2oid, oid2name, oid2atype } from "./asn1x509-1.0.js"
+
 /**
  * @fileOverview
  * @name x509-1.1.js
  * @author Kenji Urushima kenji.urushima@gmail.com
  * @version jsrsasign 8.0.10 x509 1.1.20 (2018-Apr-09)
- * @since jsrsasign 1.x.x
  * @license <a href="https://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
 
 /**
  * hexadecimal X.509 certificate ASN.1 parser class.<br/>
  * @class hexadecimal X.509 certificate ASN.1 parser class
- * @property {String} hex hexacedimal string for X.509 certificate.
- * @property {Number} version format version (1: X509v1, 3: X509v3, otherwise: unknown) since jsrsasign 7.1.4
+ * @property {string} hex hexacedimal string for X.509 certificate.
+ * @property {number} version format version (1: X509v1, 3: X509v3, otherwise: unknown) since jsrsasign 7.1.4
  * @author Kenji Urushima
  * @version 1.0.1 (08 May 2012)
  * @see <a href="https://kjur.github.io/jsrsasigns/">'jsrsasign'(RSA Sign JavaScript Library) home page https://kjur.github.io/jsrsasign/</a>
@@ -85,7 +88,7 @@
  * </ul>
  */
 function X509() {
-    var _ASN1HEX = ASN1HEX,
+    let _ASN1HEX = ASN1HEX,
 	_getChildIdx = _ASN1HEX.getChildIdx,
 	_getV = _ASN1HEX.getV,
 	_getTLV = _ASN1HEX.getTLV,
@@ -106,11 +109,7 @@ function X509() {
 
     /**
      * get format version (X.509v1 or v3 certificate)<br/>
-     * @name getVersion
-     * @memberOf X509#
-     * @function
-     * @return {Number} 1 for X509v1, 3 for X509v3, otherwise 0
-     * @since jsrsasign 7.1.14 x509 1.1.13
+     * @return {number} 1 for X509v1, 3 for X509v3, otherwise 0
      * @description
      * This method returns a format version of X.509 certificate.
      * It returns 1 for X.509v1 certificate and 3 for v3 certificate.
@@ -119,7 +118,7 @@ function X509() {
      * {@link X509#readCertPEM}. After then, you can use
      * {@link X509.version} parameter.
      * @example
-     * var x = new X509();
+     * let x = new X509();
      * x.readCertPEM(sCertPEM);
      * version = x.getVersion();    // 1 or 3
      * sn = x.getSerialNumberHex(); // return string like "01ad..."
@@ -141,14 +140,11 @@ function X509() {
 
     /**
      * get hexadecimal string of serialNumber field of certificate.<br/>
-     * @name getSerialNumberHex
-     * @memberOf X509#
-     * @function
-     * @return {String} hexadecimal string of certificate serial number
+     * @return {string} hexadecimal string of certificate serial number
      * @example
-     * var x = new X509();
+     * let x = new X509();
      * x.readCertPEM(sCertPEM);
-     * var sn = x.getSerialNumberHex(); // return string like "01ad..."
+     * let sn = x.getSerialNumberHex(); // return string like "01ad..."
      */
     this.getSerialNumberHex = function() {
 	return _getVbyList(this.hex, 0, [0, 1 + this.foffset], "02");
@@ -156,15 +152,11 @@ function X509() {
 
     /**
      * get signature algorithm name in basic field
-     * @name getSignatureAlgorithmField
-     * @memberOf X509#
-     * @function
-     * @return {String} signature algorithm name (ex. SHA1withRSA, SHA256withECDSA)
-     * @since x509 1.1.8
+     * @return {string} signature algorithm name (ex. SHA1withRSA, SHA256withECDSA)
      * @description
      * This method will get a name of signature algorithm field of certificate:
      * @example
-     * var x = new X509();
+     * let x = new X509();
      * x.readCertPEM(sCertPEM);
      * algName = x.getSignatureAlgorithmField();
      */
@@ -174,14 +166,11 @@ function X509() {
 
     /**
      * get hexadecimal string of issuer field TLV of certificate.<br/>
-     * @name getIssuerHex
-     * @memberOf X509#
-     * @function
-     * @return {String} hexadecial string of issuer DN ASN.1
+     * @return {string} hexadecial string of issuer DN ASN.1
      * @example
-     * var x = new X509();
+     * let x = new X509();
      * x.readCertPEM(sCertPEM);
-     * var issuer = x.getIssuerHex(); // return string like "3013..."
+     * let issuer = x.getIssuerHex(); // return string like "3013..."
      */
     this.getIssuerHex = function() {
 	return _getTLVbyList(this.hex, 0, [0, 3 + this.foffset], "30");
@@ -189,14 +178,11 @@ function X509() {
 
     /**
      * get string of issuer field of certificate.<br/>
-     * @name getIssuerString
-     * @memberOf X509#
-     * @function
-     * @return {String} issuer DN string
+     * @return {string} issuer DN string
      * @example
-     * var x = new X509();
+     * let x = new X509();
      * x.readCertPEM(sCertPEM);
-     * var issuer = x.getIssuerString(); // return string like "/C=US/O=TEST"
+     * let issuer = x.getIssuerString(); // return string like "/C=US/O=TEST"
      */
     this.getIssuerString = function() {
         return _X509.hex2dn(this.getIssuerHex());
@@ -204,14 +190,11 @@ function X509() {
 
     /**
      * get hexadecimal string of subject field of certificate.<br/>
-     * @name getSubjectHex
-     * @memberOf X509#
-     * @function
-     * @return {String} hexadecial string of subject DN ASN.1
+     * @return {string} hexadecial string of subject DN ASN.1
      * @example
-     * var x = new X509();
+     * let x = new X509();
      * x.readCertPEM(sCertPEM);
-     * var subject = x.getSubjectHex(); // return string like "3013..."
+     * let subject = x.getSubjectHex(); // return string like "3013..."
      */
     this.getSubjectHex = function() {
 	return _getTLVbyList(this.hex, 0, [0, 5 + this.foffset], "30");
@@ -219,14 +202,11 @@ function X509() {
 
     /**
      * get string of subject field of certificate.<br/>
-     * @name getSubjectString
-     * @memberOf X509#
-     * @function
-     * @return {String} subject DN string
+     * @return {string} subject DN string
      * @example
-     * var x = new X509();
+     * let x = new X509();
      * x.readCertPEM(sCertPEM);
-     * var subject = x.getSubjectString(); // return string like "/C=US/O=TEST"
+     * let subject = x.getSubjectString(); // return string like "/C=US/O=TEST"
      */
     this.getSubjectString = function() {
         return _X509.hex2dn(this.getSubjectHex());
@@ -234,17 +214,14 @@ function X509() {
 
     /**
      * get notBefore field string of certificate.<br/>
-     * @name getNotBefore
-     * @memberOf X509#
-     * @function
-     * @return {String} not before time value (ex. "151231235959Z")
+     * @return {string} not before time value (ex. "151231235959Z")
      * @example
-     * var x = new X509();
+     * let x = new X509();
      * x.readCertPEM(sCertPEM);
-     * var notBefore = x.getNotBefore(); // return string like "151231235959Z"
+     * let notBefore = x.getNotBefore(); // return string like "151231235959Z"
      */
     this.getNotBefore = function() {
-        var s = _getVbyList(this.hex, 0, [0, 4 + this.foffset, 0]);
+        let s = _getVbyList(this.hex, 0, [0, 4 + this.foffset, 0]);
         s = s.replace(/(..)/g, "%$1");
         s = decodeURIComponent(s);
         return s;
@@ -252,17 +229,14 @@ function X509() {
 
     /**
      * get notAfter field string of certificate.<br/>
-     * @name getNotAfter
-     * @memberOf X509#
-     * @function
-     * @return {String} not after time value (ex. "151231235959Z")
+     * @return {string} not after time value (ex. "151231235959Z")
      * @example
-     * var x = new X509();
+     * let x = new X509();
      * x.readCertPEM(sCertPEM);
-     * var notAfter = x.getNotAfter(); // return string like "151231235959Z"
+     * let notAfter = x.getNotAfter(); // return string like "151231235959Z"
      */
     this.getNotAfter = function() {
-	var s = _getVbyList(this.hex, 0, [0, 4 + this.foffset, 1]);
+	let s = _getVbyList(this.hex, 0, [0, 4 + this.foffset, 1]);
         s = s.replace(/(..)/g, "%$1");
         s = decodeURIComponent(s);
         return s;
@@ -270,11 +244,7 @@ function X509() {
 
     /**
      * get a hexadecimal string of subjectPublicKeyInfo field.<br/>
-     * @name getPublicKeyHex
-     * @memberOf X509#
-     * @function
-     * @return {String} ASN.1 SEQUENCE hexadecimal string of subjectPublicKeyInfo field
-     * @since jsrsasign 7.1.4 x509 1.1.13
+     * @return {string} ASN.1 SEQUENCE hexadecimal string of subjectPublicKeyInfo field
      * @example
      * x = new X509();
      * x.readCertPEM(sCertPEM);
@@ -286,11 +256,7 @@ function X509() {
 
     /**
      * get a string index of subjectPublicKeyInfo field for hexadecimal string certificate.<br/>
-     * @name getPublicKeyIdx
-     * @memberOf X509#
-     * @function
-     * @return {Number} string index of subjectPublicKeyInfo field for hexadecimal string certificate.
-     * @since jsrsasign 7.1.4 x509 1.1.13
+     * @return {number} string index of subjectPublicKeyInfo field for hexadecimal string certificate.
      * @example
      * x = new X509();
      * x.readCertPEM(sCertPEM);
@@ -302,11 +268,7 @@ function X509() {
 
     /**
      * get a string index of contents of subjectPublicKeyInfo BITSTRING value from hexadecimal certificate<br/>
-     * @name getPublicKeyContentIdx
-     * @memberOf X509#
-     * @function
-     * @return {Integer} string index of key contents
-     * @since jsrsasign 8.0.0 x509 1.2.0
+     * @return {number} string index of key contents
      * @example
      * x = new X509();
      * x.readCertPEM(sCertPEM);
@@ -314,17 +276,13 @@ function X509() {
      */
     // NOTE: Without BITSTRING encapsulation.
     this.getPublicKeyContentIdx = function() {
-	var idx = this.getPublicKeyIdx();
+	let idx = this.getPublicKeyIdx();
 	return _getIdxbyList(this.hex, idx, [1, 0], "30");
     };
 
     /**
      * get a RSAKey/ECDSA/DSA public key object of subjectPublicKeyInfo field.<br/>
-     * @name getPublicKey
-     * @memberOf X509#
-     * @function
      * @return {Object} RSAKey/ECDSA/DSA public key object of subjectPublicKeyInfo field
-     * @since jsrsasign 7.1.4 x509 1.1.13
      * @example
      * x = new X509();
      * x.readCertPEM(sCertPEM);
@@ -336,16 +294,12 @@ function X509() {
 
     /**
      * get signature algorithm name from hexadecimal certificate data
-     * @name getSignatureAlgorithmName
-     * @memberOf X509#
-     * @function
-     * @param {String} hCert hexadecimal string of X.509 certificate binary
-     * @return {String} signature algorithm name (ex. SHA1withRSA, SHA256withECDSA)
-     * @since jsrsasign 7.2.0 x509 1.1.14
+     * @param {string} hCert hexadecimal string of X.509 certificate binary
+     * @return {string} signature algorithm name (ex. SHA1withRSA, SHA256withECDSA)
      * @description
      * This method will get signature algorithm name of certificate:
      * @example
-     * var x = new X509();
+     * let x = new X509();
      * x.readCertPEM(sCertPEM);
      * x.getSignatureAlgorithmName() &rarr; "SHA256withRSA"
      */
@@ -355,15 +309,11 @@ function X509() {
 
     /**
      * get signature value in hexadecimal string<br/>
-     * @name getSignatureValueHex
-     * @memberOf X509#
-     * @function
-     * @return {String} signature value hexadecimal string without BitString unused bits
-     * @since jsrsasign 7.2.0 x509 1.1.14
+     * @return {string} signature value hexadecimal string without BitString unused bits
      * @description
      * This method will get signature value of certificate:
      * @example
-     * var x = new X509();
+     * let x = new X509();
      * x.readCertPEM(sCertPEM);
      * x.getSignatureValueHex() &rarr "8a4c47913..."
      */
@@ -373,12 +323,8 @@ function X509() {
 
     /**
      * verifies signature value by public key<br/>
-     * @name verifySignature
-     * @memberOf X509#
-     * @function
      * @param {Object} pubKey public key object
-     * @return {Boolean} true if signature value is valid otherwise false
-     * @since jsrsasign 7.2.0 x509 1.1.14
+     * @return {boolean} true if signature value is valid otherwise false
      * @description
      * This method verifies signature value of hexadecimal string of 
      * X.509 certificate by specified public key object.
@@ -389,11 +335,11 @@ function X509() {
      * x.verifySignature(pubKey) &rarr; true, false or raising exception
      */
     this.verifySignature = function(pubKey) {
-	var algName = this.getSignatureAlgorithmName();
-	var hSigVal = this.getSignatureValueHex();
-	var hTbsCert = _getTLVbyList(this.hex, 0, [0], "30");
+	let algName = this.getSignatureAlgorithmName();
+	let hSigVal = this.getSignatureValueHex();
+	let hTbsCert = _getTLVbyList(this.hex, 0, [0], "30");
 	
-	var sig = new KJUR.crypto.Signature({alg: algName});
+	let sig = new KJUR.crypto.Signature({alg: algName});
 	sig.init(pubKey);
 	sig.updateHex(hTbsCert);
 	return sig.verify(hSigVal);
@@ -402,10 +348,6 @@ function X509() {
     // ===== parse extension ======================================
     /**
      * set array of X.509v3 extesion information such as extension OID, criticality and value index.<br/>
-     * @name parseExt
-     * @memberOf X509#
-     * @function
-     * @since jsrsasign 7.2.0 x509 1.1.14
      * @description
      * This method will set an array of X.509v3 extension information having 
      * following parameters:
@@ -422,15 +364,15 @@ function X509() {
      */
     this.parseExt = function() {
 	if (this.version !== 3) return -1;
-	var iExtSeq = _getIdxbyList(this.hex, 0, [0, 7, 0], "30");
-	var aExtIdx = _getChildIdx(this.hex, iExtSeq);
+	let iExtSeq = _getIdxbyList(this.hex, 0, [0, 7, 0], "30");
+	let aExtIdx = _getChildIdx(this.hex, iExtSeq);
 
 	this.aExtInfo = new Array();
-	for (var i = 0; i < aExtIdx.length; i++) {
-	    var item = {};
+	for (let i = 0; i < aExtIdx.length; i++) {
+	    let item = {};
 	    item.critical = false;
-	    var a = _getChildIdx(this.hex, aExtIdx[i]);
-	    var offset = 0;
+	    let a = _getChildIdx(this.hex, aExtIdx[i]);
+	    let offset = 0;
 
 	    if (a.length === 3) {
 		item.critical = true;
@@ -438,7 +380,7 @@ function X509() {
 	    }
 
 	    item.oid = _ASN1HEX.hextooidstr(_getVbyList(this.hex, aExtIdx[i], [0], "06"));
-	    var octidx = _getIdxbyList(this.hex, aExtIdx[i], [1 + offset]);
+	    let octidx = _getIdxbyList(this.hex, aExtIdx[i], [1 + offset]);
 	    item.vidx = _getVidx(this.hex, octidx);
 	    this.aExtInfo.push(item);
 	}
@@ -446,12 +388,8 @@ function X509() {
 
     /**
      * get a X.509v3 extesion information such as extension OID, criticality and value index for specified oid or name.<br/>
-     * @name getExtInfo
-     * @memberOf X509#
-     * @function
-     * @param {String} oidOrName X.509 extension oid or name (ex. keyUsage or 2.5.29.19)
+     * @param {string} oidOrName X.509 extension oid or name (ex. keyUsage or 2.5.29.19)
      * @return X.509 extension information such as extension OID or value indx (see {@link X509#parseExt})
-     * @since jsrsasign 7.2.0 x509 1.1.14
      * @description
      * This method will get an X.509v3 extension information JSON object
      * having extension OID, criticality and value idx for specified
@@ -465,14 +403,14 @@ function X509() {
      * x.getExtInfo("unknownExt") &rarr; undefined
      */
     this.getExtInfo = function(oidOrName) {
-	var a = this.aExtInfo;
-	var oid = oidOrName;
+	let a = this.aExtInfo;
+	let oid = oidOrName;
 	if (! oidOrName.match(/^[0-9.]+$/)) {
-	    oid = KJUR.asn1.x509.OID.name2oid(oidOrName);
+	    oid = name2oid(oidOrName);
 	}
 	if (oid === '') return undefined;
 
-	for (var i = 0; i < a.length; i++) {
+	for (let i = 0; i < a.length; i++) {
 	    if (a[i].oid === oid) return a[i];
 	}
 	return undefined;
@@ -480,11 +418,7 @@ function X509() {
 
     /**
      * get BasicConstraints extension value as object in the certificate
-     * @name getExtBasicConstraints
-     * @memberOf X509#
-     * @function
      * @return {Object} associative array which may have "cA" and "pathLen" parameters
-     * @since jsrsasign 7.2.0 x509 1.1.14
      * @description
      * This method will get basic constraints extension value as object with following paramters.
      * <ul>
@@ -504,15 +438,15 @@ function X509() {
      * x.getExtBasicConstraints() &rarr; { cA: true, pathLen: 3 };
      */
     this.getExtBasicConstraints = function() {
-	var info = this.getExtInfo("basicConstraints");
+	let info = this.getExtInfo("basicConstraints");
 	if (info === undefined) return info;
 
-	var hBC = _getV(this.hex, info.vidx);
+	let hBC = _getV(this.hex, info.vidx);
 	if (hBC === '') return {};
 	if (hBC === '0101ff') return { cA: true };
 	if (hBC.substr(0, 8) === '0101ff02') {
-	    var pathLexHex = _getV(hBC, 6);
-	    var pathLen = parseInt(pathLexHex, 16);
+	    let pathLexHex = _getV(hBC, 6);
+	    let pathLen = parseInt(pathLexHex, 16);
 	    return { cA: true, pathLen: pathLen };
 	}
 	throw "basicConstraints parse error";
@@ -521,11 +455,7 @@ function X509() {
 
     /**
      * get KeyUsage extension value as binary string in the certificate<br/>
-     * @name getExtKeyUsageBin
-     * @memberOf X509#
-     * @function
-     * @return {String} binary string of key usage bits (ex. '101')
-     * @since jsrsasign 7.2.0 x509 1.1.14
+     * @return {string} binary string of key usage bits (ex. '101')
      * @description
      * This method will get key usage extension value
      * as binary string such like '101'.
@@ -541,24 +471,20 @@ function X509() {
      * // 1 - keyEncipherment
      */
     this.getExtKeyUsageBin = function() {
-	var info = this.getExtInfo("keyUsage");
+	let info = this.getExtInfo("keyUsage");
 	if (info === undefined) return '';
 	
-	var hKeyUsage = _getV(this.hex, info.vidx);
+	let hKeyUsage = _getV(this.hex, info.vidx);
 	if (hKeyUsage.length % 2 != 0 || hKeyUsage.length <= 2)
 	    throw "malformed key usage value";
-	var unusedBits = parseInt(hKeyUsage.substr(0, 2));
-	var bKeyUsage = parseInt(hKeyUsage.substr(2), 16).toString(2);
+	let unusedBits = parseInt(hKeyUsage.substr(0, 2));
+	let bKeyUsage = parseInt(hKeyUsage.substr(2), 16).toString(2);
 	return bKeyUsage.substr(0, bKeyUsage.length - unusedBits);
     };
 
     /**
      * get KeyUsage extension value as names in the certificate<br/>
-     * @name getExtKeyUsageString
-     * @memberOf X509#
-     * @function
-     * @return {String} comma separated string of key usage
-     * @since jsrsasign 7.2.0 x509 1.1.14
+     * @return {string} comma separated string of key usage
      * @description
      * This method will get key usage extension value
      * as comma separated string of usage names.
@@ -570,9 +496,9 @@ function X509() {
      * x.getExtKeyUsageString() &rarr; "digitalSignature,keyEncipherment"
      */
     this.getExtKeyUsageString = function() {
-	var bKeyUsage = this.getExtKeyUsageBin();
-	var a = new Array();
-	for (var i = 0; i < bKeyUsage.length; i++) {
+	let bKeyUsage = this.getExtKeyUsageBin();
+	let a = new Array();
+	for (let i = 0; i < bKeyUsage.length; i++) {
 	    if (bKeyUsage.substr(i, 1) == "1") a.push(X509.KEYUSAGE_NAME[i]);
 	}
 	return a.join(",");
@@ -580,11 +506,7 @@ function X509() {
 
     /**
      * get subjectKeyIdentifier value as hexadecimal string in the certificate<br/>
-     * @name getExtSubjectKeyIdentifier
-     * @memberOf X509#
-     * @function
-     * @return {String} hexadecimal string of subject key identifier or null
-     * @since jsrsasign 7.2.0 x509 1.1.14
+     * @return {string} hexadecimal string of subject key identifier or null
      * @description
      * This method will get subject key identifier extension value
      * as hexadecimal string.
@@ -595,7 +517,7 @@ function X509() {
      * x.getExtSubjectKeyIdentifier() &rarr; "1b3347ab...";
      */
     this.getExtSubjectKeyIdentifier = function() {
-	var info = this.getExtInfo("subjectKeyIdentifier");
+	let info = this.getExtInfo("subjectKeyIdentifier");
 	if (info === undefined) return info;
 
 	return _getV(this.hex, info.vidx);
@@ -603,11 +525,7 @@ function X509() {
 
     /**
      * get authorityKeyIdentifier value as JSON object in the certificate<br/>
-     * @name getExtAuthorityKeyIdentifier
-     * @memberOf X509#
-     * @function
      * @return {Object} JSON object of authority key identifier or null
-     * @since jsrsasign 7.2.0 x509 1.1.14
      * @description
      * This method will get authority key identifier extension value
      * as JSON object.
@@ -622,13 +540,13 @@ function X509() {
      * x.getExtAuthorityKeyIdentifier() &rarr; { kid: "1234abcd..." }
      */
     this.getExtAuthorityKeyIdentifier = function() {
-	var info = this.getExtInfo("authorityKeyIdentifier");
+	let info = this.getExtInfo("authorityKeyIdentifier");
 	if (info === undefined) return info;
 
-	var result = {};
-	var hAKID = _getTLV(this.hex, info.vidx);
-	var a = _getChildIdx(hAKID, 0);
-	for (var i = 0; i < a.length; i++) {
+	let result = {};
+	let hAKID = _getTLV(this.hex, info.vidx);
+	let a = _getChildIdx(hAKID, 0);
+	for (let i = 0; i < a.length; i++) {
 	    if (hAKID.substr(a[i], 2) === "80")
 		result.kid = _getV(hAKID, a[i]);
 	}
@@ -637,11 +555,7 @@ function X509() {
 
     /**
      * get extKeyUsage value as array of name string in the certificate<br/>
-     * @name getExtExtKeyUsageName
-     * @memberOf X509#
-     * @function
      * @return {Object} array of extended key usage ID name or oid
-     * @since jsrsasign 7.2.0 x509 1.1.14
      * @description
      * This method will get extended key usage extension value
      * as array of name or OID string.
@@ -655,16 +569,16 @@ function X509() {
      * x.getExtExtKeyUsageName() &rarr; ["serverAuth", "clientAuth", "0.1.2.3.4.5"]
      */
     this.getExtExtKeyUsageName = function() {
-	var info = this.getExtInfo("extKeyUsage");
+	let info = this.getExtInfo("extKeyUsage");
 	if (info === undefined) return info;
 
-	var result = new Array();
+	let result = new Array();
 	
-	var h = _getTLV(this.hex, info.vidx);
+	let h = _getTLV(this.hex, info.vidx);
 	if (h === '') return result;
 
-	var a = _getChildIdx(h, 0);
-	for (var i = 0; i < a.length; i++) {
+	let a = _getChildIdx(h, 0);
+	for (let i = 0; i < a.length; i++) {
 	    result.push(_oidname(_getV(h, a[i])));
 	}
 
@@ -673,11 +587,7 @@ function X509() {
 
     /**
      * (DEPRECATED) get subjectAltName value as array of string in the certificate
-     * @name getExtSubjectAltName
-     * @memberOf X509#
-     * @function
      * @return {Object} array of alt names
-     * @since jsrsasign 7.2.0 x509 1.1.14
      * @deprecated since jsrsasign 8.0.1 x509 1.1.17. Please move to {@link X509#getExtSubjectAltName2}
      * @description
      * This method will get subject alt name extension value
@@ -692,10 +602,10 @@ function X509() {
      * x.getExtSubjectAltName() &rarr; ["example.com", "example.org"]
      */
     this.getExtSubjectAltName = function() {
-	var a = this.getExtSubjectAltName2();
-	var result = new Array();
+	let a = this.getExtSubjectAltName2();
+	let result = new Array();
 
-	for (var i = 0; i < a.length; i++) {
+	for (let i = 0; i < a.length; i++) {
 	    if (a[i][0] === "DNS") result.push(a[i][1]);
 	}
 	return result;
@@ -703,11 +613,7 @@ function X509() {
 
     /**
      * get subjectAltName value as array of string in the certificate
-     * @name getExtSubjectAltName2
-     * @memberOf X509#
-     * @function
      * @return {Object} array of alt name array
-     * @since jsrsasign 8.0.1 x509 1.1.17
      * @description
      * This method will get subject alt name extension value
      * as array of type and name.
@@ -732,15 +638,15 @@ function X509() {
      *  ["DN",   "/C=US/O=TEST1"]]
      */
     this.getExtSubjectAltName2 = function() {
-	var gnValueHex, gnValueStr, gnTag;
-	var info = this.getExtInfo("subjectAltName");
+	let gnValueHex, gnValueStr, gnTag;
+	let info = this.getExtInfo("subjectAltName");
 	if (info === undefined) return info;
 
-	var result = new Array();
-	var h = _getTLV(this.hex, info.vidx);
+	let result = new Array();
+	let h = _getTLV(this.hex, info.vidx);
 
-	var a = _getChildIdx(h, 0);
-	for (var i = 0; i < a.length; i++) {
+	let a = _getChildIdx(h, 0);
+	for (let i = 0; i < a.length; i++) {
 	    gnTag = h.substr(a[i], 2);
 	    gnValueHex = _getV(h, a[i]);
 	    
@@ -770,11 +676,7 @@ function X509() {
 
     /**
      * get array of string for fullName URIs in cRLDistributionPoints(CDP) in the certificate
-     * @name getExtCRLDistributionPointsURI
-     * @memberOf X509#
-     * @function
      * @return {Object} array of fullName URIs of CDP of the certificate
-     * @since jsrsasign 7.2.0 x509 1.1.14
      * @description
      * This method will get all fullName URIs of cRLDistributionPoints extension
      * in the certificate as array of URI string.
@@ -789,15 +691,15 @@ function X509() {
      * ["http://example.com/aaa.crl", "http://example.org/aaa.crl"]
      */
     this.getExtCRLDistributionPointsURI = function() {
-	var info = this.getExtInfo("cRLDistributionPoints");
+	let info = this.getExtInfo("cRLDistributionPoints");
 	if (info === undefined) return info;
 
-	var result = new Array();
-	var a = _getChildIdx(this.hex, info.vidx);
-	for (var i = 0; i < a.length; i++) {
+	let result = new Array();
+	let a = _getChildIdx(this.hex, info.vidx);
+	for (let i = 0; i < a.length; i++) {
 	    try {
-		var hURI = _getVbyList(this.hex, a[i], [0, 0, 0], "86");
-		var uri = hextoutf8(hURI);
+		let hURI = _getVbyList(this.hex, a[i], [0, 0, 0], "86");
+		let uri = hextoutf8(hURI);
 		result.push(uri);
 	    } catch(ex) {};
 	}
@@ -807,11 +709,7 @@ function X509() {
 
     /**
      * get AuthorityInfoAccess extension value in the certificate as associative array
-     * @name getExtAIAInfo
-     * @memberOf X509#
-     * @function
      * @return {Object} associative array of AIA extension properties
-     * @since jsrsasign 7.2.0 x509 1.1.14
      * @description
      * This method will get authority info access value
      * as associate array which has following properties:
@@ -828,14 +726,14 @@ function X509() {
      *   caissuer: ["http://rep.foo.com/aaa.p8m"] }
      */
     this.getExtAIAInfo = function() {
-	var info = this.getExtInfo("authorityInfoAccess");
+	let info = this.getExtInfo("authorityInfoAccess");
 	if (info === undefined) return info;
 
-	var result = { ocsp: [], caissuer: [] };
-	var a = _getChildIdx(this.hex, info.vidx);
-	for (var i = 0; i < a.length; i++) {
-	    var hOID = _getVbyList(this.hex, a[i], [0], "06");
-	    var hName = _getVbyList(this.hex, a[i], [1], "86");
+	let result = { ocsp: [], caissuer: [] };
+	let a = _getChildIdx(this.hex, info.vidx);
+	for (let i = 0; i < a.length; i++) {
+	    let hOID = _getVbyList(this.hex, a[i], [0], "06");
+	    let hName = _getVbyList(this.hex, a[i], [1], "86");
 	    if (hOID === "2b06010505073001") {
 		result.ocsp.push(hextoutf8(hName));
 	    }
@@ -849,11 +747,7 @@ function X509() {
 
     /**
      * get CertificatePolicies extension value in the certificate as array
-     * @name getExtCertificatePolicies
-     * @memberOf X509#
-     * @function
      * @return {Object} array of PolicyInformation JSON object
-     * @since jsrsasign 7.2.0 x509 1.1.14
      * @description
      * This method will get certificate policies value
      * as an array of JSON object which has following properties:
@@ -873,24 +767,24 @@ function X509() {
      *    unotice: "explicit text" }]
      */
     this.getExtCertificatePolicies = function() {
-	var info = this.getExtInfo("certificatePolicies");
+	let info = this.getExtInfo("certificatePolicies");
 	if (info === undefined) return info;
 	
-	var hExt = _getTLV(this.hex, info.vidx);
-	var result = [];
+	let hExt = _getTLV(this.hex, info.vidx);
+	let result = [];
 
-	var a = _getChildIdx(hExt, 0);
-	for (var i = 0; i < a.length; i++) {
-	    var policyInfo = {};
-	    var a1 = _getChildIdx(hExt, a[i]);
+	let a = _getChildIdx(hExt, 0);
+	for (let i = 0; i < a.length; i++) {
+	    let policyInfo = {};
+	    let a1 = _getChildIdx(hExt, a[i]);
 
 	    policyInfo.id = _oidname(_getV(hExt, a1[0]));
 
 	    if (a1.length === 2) {
-		var a2 = _getChildIdx(hExt, a1[1]);
+		let a2 = _getChildIdx(hExt, a1[1]);
 
-		for (var j = 0; j < a2.length; j++) {
-		    var hQualifierId = _getVbyList(hExt, a2[j], [0], "06");
+		for (let j = 0; j < a2.length; j++) {
+		    let hQualifierId = _getVbyList(hExt, a2[j], [0], "06");
 
 		    if (hQualifierId === "2b06010505070201") { // cps
 			policyInfo.cps = hextoutf8(_getVbyList(hExt, a2[j], [1]));
@@ -910,10 +804,7 @@ function X509() {
     // ===== read certificate =====================================
     /**
      * read PEM formatted X.509 certificate from string.<br/>
-     * @name readCertPEM
-     * @memberOf X509#
-     * @function
-     * @param {String} sCertPEM string for PEM formatted X.509 certificate
+     * @param {string} sCertPEM string for PEM formatted X.509 certificate
      * @example
      * x = new X509();
      * x.readCertPEM(sCertPEM); // read certificate
@@ -924,11 +815,7 @@ function X509() {
 
     /**
      * read a hexadecimal string of X.509 certificate<br/>
-     * @name readCertHex
-     * @memberOf X509#
-     * @function
-     * @param {String} sCertHex hexadecimal string of X.509 certificate
-     * @since jsrsasign 7.1.4 x509 1.1.13
+     * @param {string} sCertHex hexadecimal string of X.509 certificate
      * @description
      * NOTE: {@link X509#parseExt} will called internally since jsrsasign 7.2.0.
      * @example
@@ -947,11 +834,7 @@ function X509() {
 
     /**
      * get certificate information as string.<br/>
-     * @name getInfo
-     * @memberOf X509#
-     * @function
-     * @return {String} certificate information string
-     * @since jsrsasign 5.0.10 x509 1.1.8
+     * @return {string} certificate information string
      * @example
      * x = new X509();
      * x.readCertPEM(certPEM);
@@ -981,8 +864,8 @@ function X509() {
      * signature: 1c1a0697dcd79c9f...
      */
     this.getInfo = function() {
-	var _X509 = X509;
-	var s, pubkey, aExt;
+	let _X509 = X509;
+	let s, pubkey, aExt;
 	s  = "Basic Fields\n";
         s += "  serial number: " + this.getSerialNumberHex() + "\n";
 	s += "  signature algorithm: " + this.getSignatureAlgorithmField() + "\n";
@@ -1007,21 +890,21 @@ function X509() {
 	if (aExt !== undefined && aExt !== null) {
             s += "X509v3 Extensions:\n";
 	    
-            for (var i = 0; i < aExt.length; i++) {
-		var info = aExt[i];
+            for (let i = 0; i < aExt.length; i++) {
+		let info = aExt[i];
 
 		// show extension name and critical flag
-		var extName = KJUR.asn1.x509.OID.oid2name(info["oid"]);
+		let extName = oid2name(info["oid"]);
 		if (extName === '') extName = info["oid"];
 
-		var critical = '';
+		let critical = '';
 		if (info["critical"] === true) critical = "CRITICAL";
 
 		s += "  " + extName + " " + critical + ":\n";
 
 		// show extension value if supported
 		if (extName === "basicConstraints") {
-		    var bc = this.getExtBasicConstraints();
+		    let bc = this.getExtBasicConstraints();
 		    if (bc.cA === undefined) {
 			s += "    {}\n";
 		    } else {
@@ -1035,27 +918,27 @@ function X509() {
 		} else if (extName === "subjectKeyIdentifier") {
 		    s += "    " + this.getExtSubjectKeyIdentifier() + "\n";
 		} else if (extName === "authorityKeyIdentifier") {
-		    var akid = this.getExtAuthorityKeyIdentifier();
+		    let akid = this.getExtAuthorityKeyIdentifier();
 		    if (akid.kid !== undefined)
 			s += "    kid=" + akid.kid + "\n";
 		} else if (extName === "extKeyUsage") {
-		    var eku = this.getExtExtKeyUsageName();
+		    let eku = this.getExtExtKeyUsageName();
 		    s += "    " + eku.join(", ") + "\n";
 		} else if (extName === "subjectAltName") {
-		    var san = this.getExtSubjectAltName2();
+		    let san = this.getExtSubjectAltName2();
 		    s += "    " + san + "\n";
 		} else if (extName === "cRLDistributionPoints") {
-		    var cdp = this.getExtCRLDistributionPointsURI();
+		    let cdp = this.getExtCRLDistributionPointsURI();
 		    s += "    " + cdp + "\n";
 		} else if (extName === "authorityInfoAccess") {
-		    var aia = this.getExtAIAInfo();
+		    let aia = this.getExtAIAInfo();
 		    if (aia.ocsp !== undefined)
 			s += "    ocsp: " + aia.ocsp.join(",") + "\n";
 		    if (aia.caissuer !== undefined)
 			s += "    caissuer: " + aia.caissuer.join(",") + "\n";
 		} else if (extName === "certificatePolicies") {
-		    var aCP = this.getExtCertificatePolicies();
-		    for (var j = 0; j < aCP.length; j++) {
+		    let aCP = this.getExtCertificatePolicies();
+		    for (let j = 0; j < aCP.length; j++) {
 			if (aCP[j].id !== undefined)
 			    s += "    policy oid: " + aCP[j].id + "\n";
 			if (aCP[j].cps !== undefined)
@@ -1073,12 +956,9 @@ function X509() {
 
 /**
  * get distinguished name string in OpenSSL online format from hexadecimal string of ASN.1 DER X.500 name<br/>
- * @name hex2dn
- * @memberOf X509
- * @function
- * @param {String} hex hexadecimal string of ASN.1 DER distinguished name
- * @param {Integer} idx index of hexadecimal string (DEFAULT=0)
- * @return {String} OpenSSL online format distinguished name
+ * @param {string} hex hexadecimal string of ASN.1 DER distinguished name
+ * @param {number} idx index of hexadecimal string (DEFAULT=0)
+ * @return {string} OpenSSL online format distinguished name
  * @description
  * This static method converts from a hexadecimal string of 
  * distinguished name (DN)
@@ -1090,10 +970,10 @@ X509.hex2dn = function(hex, idx) {
     if (idx === undefined) idx = 0;
     if (hex.substr(idx, 2) !== "30") throw "malformed DN";
 
-    var a = new Array();
+    let a = new Array();
 
-    var aIdx = ASN1HEX.getChildIdx(hex, idx);
-    for (var i = 0; i < aIdx.length; i++) {
+    let aIdx = ASN1HEX.getChildIdx(hex, idx);
+    for (let i = 0; i < aIdx.length; i++) {
 	a.push(X509.hex2rdn(hex, aIdx[i]));
     }
 
@@ -1103,12 +983,9 @@ X509.hex2dn = function(hex, idx) {
 
 /**
  * get relative distinguished name string in OpenSSL online format from hexadecimal string of ASN.1 DER RDN<br/>
- * @name hex2rdn
- * @memberOf X509
- * @function
- * @param {String} hex hexadecimal string of ASN.1 DER concludes relative distinguished name
- * @param {Integer} idx index of hexadecimal string (DEFAULT=0)
- * @return {String} OpenSSL online format relative distinguished name
+ * @param {string} hex hexadecimal string of ASN.1 DER concludes relative distinguished name
+ * @param {number} idx index of hexadecimal string (DEFAULT=0)
+ * @return {string} OpenSSL online format relative distinguished name
  * @description
  * This static method converts from a hexadecimal string of 
  * relative distinguished name (RDN)
@@ -1122,10 +999,10 @@ X509.hex2rdn = function(hex, idx) {
     if (idx === undefined) idx = 0;
     if (hex.substr(idx, 2) !== "31") throw "malformed RDN";
 
-    var a = new Array();
+    let a = new Array();
 
-    var aIdx = ASN1HEX.getChildIdx(hex, idx);
-    for (var i = 0; i < aIdx.length; i++) {
+    let aIdx = ASN1HEX.getChildIdx(hex, idx);
+    for (let i = 0; i < aIdx.length; i++) {
 	a.push(X509.hex2attrTypeValue(hex, aIdx[i]));
     }
 
@@ -1135,12 +1012,9 @@ X509.hex2rdn = function(hex, idx) {
 
 /**
  * get string from hexadecimal string of ASN.1 DER AttributeTypeAndValue<br/>
- * @name hex2attrTypeValue
- * @memberOf X509
- * @function
- * @param {String} hex hexadecimal string of ASN.1 DER concludes AttributeTypeAndValue
- * @param {Integer} idx index of hexadecimal string (DEFAULT=0)
- * @return {String} string representation of AttributeTypeAndValue (ex. C=US)
+ * @param {string} hex hexadecimal string of ASN.1 DER concludes AttributeTypeAndValue
+ * @param {number} idx index of hexadecimal string (DEFAULT=0)
+ * @return {string} string representation of AttributeTypeAndValue (ex. C=US)
  * @description
  * This static method converts from a hexadecimal string of AttributeTypeAndValue
  * specified by 'hex' and 'idx' to LDAP string representation (ex. C=US).
@@ -1150,66 +1024,54 @@ X509.hex2rdn = function(hex, idx) {
  * X509.hex2attrTypeValue("...3008060355040a0c0161...", 128) &rarr; O=a
  */
 X509.hex2attrTypeValue = function(hex, idx) {
-    var _ASN1HEX = ASN1HEX;
-    var _getV = _ASN1HEX.getV;
+    let _ASN1HEX = ASN1HEX;
+    let _getV = _ASN1HEX.getV;
 
     if (idx === undefined) idx = 0;
     if (hex.substr(idx, 2) !== "30") throw "malformed attribute type and value";
 
-    var aIdx = _ASN1HEX.getChildIdx(hex, idx);
+    let aIdx = _ASN1HEX.getChildIdx(hex, idx);
     if (aIdx.length !== 2 || hex.substr(aIdx[0], 2) !== "06")
 	"malformed attribute type and value";
 
-    var oidHex = _getV(hex, aIdx[0]);
-    var oidInt = KJUR.asn1.ASN1Util.oidHexToInt(oidHex);
-    var atype = KJUR.asn1.x509.OID.oid2atype(oidInt);
+    let oidHex = _getV(hex, aIdx[0]);
+    let oidInt = oidHexToInt(oidHex);
+    let atype = oid2atype(oidInt);
 
-    var hV = _getV(hex, aIdx[1]);
-    var rawV = hextorstr(hV);
+    let hV = _getV(hex, aIdx[1]);
+    let rawV = hextorstr(hV);
 
     return atype + "=" + rawV;
 };
 
 /**
  * get RSA/DSA/ECDSA public key object from X.509 certificate hexadecimal string<br/>
- * @name getPublicKeyFromCertHex
- * @memberOf X509
- * @function
- * @param {String} h hexadecimal string of X.509 certificate for RSA/ECDSA/DSA public key
+ * @param {string} h hexadecimal string of X.509 certificate for RSA/ECDSA/DSA public key
  * @return returns RSAKey/KJUR.crypto.{ECDSA,DSA} object of public key
- * @since jsrasign 7.1.0 x509 1.1.11
  */
 X509.getPublicKeyFromCertHex = function(h) {
-    var x = new X509();
+    let x = new X509();
     x.readCertHex(h);
     return x.getPublicKey();
 };
 
 /**
  * get RSA/DSA/ECDSA public key object from PEM certificate string
- * @name getPublicKeyFromCertPEM
- * @memberOf X509
- * @function
- * @param {String} sCertPEM PEM formatted RSA/ECDSA/DSA X.509 certificate
+ * @param {string} sCertPEM PEM formatted RSA/ECDSA/DSA X.509 certificate
  * @return returns RSAKey/KJUR.crypto.{ECDSA,DSA} object of public key
- * @since x509 1.1.1
  * @description
  * NOTE: DSA is also supported since x509 1.1.2.
  */
 X509.getPublicKeyFromCertPEM = function(sCertPEM) {
-    var x = new X509();
+    let x = new X509();
     x.readCertPEM(sCertPEM);
     return x.getPublicKey();
 };
 
 /**
  * get public key information from PEM certificate
- * @name getPublicKeyInfoPropOfCertPEM
- * @memberOf X509
- * @function
- * @param {String} sCertPEM string of PEM formatted certificate
+ * @param {string} sCertPEM string of PEM formatted certificate
  * @return {Hash} hash of information for public key
- * @since x509 1.1.1
  * @description
  * Resulted associative array has following properties:<br/>
  * <ul>
@@ -1220,11 +1082,11 @@ X509.getPublicKeyFromCertPEM = function(sCertPEM) {
  * NOTE: X509v1 certificate is also supported since x509.js 1.1.9.
  */
 X509.getPublicKeyInfoPropOfCertPEM = function(sCertPEM) {
-    var _ASN1HEX = ASN1HEX;
-    var _getVbyList = _ASN1HEX.getVbyList;
+    let _ASN1HEX = ASN1HEX;
+    let _getVbyList = _ASN1HEX.getVbyList;
 
-    var result = {};
-    var x, hSPKI, pubkey;
+    let result = {};
+    let x, hSPKI, pubkey;
     result.algparam = null;
 
     x = new X509();
