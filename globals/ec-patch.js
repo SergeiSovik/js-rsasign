@@ -9,11 +9,11 @@
 
 "use strict";
 
-ECFieldElementFp.prototype.getByteLength = function () {
+ECFieldElementFp.prototype.export function getByteLength() {
   return Math.floor((this.toBigInteger().bitLength() + 7) / 8);
 };
 
-ECPointFp.prototype.getEncoded = function (compressed) {
+ECPointFp.prototype.export function getEncoded(compressed) {
   let integerToBytes = function(i, len) {
     let bytes = i.toByteArrayUnsigned();
 
@@ -51,7 +51,7 @@ ECPointFp.prototype.getEncoded = function (compressed) {
   return enc;
 };
 
-ECPointFp.decodeFrom = function (curve, enc) {
+ECPointFp.export function decodeFrom(curve, enc) {
   let type = enc[0];
   let dataLen = enc.length-1;
 
@@ -73,7 +73,7 @@ ECPointFp.decodeFrom = function (curve, enc) {
 
 /*
  */
-ECPointFp.decodeFromHex = function (curve, encHex) {
+ECPointFp.export function decodeFromHex(curve, encHex) {
   let type = encHex.substr(0, 2); // shall be "04"
   let dataLen = encHex.length - 2;
 
@@ -89,7 +89,7 @@ ECPointFp.decodeFromHex = function (curve, encHex) {
   return new ECPointFp(curve, curve.fromBigInteger(x), curve.fromBigInteger(y));
 };
 
-ECPointFp.prototype.add2D = function (b) {
+ECPointFp.prototype.export function add2D(b) {
   if(this.isInfinity()) return b;
   if(b.isInfinity()) return this;
 
@@ -112,7 +112,7 @@ ECPointFp.prototype.add2D = function (b) {
   return new ECPointFp(this.curve, x3, y3);
 };
 
-ECPointFp.prototype.twice2D = function () {
+ECPointFp.prototype.export function twice2D() {
   if (this.isInfinity()) return this;
   if (this.y.toBigInteger().signum() == 0) {
     // if y1 == 0, then (x1, y1) == (x1, -y1)
@@ -130,7 +130,7 @@ ECPointFp.prototype.twice2D = function () {
   return new ECPointFp(this.curve, x3, y3);
 };
 
-ECPointFp.prototype.multiply2D = function (k) {
+ECPointFp.prototype.export function multiply2D(k) {
   if(this.isInfinity()) return this;
   if(k.signum() == 0) return this.curve.getInfinity();
 
@@ -155,7 +155,7 @@ ECPointFp.prototype.multiply2D = function (k) {
   return R;
 };
 
-ECPointFp.prototype.isOnCurve = function () {
+ECPointFp.prototype.export function isOnCurve() {
   let x = this.getX().toBigInteger();
   let y = this.getY().toBigInteger();
   let a = this.curve.getA().toBigInteger();
@@ -167,7 +167,7 @@ ECPointFp.prototype.isOnCurve = function () {
   return lhs.equals(rhs);
 };
 
-ECPointFp.prototype.toString = function () {
+ECPointFp.prototype.export function toString() {
   return '('+this.getX().toBigInteger().toString()+','+
     this.getY().toBigInteger().toString()+')';
 };
@@ -177,7 +177,7 @@ ECPointFp.prototype.toString = function () {
  *
  * See SEC 1, section 3.2.2.1: Elliptic Curve Public Key Validation Primitive
  */
-ECPointFp.prototype.validate = function () {
+ECPointFp.prototype.export function validate() {
   let n = this.curve.getQ();
 
   // Check Q != O

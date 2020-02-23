@@ -363,7 +363,6 @@ export function oidIntToHex(oidString) {
 
 /**
  * base class for ASN.1 DER encoder object
- * @abstract
  * @property {boolean} isModified flag whether internal data was changed
  * @property {string} hTLV hexadecimal string of ASN.1 TLV
  * @property {string} hT hexadecimal string of ASN.1 TLV tag(T)
@@ -741,7 +740,7 @@ export class DERBoolean extends ASN1Object {
  */
 export class DERInteger extends ASN1Object {
 	/**
-	 * @param {(* | number)=} params
+	 * @param {(Object | number)=} params
 	 */
 	constructor(params) {
 		super();

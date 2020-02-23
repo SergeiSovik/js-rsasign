@@ -17,6 +17,7 @@ import { DERInteger, DEROctetString, DERObjectIdentifier, DERSequence, DERSet, D
 import { isHex } from "./base64x-1.1.js"
 import { name2obj, Time, AlgorithmIdentifier, X500Name,  } from "./asn1x509-1.0.js"
 import { hashHex } from "./crypto-1.1.js"
+import { getVbyList, getTLVbyList, getIdxbyList, getChildIdx, getTLV, oidname } from "./asn1hex-1.1.js"
 
 /**
  * @fileOverview
@@ -1031,8 +1032,6 @@ KJUR.asn1.cms.CMSUtil.newSignedData = function(param) {
  * }
  */
 KJUR.asn1.cms.CMSUtil.verifySignedData = function(param) {
-
-
 	KJUR.asn1.cms = KJUR.asn1.cms,
 	_SignerInfo = KJUR.asn1.cms.SignerInfo,
 	_SignedData = KJUR.asn1.cms.SignedData,
@@ -1041,14 +1040,6 @@ KJUR.asn1.cms.CMSUtil.verifySignedData = function(param) {
 	_SigningCertificateV2 = KJUR.asn1.cms.SigningCertificateV2,
 	KJUR.asn1.cades = KJUR.asn1.cades,
 	_SignaturePolicyIdentifier = KJUR.asn1.cades.SignaturePolicyIdentifier,
-	_ASN1HEX = ASN1HEX,
-	_getVbyList = _ASN1HEX.getVbyList,
-	_getTLVbyList = _ASN1HEX.getTLVbyList,
-	_getIdxbyList = _ASN1HEX.getIdxbyList,
-	_getChildIdx = _ASN1HEX.getChildIdx,
-	_getTLV = _ASN1HEX.getTLV,
-	_oidname = _ASN1HEX.oidname,
-	hashHex = hashHex;
 
     if (param.cms === undefined &&
         ! isHex(param.cms)) {
@@ -1059,7 +1050,7 @@ KJUR.asn1.cms.CMSUtil.verifySignedData = function(param) {
     let _findSignerInfos = function(hCMS, result) {
 	let idx;
 	for (let i = 3; i < 6; i++) {
-	    idx = _getIdxbyList(hCMS, 0, [1, 0, i]);
+	    idx = getIdxbyList(hCMS, 0, [1, 0, i]);
 	    if (idx !== undefined) {
 		let tag = hCMS.substr(idx, 2);
 		if (tag === "a0") result.certsIdx = idx;
@@ -1072,7 +1063,7 @@ KJUR.asn1.cms.CMSUtil.verifySignedData = function(param) {
     let _parseSignerInfos = function(hCMS, result) {
 	let idxSignerInfos = result.signerinfosIdx;
 	if (idxSignerInfos === undefined) return;
-	let idxList = _getChildIdx(hCMS, idxSignerInfos);
+	let idxList = getChildIdx(hCMS, idxSignerInfos);
 	result.signerInfoIdxList = idxList;
 	for (let i = 0; i < idxList.length; i++) {
 	    let idxSI = idxList[i];
@@ -1086,40 +1077,40 @@ KJUR.asn1.cms.CMSUtil.verifySignedData = function(param) {
 	let idx = info.idx;
 
 	// 1. signer identifier
-	info.signerid_issuer1 = _getTLVbyList(hCMS, idx, [1, 0], "30");
-	info.signerid_serial1 = _getVbyList(hCMS, idx, [1, 1], "02");
+	info.signerid_issuer1 = getTLVbyList(hCMS, idx, [1, 0], "30");
+	info.signerid_serial1 = getVbyList(hCMS, idx, [1, 1], "02");
 
 	// 2. hash alg
-	info.hashalg = _oidname(_getVbyList(hCMS, idx, [2, 0], "06"));
+	info.hashalg = oidname(getVbyList(hCMS, idx, [2, 0], "06"));
 
 	// 3. [0] singedAtttrs
-	let idxSignedAttrs = _getIdxbyList(hCMS, idx, [3], "a0");
+	let idxSignedAttrs = getIdxbyList(hCMS, idx, [3], "a0");
 	info.idxSignedAttrs = idxSignedAttrs;
 	_parseSignedAttrs(hCMS, info, idxSignedAttrs);
 
-	let aIdx = _getChildIdx(hCMS, idx);
+	let aIdx = getChildIdx(hCMS, idx);
 	let n = aIdx.length;
 	if (n < 6) throw "malformed SignerInfo";
 	
-	info.sigalg = _oidname(_getVbyList(hCMS, idx, [n - 2, 0], "06"));
-	info.sigval = _getVbyList(hCMS, idx, [n - 1], "04");
-	//info.sigval = _getVbyList(hCMS, 0, [1, 0, 4, 0, 5], "04");
+	info.sigalg = oidname(getVbyList(hCMS, idx, [n - 2, 0], "06"));
+	info.sigval = getVbyList(hCMS, idx, [n - 1], "04");
+	//info.sigval = getVbyList(hCMS, 0, [1, 0, 4, 0, 5], "04");
 	//info.sigval = hCMS;
     };
 
     let _parseSignedAttrs = function(hCMS, info, idx) {
-	let aIdx = _getChildIdx(hCMS, idx);
+	let aIdx = getChildIdx(hCMS, idx);
 	info.signedAttrIdxList = aIdx;
 	for (let i = 0; i < aIdx.length; i++) {
 	    let idxAttr = aIdx[i];
-	    let hAttrType = _getVbyList(hCMS, idxAttr, [0], "06");
+	    let hAttrType = getVbyList(hCMS, idxAttr, [0], "06");
 	    let v;
 
 	    if (hAttrType === "2a864886f70d010905") { // siging time
-		v = hextoutf8(_getVbyList(hCMS, idxAttr, [1, 0]));
+		v = hextoutf8(getVbyList(hCMS, idxAttr, [1, 0]));
 		info.saSigningTime = v;
 	    } else if (hAttrType === "2a864886f70d010904") { // message digest
-		v = _getVbyList(hCMS, idxAttr, [1, 0], "04");
+		v = getVbyList(hCMS, idxAttr, [1, 0], "04");
 		info.saMessageDigest = v;
 	    }
 	}
@@ -1127,13 +1118,13 @@ KJUR.asn1.cms.CMSUtil.verifySignedData = function(param) {
 
     let _parseSignedData = function(hCMS, result) {
 	// check if signedData (1.2.840.113549.1.7.2) type
-	if (_getVbyList(hCMS, 0, [0], "06") !== "2a864886f70d010702") {
+	if (getVbyList(hCMS, 0, [0], "06") !== "2a864886f70d010702") {
 	    return result;
 	}
 	result.cmsType = "signedData";
 
 	// find eContent data
-	result.econtent = _getVbyList(hCMS, 0, [1, 0, 2, 1, 0]);
+	result.econtent = getVbyList(hCMS, 0, [1, 0, 2, 1, 0]);
 
 	// find certificates,revInfos,signerInfos index
 	_findSignerInfos(hCMS, result);
@@ -1170,9 +1161,9 @@ KJUR.asn1.cms.CMSUtil.verifySignedData = function(param) {
 	if (result.certs === undefined) {
 	    aCert = [];
 	    result.certkeys = [];
-	    let aIdx = _getChildIdx(hCMS, certsIdx);
+	    let aIdx = getChildIdx(hCMS, certsIdx);
 	    for (let i = 0; i < aIdx.length; i++) {
-		let hCert = _getTLV(hCMS, aIdx[i]);
+		let hCert = getTLV(hCMS, aIdx[i]);
 		let x = new X509();
 		x.readCertHex(hCert);
 		aCert[i] = x;
@@ -1223,7 +1214,7 @@ KJUR.asn1.cms.CMSUtil.verifySignedData = function(param) {
 	// verify signature value
 	_detail.validSignatureValue = false;
 	let sigalg = si.sigalg;
-	let hSignedAttr = "31" + _getTLV(hCMS, si.idxSignedAttrs).substr(2);
+	let hSignedAttr = "31" + getTLV(hCMS, si.idxSignedAttrs).substr(2);
 	si.signedattrshex = hSignedAttr;
 	let pubkey = result.certs[si.certkey_idx].getPublicKey();
 	let sig = new KJUR.crypto.Signature({alg: sigalg});

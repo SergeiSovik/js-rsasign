@@ -43,8 +43,6 @@ if (typeof KJUR.jws == "undefined" || !KJUR.jws) KJUR.jws = {};
 
 /**
  * JSON Web Signature(JWS) class.<br/> * @see <a href="https://kjur.github.io/jsjws/">'jwjws'(JWS JavaScript Library) home page https://kjur.github.io/jsjws/</a>
- * @see <a href="https://kjur.github.io/jsrsasigns/">'jwrsasign'(RSA Sign JavaScript Library) home page https://kjur.github.io/jsrsasign/</a>
- * @see <a href="http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-14">IETF I-D JSON Web Algorithms (JWA)</a>
  * @description
  * This class provides JSON Web Signature(JWS)/JSON Web Token(JWT) signing and validation.
  *
@@ -170,8 +168,6 @@ KJUR.jws.JWS = function() {
  * @param {string} key string of private key or mac key object to sign
  * @param {string} pass (OPTION)passcode to use encrypted asymmetric private key 
  * @return {string} JWS signature string
- * @see <a href="https://kjur.github.io/jsrsasign/api/symbols/KJUR.crypto.Signature.html">jsrsasign KJUR.crypto.Signature method</a>
- * @see <a href="https://kjur.github.io/jsrsasign/api/symbols/KJUR.crypto.Mac.html">jsrsasign KJUR.crypto.Mac method</a>
  * @description
  * This method supports following algorithms.
  * <table>
@@ -318,8 +314,6 @@ KJUR.jws.JWS.sign = function(alg, spHeader, spPayload, key, pass) {
  * @param {Object} key string of public key, certificate or key object to verify
  * @param {string} acceptAlgs array of algorithm name strings (OPTION)
  * @return {boolean} true if the signature is valid otherwise false including no signature case or without head and payload
- * @see <a href="https://kjur.github.io/jsrsasign/api/symbols/KJUR.crypto.Signature.html">jsrsasign KJUR.crypto.Signature method</a>
- * @see <a href="https://kjur.github.io/jsrsasign/api/symbols/KJUR.crypto.Mac.html">jsrsasign KJUR.crypto.Mac method</a>
  * @description
  * <p>
  * This method verifies a JSON Web Signature Compact Serialization string by the validation 

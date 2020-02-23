@@ -16,6 +16,7 @@
 import { DERInteger, DEROctetString, DERSequence } from "./asn1-1.0.js"
 import { AlgorithmIdentifier } from "./asn1x509-1.0.js"
 import { hashHex } from "./crypto-1.1.js"
+import { getTLVbyList, getIdxbyList, getVbyList, getV } from "./asn1hex-1.1.js"
 
 /**
  * @fileOverview
@@ -83,27 +84,26 @@ KJUR.asn1.ocsp.DEFAULT_HASH = "sha1";
  * // constructor with values
  * o = new KJUR.asn1.ocsp.CertID({namehash: "1a...", keyhash: "ad...", serial: "1234", alg: "sha256"});
  */
-KJUR.asn1.ocsp.CertID = function(params) {
+KJUR.asn1.ocsp.export function CertID(params) {
 
 
 
 
 
 	KJUR.asn1.x509 = KJUR.asn1.x509,
-	AlgorithmIdentifier = AlgorithmIdentifier,
-	KJUR.asn1.ocsp = KJUR.asn1.ocsp,
-	_DEFAULT_HASH = KJUR.asn1.ocsp.DEFAULT_HASH,
-	KJUR.crypto = KJUR.crypto,
-	hashHex = hashHex,
-	_X509 = X509,
-	_ASN1HEX = ASN1HEX;
+		AlgorithmIdentifier = AlgorithmIdentifier,
+		KJUR.asn1.ocsp = KJUR.asn1.ocsp,
+		_DEFAULT_HASH = KJUR.asn1.ocsp.DEFAULT_HASH,
+		KJUR.crypto = KJUR.crypto,
+		hashHex = hashHex,
+		_X509 = X509,
 
-    KJUR.asn1.ocsp.CertID.superclass.constructor.call(this);
+		KJUR.asn1.ocsp.CertID.superclass.constructor.call(this);
 
-    this.dHashAlg = null;
-    this.dIssuerNameHash = null;
-    this.dIssuerKeyHash = null;
-    this.dSerialNumber = null;
+	this.dHashAlg = null;
+	this.dIssuerNameHash = null;
+	this.dIssuerKeyHash = null;
+	this.dSerialNumber = null;
 
     /**
      * set CertID ASN.1 object by values.<br/>
@@ -116,14 +116,14 @@ KJUR.asn1.ocsp.CertID = function(params) {
      * o.setByValue("1fac...", "fd3a...", "1234"); // sha1 is used by default
      * o.setByValue("1fac...", "fd3a...", "1234", "sha256");
      */
-    this.setByValue = function(issuerNameHashHex, issuerKeyHashHex,
-			       serialNumberHex, algName) {
-	if (algName === undefined) algName = _DEFAULT_HASH;
-	this.dHashAlg =        new AlgorithmIdentifier({name: algName});
-	this.dIssuerNameHash = new DEROctetString({hex: issuerNameHashHex});
-	this.dIssuerKeyHash =  new DEROctetString({hex: issuerKeyHashHex});
-	this.dSerialNumber =   new DERInteger({hex: serialNumberHex});
-    };
+	this.export function setByValue(issuerNameHashHex, issuerKeyHashHex,
+		serialNumberHex, algName) {
+		if (algName === undefined) algName = _DEFAULT_HASH;
+		this.dHashAlg = new AlgorithmIdentifier({ name: algName });
+		this.dIssuerNameHash = new DEROctetString({ hex: issuerNameHashHex });
+		this.dIssuerKeyHash = new DEROctetString({ hex: issuerKeyHashHex });
+		this.dSerialNumber = new DERInteger({ hex: serialNumberHex });
+	};
 
     /**
      * set CertID ASN.1 object by PEM certificates.<br/>
@@ -135,56 +135,56 @@ KJUR.asn1.ocsp.CertID = function(params) {
      * o.setByCert("-----BEGIN...", "-----BEGIN..."); // sha1 is used by default
      * o.setByCert("-----BEGIN...", "-----BEGIN...", "sha256");
      */
-    this.setByCert = function(issuerCert, subjectCert, algName) {
-	if (algName === undefined) algName = _DEFAULT_HASH;
+	this.export function setByCert(issuerCert, subjectCert, algName) {
+		if (algName === undefined) algName = _DEFAULT_HASH;
 
-	let xSbj = new _X509();
-	xSbj.readCertPEM(subjectCert);
-	let xIss = new _X509();
-	xIss.readCertPEM(issuerCert);
+		let xSbj = new _X509();
+		xSbj.readCertPEM(subjectCert);
+		let xIss = new _X509();
+		xIss.readCertPEM(issuerCert);
 
-	let hISS_SPKI = xIss.getPublicKeyHex();
-	let issuerKeyHex = _ASN1HEX.getTLVbyList(hISS_SPKI, 0, [1, 0], "30");
+		let hISS_SPKI = xIss.getPublicKeyHex();
+		let issuerKeyHex = getTLVbyList(hISS_SPKI, 0, [1, 0], "30");
 
-	let serialNumberHex = xSbj.getSerialNumberHex();
-	let issuerNameHashHex = hashHex(xIss.getSubjectHex(), algName);
-	let issuerKeyHashHex = hashHex(issuerKeyHex, algName);
-	this.setByValue(issuerNameHashHex, issuerKeyHashHex,
+		let serialNumberHex = xSbj.getSerialNumberHex();
+		let issuerNameHashHex = hashHex(xIss.getSubjectHex(), algName);
+		let issuerKeyHashHex = hashHex(issuerKeyHex, algName);
+		this.setByValue(issuerNameHashHex, issuerKeyHashHex,
 			serialNumberHex, algName);
-	this.hoge = xSbj.getSerialNumberHex();
-    };
+		this.hoge = xSbj.getSerialNumberHex();
+	};
 
-    this.getEncodedHex = function() {
-	if (this.dHashAlg === null && 
-	    this.dIssuerNameHash === null &&
-	    this.dIssuerKeyHash === null &&
-	    this.dSerialNumber === null)
-	    throw "not yet set values";
+	this.export function getEncodedHex() {
+		if (this.dHashAlg === null &&
+			this.dIssuerNameHash === null &&
+			this.dIssuerKeyHash === null &&
+			this.dSerialNumber === null)
+			throw "not yet set values";
 
-	let a = [this.dHashAlg, this.dIssuerNameHash,
-		 this.dIssuerKeyHash, this.dSerialNumber];
-	let seq = new DERSequence({array: a});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
+		let a = [this.dHashAlg, this.dIssuerNameHash,
+		this.dIssuerKeyHash, this.dSerialNumber];
+		let seq = new DERSequence({ array: a });
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	};
 
-    if (params !== undefined) {
-	let p = params;
-	if (p.issuerCert !== undefined &&
-	    p.subjectCert !== undefined) {
-	    let alg = _DEFAULT_HASH;
-	    if (p.alg === undefined) alg = undefined;
-	    this.setByCert(p.issuerCert, p.subjectCert, alg);
-	} else if (p.namehash !== undefined &&
-		   p.keyhash !== undefined &&
-		   p.serial !== undefined) {
-	    let alg = _DEFAULT_HASH;
-	    if (p.alg === undefined) alg = undefined;
-	    this.setByValue(p.namehash, p.keyhash, p.serial, alg);
-	} else {
-	    throw "invalid constructor arguments";
+	if (params !== undefined) {
+		let p = params;
+		if (p.issuerCert !== undefined &&
+			p.subjectCert !== undefined) {
+			let alg = _DEFAULT_HASH;
+			if (p.alg === undefined) alg = undefined;
+			this.setByCert(p.issuerCert, p.subjectCert, alg);
+		} else if (p.namehash !== undefined &&
+			p.keyhash !== undefined &&
+			p.serial !== undefined) {
+			let alg = _DEFAULT_HASH;
+			if (p.alg === undefined) alg = undefined;
+			this.setByValue(p.namehash, p.keyhash, p.serial, alg);
+		} else {
+			throw "invalid constructor arguments";
+		}
 	}
-    }
 };
 YAHOO.lang.extend(KJUR.asn1.ocsp.CertID, KJUR.asn1.ASN1Object);
 
@@ -210,36 +210,36 @@ YAHOO.lang.extend(KJUR.asn1.ocsp.CertID, KJUR.asn1.ASN1Object);
  * // constructor with values
  * o = new KJUR.asn1.ocsp.Request({namehash: "1a...", keyhash: "ad...", serial: "1234", alg: "sha256"});
  */
-KJUR.asn1.ocsp.Request = function(params) {
+KJUR.asn1.ocsp.export function Request(params) {
 
 
 
 	KJUR.asn1.ocsp = KJUR.asn1.ocsp;
-    
-    KJUR.asn1.ocsp.Request.superclass.constructor.call(this);
-    this.dReqCert = null;
-    this.dExt = null;
-    
-    this.getEncodedHex = function() {
-	let a = [];
 
-	// 1. reqCert
-	if (this.dReqCert === null)
-	    throw "reqCert not set";
-	a.push(this.dReqCert);
+	KJUR.asn1.ocsp.Request.superclass.constructor.call(this);
+	this.dReqCert = null;
+	this.dExt = null;
 
-	// 2. singleRequestExtensions (not supported yet)
+	this.export function getEncodedHex() {
+		let a = [];
 
-	// 3. construct SEQUENCE
-	let seq = new DERSequence({array: a});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
+		// 1. reqCert
+		if (this.dReqCert === null)
+			throw "reqCert not set";
+		a.push(this.dReqCert);
 
-    if (typeof params !== "undefined") {
-	let o = new KJUR.asn1.ocsp.CertID(params);
-	this.dReqCert = o;
-    }
+		// 2. singleRequestExtensions (not supported yet)
+
+		// 3. construct SEQUENCE
+		let seq = new DERSequence({ array: a });
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	};
+
+	if (typeof params !== "undefined") {
+		let o = new KJUR.asn1.ocsp.CertID(params);
+		this.dReqCert = o;
+	}
 };
 YAHOO.lang.extend(KJUR.asn1.ocsp.Request, KJUR.asn1.ASN1Object);
 
@@ -265,17 +265,17 @@ YAHOO.lang.extend(KJUR.asn1.ocsp.Request, KJUR.asn1.ASN1Object);
  *   {issuerCert: "-----BEGIN...", subjectCert: "-----BEGIN...", alg: "sha256"}
  * ]});
  */
-KJUR.asn1.ocsp.TBSRequest = function(params) {
+KJUR.asn1.ocsp.export function TBSRequest(params) {
 
 
 
 	KJUR.asn1.ocsp = KJUR.asn1.ocsp;
 
-    KJUR.asn1.ocsp.TBSRequest.superclass.constructor.call(this);
-    this.version = 0;
-    this.dRequestorName = null;
-    this.dRequestList = [];
-    this.dRequestExt = null;
+	KJUR.asn1.ocsp.TBSRequest.superclass.constructor.call(this);
+	this.version = 0;
+	this.dRequestorName = null;
+	this.dRequestList = [];
+	this.dRequestExt = null;
 
     /**
      * set TBSRequest ASN.1 object by array of parameters.<br/>
@@ -287,45 +287,45 @@ KJUR.asn1.ocsp.TBSRequest = function(params) {
      *   {issuerCert: "-----BEGIN...", subjectCert: "-----BEGIN...", alg: "sha256"}
      * ]);
      */
-    this.setRequestListByParam = function(aParams) {
-	let a = [];
-	for (let i = 0; i < aParams.length; i++) {
-	    let dReq = new KJUR.asn1.ocsp.Request(aParams[0]);
-	    a.push(dReq);
+	this.export function setRequestListByParam(aParams) {
+		let a = [];
+		for (let i = 0; i < aParams.length; i++) {
+			let dReq = new KJUR.asn1.ocsp.Request(aParams[0]);
+			a.push(dReq);
+		}
+		this.dRequestList = a;
+	};
+
+	this.export function getEncodedHex() {
+		let a = [];
+
+		// 1. version
+		if (this.version !== 0)
+			throw "not supported version: " + this.version;
+
+		// 2. requestorName
+		if (this.dRequestorName !== null)
+			throw "requestorName not supported";
+
+		// 3. requestList
+		let seqRequestList =
+			new DERSequence({ array: this.dRequestList });
+		a.push(seqRequestList);
+
+		// 4. requestExtensions
+		if (this.dRequestExt !== null)
+			throw "requestExtensions not supported";
+
+		// 5. construct SEQUENCE
+		let seq = new DERSequence({ array: a });
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	};
+
+	if (params !== undefined) {
+		if (params['reqList'] !== undefined)
+			this.setRequestListByParam(params['reqList']);
 	}
-	this.dRequestList = a;
-    };
-
-    this.getEncodedHex = function() {
-	let a = [];
-
-	// 1. version
-	if (this.version !== 0)
-	    throw "not supported version: " + this.version;
-
-	// 2. requestorName
-	if (this.dRequestorName !== null)
-	    throw "requestorName not supported";
-
-	// 3. requestList
-	let seqRequestList = 
-	    new DERSequence({array: this.dRequestList});
-	a.push(seqRequestList);
-
-	// 4. requestExtensions
-	if (this.dRequestExt !== null)
-	    throw "requestExtensions not supported";
-
-	// 5. construct SEQUENCE
-	let seq = new DERSequence({array: a});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
-
-    if (params !== undefined) {
-	if (params['reqList'] !== undefined)
-	    this.setRequestListByParam(params['reqList']);
-    }
 };
 YAHOO.lang.extend(KJUR.asn1.ocsp.TBSRequest, KJUR.asn1.ASN1Object);
 
@@ -351,42 +351,42 @@ YAHOO.lang.extend(KJUR.asn1.ocsp.TBSRequest, KJUR.asn1.ASN1Object);
  *   {issuerCert: "-----BEGIN...", subjectCert: "-----BEGIN...", alg: "sha256"}
  * ]});
  */
-KJUR.asn1.ocsp.OCSPRequest = function(params) {
+KJUR.asn1.ocsp.export function OCSPRequest(params) {
 
 
 
 	KJUR.asn1.ocsp = KJUR.asn1.ocsp;
 
-    KJUR.asn1.ocsp.OCSPRequest.superclass.constructor.call(this);
-    this.dTbsRequest = null;
-    this.dOptionalSignature = null;
+	KJUR.asn1.ocsp.OCSPRequest.superclass.constructor.call(this);
+	this.dTbsRequest = null;
+	this.dOptionalSignature = null;
 
-    this.getEncodedHex = function() {
-	let a = [];
+	this.export function getEncodedHex() {
+		let a = [];
 
-	// 1. tbsRequest
-	if (this.dTbsRequest !== null) {
-	    a.push(this.dTbsRequest);
-	} else {
-	    throw "tbsRequest not set";
+		// 1. tbsRequest
+		if (this.dTbsRequest !== null) {
+			a.push(this.dTbsRequest);
+		} else {
+			throw "tbsRequest not set";
+		}
+
+		// 2. optionalSignature
+		if (this.dOptionalSignature !== null)
+			throw "optionalSignature not supported";
+
+		// 3. construct SEQUENCE
+		let seq = new DERSequence({ array: a });
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	};
+
+	if (params !== undefined) {
+		if (params['reqList'] !== undefined) {
+			let o = new KJUR.asn1.ocsp.TBSRequest(params);
+			this.dTbsRequest = o;
+		}
 	}
-
-	// 2. optionalSignature
-	if (this.dOptionalSignature !== null)
-	    throw "optionalSignature not supported";
-
-	// 3. construct SEQUENCE
-	let seq = new DERSequence({array: a});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
-
-    if (params !== undefined) {
-	if (params['reqList'] !== undefined) {
-	    let o = new KJUR.asn1.ocsp.TBSRequest(params);
-	    this.dTbsRequest = o;
-	}
-    }
 };
 YAHOO.lang.extend(KJUR.asn1.ocsp.OCSPRequest, KJUR.asn1.ASN1Object);
 
@@ -411,15 +411,15 @@ KJUR.asn1.ocsp.OCSPUtil = {};
  * // generate OCSP request using sha1 algorithnm by default.
  * hReq = KJUR.asn1.ocsp.OCSPUtil.getRequestHex("-----BEGIN...", "-----BEGIN...");
  */
-KJUR.asn1.ocsp.OCSPUtil.getRequestHex = function(issuerCert, subjectCert, alg) {
+KJUR.asn1.ocsp.OCSPUtil.export function getRequestHex(issuerCert, subjectCert, alg) {
 
 
 	KJUR.asn1.ocsp = KJUR.asn1.ocsp;
 
-    if (alg === undefined) alg = KJUR.asn1.ocsp.DEFAULT_HASH;
-    let param = {alg: alg, issuerCert: issuerCert, subjectCert: subjectCert};
-    let o = new KJUR.asn1.ocsp.OCSPRequest({reqList: [param]});
-    return o.getEncodedHex();
+	if (alg === undefined) alg = KJUR.asn1.ocsp.DEFAULT_HASH;
+	let param = { alg: alg, issuerCert: issuerCert, subjectCert: subjectCert };
+	let o = new KJUR.asn1.ocsp.OCSPRequest({ reqList: [param] });
+	return o.getEncodedHex();
 };
 
 /**
@@ -439,49 +439,43 @@ KJUR.asn1.ocsp.OCSPUtil.getRequestHex = function(issuerCert, subjectCert, alg) {
  * @example
  * info = KJUR.asn1.ocsp.OCSPUtil.getOCSPResponseInfo("3082...");
  */
-KJUR.asn1.ocsp.OCSPUtil.getOCSPResponseInfo = function(h) {
-    let _ASN1HEX = ASN1HEX;
-    let _getVbyList = _ASN1HEX.getVbyList;
-    let _getIdxbyList = _ASN1HEX.getIdxbyList;
-    let _getVbyList = _ASN1HEX.getVbyList;
-    let _getV = _ASN1HEX.getV;
+KJUR.asn1.ocsp.OCSPUtil.export function getOCSPResponseInfo(h) {
+	let result = {};
+	try {
+		let v = getVbyList(h, 0, [0], "0a");
+		result.responseStatus = parseInt(v, 16);
+	} catch (ex) { };
+	if (result.responseStatus !== 0) return result;
 
-    let result = {};
-    try {
-	let v = _getVbyList(h, 0, [0], "0a");
-	result.responseStatus = parseInt(v, 16);
-    } catch(ex) {};
-    if (result.responseStatus !== 0) return result;
+	try {
+		// certStatus
+		let idxCertStatus = getIdxbyList(h, 0, [1, 0, 1, 0, 0, 2, 0, 1]);
+		if (h.substr(idxCertStatus, 2) === "80") {
+			result.certStatus = "good";
+		} else if (h.substr(idxCertStatus, 2) === "a1") {
+			result.certStatus = "revoked";
+			result.revocationTime =
+				hextoutf8(getVbyList(h, idxCertStatus, [0]));
+		} else if (h.substr(idxCertStatus, 2) === "82") {
+			result.certStatus = "unknown";
+		}
+	} catch (ex) { };
 
-    try {
-	// certStatus
-	let idxCertStatus = _getIdxbyList(h, 0, [1,0,1,0,0,2,0,1]);
-	if (h.substr(idxCertStatus, 2) === "80") {
-	    result.certStatus = "good";
-	} else if (h.substr(idxCertStatus, 2) === "a1") {
-	    result.certStatus = "revoked";
-	    result.revocationTime = 
-		hextoutf8(_getVbyList(h, idxCertStatus, [0]));
-	} else if (h.substr(idxCertStatus, 2) === "82") {
-	    result.certStatus = "unknown";
-	}
-    } catch (ex) {};
+	// thisUpdate
+	try {
+		let idxThisUpdate = getIdxbyList(h, 0, [1, 0, 1, 0, 0, 2, 0, 2]);
+		result.thisUpdate = hextoutf8(getV(h, idxThisUpdate));
+	} catch (ex) { };
 
-    // thisUpdate
-    try {
-	let idxThisUpdate = _getIdxbyList(h, 0, [1,0,1,0,0,2,0,2]);
-	result.thisUpdate = hextoutf8(_getV(h, idxThisUpdate));
-    } catch (ex) {};
+	// nextUpdate
+	try {
+		let idxEncapNextUpdate = getIdxbyList(h, 0, [1, 0, 1, 0, 0, 2, 0, 3]);
+		if (h.substr(idxEncapNextUpdate, 2) === "a0") {
+			result.nextUpdate =
+				hextoutf8(getVbyList(h, idxEncapNextUpdate, [0]));
+		}
+	} catch (ex) { };
 
-    // nextUpdate
-    try {
-	let idxEncapNextUpdate = _getIdxbyList(h, 0, [1,0,1,0,0,2,0,3]);
-	if (h.substr(idxEncapNextUpdate, 2) === "a0") {
-	    result.nextUpdate = 
-		hextoutf8(_getVbyList(h, idxEncapNextUpdate, [0]));
-	}
-    } catch (ex) {};
-
-    return result;
+	return result;
 };
 

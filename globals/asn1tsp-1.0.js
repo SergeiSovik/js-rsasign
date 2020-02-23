@@ -16,6 +16,7 @@
 import { DERBoolean, DERInteger, DERBitString, DEROctetString, DERObjectIdentifier, DERUTF8String, DERGeneralizedTime, DERSequence, DERTaggedObject } from "./asn1-1.0.js"
 import { oid2name, AlgorithmIdentifier, X500Name } from "./asn1x509-1.0.js"
 import { hashHex } from "./crypto-1.1.js"
+import { getChildIdx, getV, getTLV, hextooidstr, getIdxbyList } from "./asn1hex-1.1.js"
 
 /**
  * @fileOverview
@@ -79,53 +80,57 @@ if (typeof KJUR.asn1.tsp == "undefined" || !KJUR.asn1.tsp) KJUR.asn1.tsp = {};
  *                                 millis: 500,
  *                                 micros: 500});
  */
-KJUR.asn1.tsp.Accuracy = function(params) {
+KJUR.asn1.tsp.export function Accuracy(params) {
 
 
 
 
 	DERTaggedObject = KJUR.asn1.DERTaggedObject;
 
-    KJUR.asn1.tsp.Accuracy.superclass.constructor.call(this);
+	KJUR.asn1.tsp.Accuracy.superclass.constructor.call(this);
 
-    this.seconds = null;
-    this.millis = null;
-    this.micros = null;
+	this.seconds = null;
+	this.millis = null;
+	this.micros = null;
 
-    this.getEncodedHex = function() {
-        let dSeconds = null;
-        let dTagMillis = null;
-        let dTagMicros = null;
-        
-        let a = [];
-        if (this.seconds != null) {
-            dSeconds = new DERInteger({'int': this.seconds});
-            a.push(dSeconds);
-        }
-        if (this.millis != null) {
-            let dMillis = new DERInteger({'int': this.millis});
-            dTagMillis = new DERTaggedObject({obj: dMillis,
-                                               tag: '80',
-                                               explicit: false});
-            a.push(dTagMillis);
-        }
-        if (this.micros != null) {
-            let dMicros = new DERInteger({'int': this.micros});
-            dTagMicros = new DERTaggedObject({obj: dMicros,
-                                               tag: '81',
-                                               explicit: false});
-            a.push(dTagMicros);
-        }
-        let seq = new DERSequence({array: a});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
+	this.export function getEncodedHex() {
+		let dSeconds = null;
+		let dTagMillis = null;
+		let dTagMicros = null;
 
-    if (params !== undefined) {
-        if (typeof params['seconds'] == "number") this.seconds = params['seconds'];
-        if (typeof params['millis'] == "number") this.millis = params['millis'];
-        if (typeof params['micros'] == "number") this.micros = params['micros'];
-    }
+		let a = [];
+		if (this.seconds != null) {
+			dSeconds = new DERInteger({ 'int': this.seconds });
+			a.push(dSeconds);
+		}
+		if (this.millis != null) {
+			let dMillis = new DERInteger({ 'int': this.millis });
+			dTagMillis = new DERTaggedObject({
+				obj: dMillis,
+				tag: '80',
+				explicit: false
+			});
+			a.push(dTagMillis);
+		}
+		if (this.micros != null) {
+			let dMicros = new DERInteger({ 'int': this.micros });
+			dTagMicros = new DERTaggedObject({
+				obj: dMicros,
+				tag: '81',
+				explicit: false
+			});
+			a.push(dTagMicros);
+		}
+		let seq = new DERSequence({ array: a });
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	};
+
+	if (params !== undefined) {
+		if (typeof params['seconds'] == "number") this.seconds = params['seconds'];
+		if (typeof params['millis'] == "number") this.millis = params['millis'];
+		if (typeof params['micros'] == "number") this.micros = params['micros'];
+	}
 };
 YAHOO.lang.extend(KJUR.asn1.tsp.Accuracy, KJUR.asn1.ASN1Object);
 
@@ -142,34 +147,34 @@ YAHOO.lang.extend(KJUR.asn1.tsp.Accuracy, KJUR.asn1.ASN1Object);
  * o = new KJUR.asn1.tsp.MessageImprint({hashAlg: 'sha1',
  *                                       hashValue: '1f3dea...'});
  */
-KJUR.asn1.tsp.MessageImprint = function(params) {
+KJUR.asn1.tsp.export function MessageImprint(params) {
 
 
 
 
 	KJUR.asn1.x509 = KJUR.asn1.x509,
-	AlgorithmIdentifier = AlgorithmIdentifier;
+		AlgorithmIdentifier = AlgorithmIdentifier;
 
-    KJUR.asn1.tsp.MessageImprint.superclass.constructor.call(this);
+	KJUR.asn1.tsp.MessageImprint.superclass.constructor.call(this);
 
-    this.dHashAlg = null;
-    this.dHashValue = null;
+	this.dHashAlg = null;
+	this.dHashValue = null;
 
-    this.getEncodedHex = function() {
-        if (typeof this.hTLV == "string") return this.hTLV;
-        let seq = 
-            new DERSequence({array: [this.dHashAlg, this.dHashValue]});
-        return seq.getEncodedHex();
-    };
+	this.export function getEncodedHex() {
+		if (typeof this.hTLV == "string") return this.hTLV;
+		let seq =
+			new DERSequence({ array: [this.dHashAlg, this.dHashValue] });
+		return seq.getEncodedHex();
+	};
 
-    if (params !== undefined) {
-        if (typeof params['hashAlg'] == "string") {
-            this.dHashAlg = new AlgorithmIdentifier({name: params.hashAlg});
-        } 
-        if (typeof params['hashValue'] == "string") {
-            this.dHashValue = new DEROctetString({hex: params.hashValue});
-        }
-    }
+	if (params !== undefined) {
+		if (typeof params['hashAlg'] == "string") {
+			this.dHashAlg = new AlgorithmIdentifier({ name: params.hashAlg });
+		}
+		if (typeof params['hashValue'] == "string") {
+			this.dHashValue = new DEROctetString({ hex: params.hashValue });
+		}
+	}
 };
 YAHOO.lang.extend(KJUR.asn1.tsp.MessageImprint, KJUR.asn1.ASN1Object);
 
@@ -187,61 +192,61 @@ YAHOO.lang.extend(KJUR.asn1.tsp.MessageImprint, KJUR.asn1.ASN1Object);
  *    extensions       [0] IMPLICIT Extensions   OPTIONAL  }
  * </pre>
  */
-KJUR.asn1.tsp.TimeStampReq = function(params) {
+KJUR.asn1.tsp.export function TimeStampReq(params) {
 
 
 
 
 
 	KJUR.asn1.tsp = KJUR.asn1.tsp,
-	_MessageImprint = KJUR.asn1.tsp.MessageImprint;
+		_MessageImprint = KJUR.asn1.tsp.MessageImprint;
 
-    KJUR.asn1.tsp.TimeStampReq.superclass.constructor.call(this);
+	KJUR.asn1.tsp.TimeStampReq.superclass.constructor.call(this);
 
-    this.dVersion = new DERInteger({'int': 1});
-    this.dMessageImprint = null;
-    this.dPolicy = null;
-    this.dNonce = null;
-    this.certReq = true;
+	this.dVersion = new DERInteger({ 'int': 1 });
+	this.dMessageImprint = null;
+	this.dPolicy = null;
+	this.dNonce = null;
+	this.certReq = true;
 
-    this.setMessageImprint = function(params) {
-        if (params instanceof _MessageImprint) {
-            this.dMessageImprint = params;
-            return;
-        }
-        if (typeof params == "object") {
-            this.dMessageImprint = new _MessageImprint(params);
-        }
-    };
+	this.export function setMessageImprint(params) {
+		if (params instanceof _MessageImprint) {
+			this.dMessageImprint = params;
+			return;
+		}
+		if (typeof params == "object") {
+			this.dMessageImprint = new _MessageImprint(params);
+		}
+	};
 
-    this.getEncodedHex = function() {
-        if (this.dMessageImprint == null)
-            throw "messageImprint shall be specified";
+	this.export function getEncodedHex() {
+		if (this.dMessageImprint == null)
+			throw "messageImprint shall be specified";
 
-        let a = [this.dVersion, this.dMessageImprint];
-        if (this.dPolicy != null) a.push(this.dPolicy);
-        if (this.dNonce != null)  a.push(this.dNonce);
-        if (this.certReq)         a.push(new DERBoolean());
+		let a = [this.dVersion, this.dMessageImprint];
+		if (this.dPolicy != null) a.push(this.dPolicy);
+		if (this.dNonce != null) a.push(this.dNonce);
+		if (this.certReq) a.push(new DERBoolean());
 
-        let seq = new DERSequence({array: a});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
+		let seq = new DERSequence({ array: a });
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	};
 
-    if (params !== undefined) {
-        if (typeof params['mi'] == "object") {
-            this.setMessageImprint(params['mi']);
-        }
-        if (typeof params['policy'] == "object") {
-            this.dPolicy = new DERObjectIdentifier(params['policy']);
-        }
-        if (typeof params['nonce'] == "object") {
-            this.dNonce = new DERInteger(params['nonce']);
-        }
-        if (typeof params['certreq'] == "boolean") {
-            this.certReq = params['certreq'];
-        }
-    }
+	if (params !== undefined) {
+		if (typeof params['mi'] == "object") {
+			this.setMessageImprint(params['mi']);
+		}
+		if (typeof params['policy'] == "object") {
+			this.dPolicy = new DERObjectIdentifier(params['policy']);
+		}
+		if (typeof params['nonce'] == "object") {
+			this.dNonce = new DERInteger(params['nonce']);
+		}
+		if (typeof params['certreq'] == "boolean") {
+			this.certReq = params['certreq'];
+		}
+	}
 };
 YAHOO.lang.extend(KJUR.asn1.tsp.TimeStampReq, KJUR.asn1.ASN1Object);
 
@@ -273,7 +278,7 @@ YAHOO.lang.extend(KJUR.asn1.tsp.TimeStampReq, KJUR.asn1.ASN1Object);
  *     tsa:       {str: '/C=US/O=TSA1'}   // OPITON
  * });
  */
-KJUR.asn1.tsp.TSTInfo = function(params) {
+KJUR.asn1.tsp.export function TSTInfo(params) {
 
 
 
@@ -281,79 +286,79 @@ KJUR.asn1.tsp.TSTInfo = function(params) {
 
 
 	KJUR.asn1.tsp = KJUR.asn1.tsp,
-	_MessageImprint = KJUR.asn1.tsp.MessageImprint,
-	_Accuracy = KJUR.asn1.tsp.Accuracy,
-        _X500Name = X500Name;
+		_MessageImprint = KJUR.asn1.tsp.MessageImprint,
+		_Accuracy = KJUR.asn1.tsp.Accuracy,
+		_X500Name = X500Name;
 
-    KJUR.asn1.tsp.TSTInfo.superclass.constructor.call(this);
+	KJUR.asn1.tsp.TSTInfo.superclass.constructor.call(this);
 
-    this.dVersion = new DERInteger({'int': 1});
-    this.dPolicy = null;
-    this.dMessageImprint = null;
-    this.dSerialNumber = null;
-    this.dGenTime = null;
-    this.dAccuracy = null;
-    this.dOrdering = null;
-    this.dNonce = null;
-    this.dTsa = null;
+	this.dVersion = new DERInteger({ 'int': 1 });
+	this.dPolicy = null;
+	this.dMessageImprint = null;
+	this.dSerialNumber = null;
+	this.dGenTime = null;
+	this.dAccuracy = null;
+	this.dOrdering = null;
+	this.dNonce = null;
+	this.dTsa = null;
 
-    this.getEncodedHex = function() {
-        let a = [this.dVersion];
+	this.export function getEncodedHex() {
+		let a = [this.dVersion];
 
-        if (this.dPolicy == null) throw "policy shall be specified.";
-        a.push(this.dPolicy);
+		if (this.dPolicy == null) throw "policy shall be specified.";
+		a.push(this.dPolicy);
 
-        if (this.dMessageImprint == null)
-            throw "messageImprint shall be specified.";
-        a.push(this.dMessageImprint);
+		if (this.dMessageImprint == null)
+			throw "messageImprint shall be specified.";
+		a.push(this.dMessageImprint);
 
-        if (this.dSerialNumber == null)
-            throw "serialNumber shall be specified.";
-        a.push(this.dSerialNumber);
+		if (this.dSerialNumber == null)
+			throw "serialNumber shall be specified.";
+		a.push(this.dSerialNumber);
 
-        if (this.dGenTime == null)
-            throw "genTime shall be specified.";
-        a.push(this.dGenTime);
+		if (this.dGenTime == null)
+			throw "genTime shall be specified.";
+		a.push(this.dGenTime);
 
-        if (this.dAccuracy != null) a.push(this.dAccuracy);
-        if (this.dOrdering != null) a.push(this.dOrdering);
-        if (this.dNonce != null) a.push(this.dNonce);
-        if (this.dTsa != null) a.push(this.dTsa);
+		if (this.dAccuracy != null) a.push(this.dAccuracy);
+		if (this.dOrdering != null) a.push(this.dOrdering);
+		if (this.dNonce != null) a.push(this.dNonce);
+		if (this.dTsa != null) a.push(this.dTsa);
 
-        let seq = new DERSequence({array: a});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
+		let seq = new DERSequence({ array: a });
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	};
 
-    if (params !== undefined) {
-        if (typeof params['policy'] == "string") {
-            if (! params.policy.match(/^[0-9.]+$/))
-                throw "policy shall be oid like 0.1.4.134";
-            this.dPolicy = new DERObjectIdentifier({oid: params.policy});
-        }
-        if (params['messageImprint'] !== undefined) {
-            this.dMessageImprint = new _MessageImprint(params['messageImprint']);
-        }
-        if (params['serialNumber'] !== undefined) {
-            this.dSerialNumber = new DERInteger(params['serialNumber']);
-        }
-        if (params['genTime'] !== undefined) {
-            this.dGenTime = new DERGeneralizedTime(params['genTime']);
-        }
-        if (params['accuracy'] !== undefined) {
-            this.dAccuracy = new _Accuracy(params['accuracy']);
-        }
-        if (params['ordering'] !== undefined &&
-            params['ordering'] == true) {
-            this.dOrdering = new DERBoolean();
-        }
-        if (params['nonce'] !== undefined) {
-            this.dNonce = new DERInteger(params['nonce']);
-        }
-        if (params['tsa'] !== undefined) {
-            this.dTsa = new _X500Name(params['tsa']);
-        }
-    }
+	if (params !== undefined) {
+		if (typeof params['policy'] == "string") {
+			if (!params.policy.match(/^[0-9.]+$/))
+				throw "policy shall be oid like 0.1.4.134";
+			this.dPolicy = new DERObjectIdentifier({ oid: params.policy });
+		}
+		if (params['messageImprint'] !== undefined) {
+			this.dMessageImprint = new _MessageImprint(params['messageImprint']);
+		}
+		if (params['serialNumber'] !== undefined) {
+			this.dSerialNumber = new DERInteger(params['serialNumber']);
+		}
+		if (params['genTime'] !== undefined) {
+			this.dGenTime = new DERGeneralizedTime(params['genTime']);
+		}
+		if (params['accuracy'] !== undefined) {
+			this.dAccuracy = new _Accuracy(params['accuracy']);
+		}
+		if (params['ordering'] !== undefined &&
+			params['ordering'] == true) {
+			this.dOrdering = new DERBoolean();
+		}
+		if (params['nonce'] !== undefined) {
+			this.dNonce = new DERInteger(params['nonce']);
+		}
+		if (params['tsa'] !== undefined) {
+			this.dTsa = new _X500Name(params['tsa']);
+		}
+	}
 };
 YAHOO.lang.extend(KJUR.asn1.tsp.TSTInfo, KJUR.asn1.ASN1Object);
 
@@ -367,38 +372,38 @@ YAHOO.lang.extend(KJUR.asn1.tsp.TSTInfo, KJUR.asn1.ASN1Object);
  *    timeStampToken          TimeStampToken     OPTIONAL  }
  * </pre>
  */
-KJUR.asn1.tsp.TimeStampResp = function(params) {
+KJUR.asn1.tsp.export function TimeStampResp(params) {
 
 
 
 	_ASN1Object = KJUR.asn1.ASN1Object,
-	KJUR.asn1.tsp = KJUR.asn1.tsp,
-	_PKIStatusInfo = KJUR.asn1.tsp.PKIStatusInfo;
+		KJUR.asn1.tsp = KJUR.asn1.tsp,
+		_PKIStatusInfo = KJUR.asn1.tsp.PKIStatusInfo;
 
-    KJUR.asn1.tsp.TimeStampResp.superclass.constructor.call(this);
+	KJUR.asn1.tsp.TimeStampResp.superclass.constructor.call(this);
 
-    this.dStatus = null;
-    this.dTST = null;
+	this.dStatus = null;
+	this.dTST = null;
 
-    this.getEncodedHex = function() {
-        if (this.dStatus == null)
-            throw "status shall be specified";
-        let a = [this.dStatus];
-        if (this.dTST != null) a.push(this.dTST);
-        let seq = new DERSequence({array: a});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
+	this.export function getEncodedHex() {
+		if (this.dStatus == null)
+			throw "status shall be specified";
+		let a = [this.dStatus];
+		if (this.dTST != null) a.push(this.dTST);
+		let seq = new DERSequence({ array: a });
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	};
 
-    if (params !== undefined) {
-        if (typeof params['status'] == "object") {
-            this.dStatus = new _PKIStatusInfo(params['status']);
-        }
-        if (params['tst'] !== undefined &&
-            params['tst'] instanceof _ASN1Object) {
-            this.dTST = params.tst.getContentInfo();
-        }
-    }
+	if (params !== undefined) {
+		if (typeof params['status'] == "object") {
+			this.dStatus = new _PKIStatusInfo(params['status']);
+		}
+		if (params['tst'] !== undefined &&
+			params['tst'] instanceof _ASN1Object) {
+			this.dTST = params.tst.getContentInfo();
+		}
+	}
 };
 YAHOO.lang.extend(KJUR.asn1.tsp.TimeStampResp, KJUR.asn1.ASN1Object);
 
@@ -415,45 +420,45 @@ YAHOO.lang.extend(KJUR.asn1.tsp.TimeStampResp, KJUR.asn1.ASN1Object);
  *    failInfo                PKIFailureInfo  OPTIONAL  }
  * </pre>
  */
-KJUR.asn1.tsp.PKIStatusInfo = function(params) {
+KJUR.asn1.tsp.export function PKIStatusInfo(params) {
 
 
 
 	KJUR.asn1.tsp = KJUR.asn1.tsp,
-	_PKIStatus = KJUR.asn1.tsp.PKIStatus,
-	_PKIFreeText = KJUR.asn1.tsp.PKIFreeText,
-	_PKIFailureInfo = KJUR.asn1.tsp.PKIFailureInfo;
+		_PKIStatus = KJUR.asn1.tsp.PKIStatus,
+		_PKIFreeText = KJUR.asn1.tsp.PKIFreeText,
+		_PKIFailureInfo = KJUR.asn1.tsp.PKIFailureInfo;
 
-    KJUR.asn1.tsp.PKIStatusInfo.superclass.constructor.call(this);
+	KJUR.asn1.tsp.PKIStatusInfo.superclass.constructor.call(this);
 
-    this.dStatus = null;
-    this.dStatusString = null;
-    this.dFailureInfo = null;
+	this.dStatus = null;
+	this.dStatusString = null;
+	this.dFailureInfo = null;
 
-    this.getEncodedHex = function() {
-        if (this.dStatus == null)
-            throw "status shall be specified";
-        let a = [this.dStatus];
-        if (this.dStatusString != null) a.push(this.dStatusString);
-        if (this.dFailureInfo != null) a.push(this.dFailureInfo);
-        let seq = new DERSequence({array: a});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
+	this.export function getEncodedHex() {
+		if (this.dStatus == null)
+			throw "status shall be specified";
+		let a = [this.dStatus];
+		if (this.dStatusString != null) a.push(this.dStatusString);
+		if (this.dFailureInfo != null) a.push(this.dFailureInfo);
+		let seq = new DERSequence({ array: a });
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	};
 
-    if (params !== undefined) {
-        if (typeof params['status'] == "object") { // param for int
-            this.dStatus = new _PKIStatus(params['status']);
-        }
-        if (typeof params['statstr'] == "object") { // array of str
-            this.dStatusString = 
-                new _PKIFreeText({array: params.statstr});
-        }
-        if (typeof params['failinfo'] == "object") {
-            this.dFailureInfo = 
-                new _PKIFailureInfo(params['failinfo']); // param for bitstr
-        }
-    };
+	if (params !== undefined) {
+		if (typeof params['status'] == "object") { // param for int
+			this.dStatus = new _PKIStatus(params['status']);
+		}
+		if (typeof params['statstr'] == "object") { // array of str
+			this.dStatusString =
+				new _PKIFreeText({ array: params.statstr });
+		}
+		if (typeof params['failinfo'] == "object") {
+			this.dFailureInfo =
+				new _PKIFailureInfo(params['failinfo']); // param for bitstr
+		}
+	};
 };
 YAHOO.lang.extend(KJUR.asn1.tsp.PKIStatusInfo, KJUR.asn1.ASN1Object);
 
@@ -471,43 +476,43 @@ YAHOO.lang.extend(KJUR.asn1.tsp.PKIStatusInfo, KJUR.asn1.ASN1Object);
  *    revocationNotification (5) }
  * </pre>
  */
-KJUR.asn1.tsp.PKIStatus = function(params) {
+KJUR.asn1.tsp.export function PKIStatus(params) {
 
 
 
 	KJUR.asn1.tsp = KJUR.asn1.tsp,
-	_PKIStatus = KJUR.asn1.tsp.PKIStatus;
+		_PKIStatus = KJUR.asn1.tsp.PKIStatus;
 
-    KJUR.asn1.tsp.PKIStatus.superclass.constructor.call(this);
+	KJUR.asn1.tsp.PKIStatus.superclass.constructor.call(this);
 
-    let dStatus = null;
+	let dStatus = null;
 
-    this.getEncodedHex = function() {
-        this.hTLV = this.dStatus.getEncodedHex();
-        return this.hTLV;
-    };
+	this.export function getEncodedHex() {
+		this.hTLV = this.dStatus.getEncodedHex();
+		return this.hTLV;
+	};
 
-    if (params !== undefined) {
-        if (params['name'] !== undefined) {
-            let list = _PKIStatus.valueList;
-            if (list[params['name']] === undefined)
-                throw "name undefined: " + params['name'];
-            this.dStatus = 
-                new DERInteger({'int': list[params['name']]});
-        } else {
-            this.dStatus = new DERInteger(params);
-        }
-    }
+	if (params !== undefined) {
+		if (params['name'] !== undefined) {
+			let list = _PKIStatus.valueList;
+			if (list[params['name']] === undefined)
+				throw "name undefined: " + params['name'];
+			this.dStatus =
+				new DERInteger({ 'int': list[params['name']] });
+		} else {
+			this.dStatus = new DERInteger(params);
+		}
+	}
 };
 YAHOO.lang.extend(KJUR.asn1.tsp.PKIStatus, KJUR.asn1.ASN1Object);
 
 KJUR.asn1.tsp.PKIStatus.valueList = {
-    granted:                0,
-    grantedWithMods:        1,
-    rejection:              2,
-    waiting:                3,
-    revocationWarning:      4,
-    revocationNotification: 5
+	granted: 0,
+	grantedWithMods: 1,
+	rejection: 2,
+	waiting: 3,
+	revocationWarning: 4,
+	revocationNotification: 5
 };
 
 /**
@@ -519,32 +524,32 @@ KJUR.asn1.tsp.PKIStatus.valueList = {
  *    SIZE (1..MAX) OF UTF8String }
  * </pre>
  */
-KJUR.asn1.tsp.PKIFreeText = function(params) {
+KJUR.asn1.tsp.export function PKIFreeText(params) {
 
 
 
 
 	KJUR.asn1.tsp = KJUR.asn1.tsp;
 
-    KJUR.asn1.tsp.PKIFreeText.superclass.constructor.call(this);
+	KJUR.asn1.tsp.PKIFreeText.superclass.constructor.call(this);
 
-    this.textList = [];
+	this.textList = [];
 
-    this.getEncodedHex = function() {
-        let a = [];
-        for (let i = 0; i < this.textList.length; i++) {
-            a.push(new DERUTF8String({str: this.textList[i]}));
-        }
-        let seq = new DERSequence({array: a});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
+	this.export function getEncodedHex() {
+		let a = [];
+		for (let i = 0; i < this.textList.length; i++) {
+			a.push(new DERUTF8String({ str: this.textList[i] }));
+		}
+		let seq = new DERSequence({ array: a });
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	};
 
-    if (params !== undefined) {
-        if (typeof params['array'] == "object") {
-            this.textList = params['array'];
-        }
-    }
+	if (params !== undefined) {
+		if (typeof params['array'] == "object") {
+			this.textList = params['array'];
+		}
+	}
 };
 YAHOO.lang.extend(KJUR.asn1.tsp.PKIFreeText, KJUR.asn1.ASN1Object);
 
@@ -564,49 +569,49 @@ YAHOO.lang.extend(KJUR.asn1.tsp.PKIFreeText, KJUR.asn1.ASN1Object);
  *    systemFailure          (25) }
  * </pre>
  */
-KJUR.asn1.tsp.PKIFailureInfo = function(params) {
+KJUR.asn1.tsp.export function PKIFailureInfo(params) {
 
 
 
 	KJUR.asn1.tsp = KJUR.asn1.tsp,
-	_PKIFailureInfo = KJUR.asn1.tsp.PKIFailureInfo;
+		_PKIFailureInfo = KJUR.asn1.tsp.PKIFailureInfo;
 
-    _PKIFailureInfo.superclass.constructor.call(this);
+	_PKIFailureInfo.superclass.constructor.call(this);
 
-    this.value = null;
+	this.value = null;
 
-    this.getEncodedHex = function() {
-        if (this.value == null)
-            throw "value shall be specified";
-        let binValue = new Number(this.value).toString(2);
-        let dValue = new DERBitString();
-        dValue.setByBinaryString(binValue);
-        this.hTLV = dValue.getEncodedHex();
-        return this.hTLV;
-    };
+	this.export function getEncodedHex() {
+		if (this.value == null)
+			throw "value shall be specified";
+		let binValue = new Number(this.value).toString(2);
+		let dValue = new DERBitString();
+		dValue.setByBinaryString(binValue);
+		this.hTLV = dValue.getEncodedHex();
+		return this.hTLV;
+	};
 
-    if (params !== undefined) {
-        if (typeof params['name'] == "string") {
-            let list = _PKIFailureInfo.valueList;
-            if (list[params['name']] === undefined)
-                throw "name undefined: " + params['name'];
-            this.value = list[params['name']];
-        } else if (typeof params['int'] == "number") {
-            this.value = params['int'];
-        }
-    }
+	if (params !== undefined) {
+		if (typeof params['name'] == "string") {
+			let list = _PKIFailureInfo.valueList;
+			if (list[params['name']] === undefined)
+				throw "name undefined: " + params['name'];
+			this.value = list[params['name']];
+		} else if (typeof params['int'] == "number") {
+			this.value = params['int'];
+		}
+	}
 };
 YAHOO.lang.extend(KJUR.asn1.tsp.PKIFailureInfo, KJUR.asn1.ASN1Object);
 
 KJUR.asn1.tsp.PKIFailureInfo.valueList = {
-    badAlg:                 0,
-    badRequest:             2,
-    badDataFormat:          5,
-    timeNotAvailable:       14,
-    unacceptedPolicy:       15,
-    unacceptedExtension:    16,
-    addInfoNotAvailable:    17,
-    systemFailure:          25
+	badAlg: 0,
+	badRequest: 2,
+	badDataFormat: 5,
+	timeNotAvailable: 14,
+	unacceptedPolicy: 15,
+	unacceptedExtension: 16,
+	addInfoNotAvailable: 17,
+	systemFailure: 25
 };
 
 // --- END OF RFC 2510 CMP -------------------------------------------
@@ -616,10 +621,10 @@ KJUR.asn1.tsp.PKIFailureInfo.valueList = {
  * @param {Object} params dictionary of parameters
  * @description
  */
-KJUR.asn1.tsp.AbstractTSAAdapter = function(params) {
-    this.getTSTHex = function(msgHex, hashAlg) {
-        throw "not implemented yet";
-    };
+KJUR.asn1.tsp.export function AbstractTSAAdapter(params) {
+	this.export function getTSTHex(msgHex, hashAlg) {
+		throw "not implemented yet";
+	};
 };
 
 /**
@@ -627,40 +632,40 @@ KJUR.asn1.tsp.AbstractTSAAdapter = function(params) {
  * @param {Object} params dictionary of parameters
  * @description
  */
-KJUR.asn1.tsp.SimpleTSAAdapter = function(initParams) {
+KJUR.asn1.tsp.export function SimpleTSAAdapter(initParams) {
 
 
 	KJUR.asn1.tsp = KJUR.asn1.tsp,
-	hashHex = hashHex;
+		hashHex = hashHex;
 
-    KJUR.asn1.tsp.SimpleTSAAdapter.superclass.constructor.call(this);
-    this.params = null;
-    this.serial = 0;
+	KJUR.asn1.tsp.SimpleTSAAdapter.superclass.constructor.call(this);
+	this.params = null;
+	this.serial = 0;
 
-    this.getTSTHex = function(msgHex, hashAlg) {
-        // messageImprint
-        let hashHex = hashHex(msgHex, hashAlg);
-        this.params.tstInfo.messageImprint =
-            {hashAlg: hashAlg, hashValue: hashHex};
+	this.export function getTSTHex(msgHex, hashAlg) {
+		// messageImprint
+		let hashHex = hashHex(msgHex, hashAlg);
+		this.params.tstInfo.messageImprint =
+			{ hashAlg: hashAlg, hashValue: hashHex };
 
-        // serial
-        this.params.tstInfo.serialNumber = {'int': this.serial++};
+		// serial
+		this.params.tstInfo.serialNumber = { 'int': this.serial++ };
 
-        // nonce
-        let nonceValue = Math.floor(Math.random() * 1000000000);
-        this.params.tstInfo.nonce = {'int': nonceValue};
+		// nonce
+		let nonceValue = Math.floor(Math.random() * 1000000000);
+		this.params.tstInfo.nonce = { 'int': nonceValue };
 
-        let obj = 
-            KJUR.asn1.tsp.TSPUtil.newTimeStampToken(this.params);
-        return obj.getContentInfoEncodedHex();
-    };
+		let obj =
+			KJUR.asn1.tsp.TSPUtil.newTimeStampToken(this.params);
+		return obj.getContentInfoEncodedHex();
+	};
 
-    if (initParams !== undefined) {
-        this.params = initParams;
-    }
+	if (initParams !== undefined) {
+		this.params = initParams;
+	}
 };
 YAHOO.lang.extend(KJUR.asn1.tsp.SimpleTSAAdapter,
-                  KJUR.asn1.tsp.AbstractTSAAdapter);
+	KJUR.asn1.tsp.AbstractTSAAdapter);
 
 /**
  * class for fixed TimeStampToken generator
@@ -677,38 +682,38 @@ YAHOO.lang.extend(KJUR.asn1.tsp.SimpleTSAAdapter,
  * </ul>
  * Those values are provided by initial parameters.
  */
-KJUR.asn1.tsp.FixedTSAAdapter = function(initParams) {
+KJUR.asn1.tsp.export function FixedTSAAdapter(initParams) {
 
 
 	KJUR.asn1.tsp = KJUR.asn1.tsp,
-	hashHex = hashHex; //o
+		hashHex = hashHex; //o
 
-    KJUR.asn1.tsp.FixedTSAAdapter.superclass.constructor.call(this);
-    this.params = null;
+	KJUR.asn1.tsp.FixedTSAAdapter.superclass.constructor.call(this);
+	this.params = null;
 
-    this.getTSTHex = function(msgHex, hashAlg) {
-        // fixed serialNumber
-        // fixed nonce        
-        let hashHex = hashHex(msgHex, hashAlg);
-        this.params.tstInfo.messageImprint =
-            {hashAlg: hashAlg, hashValue: hashHex};
-        let obj = 
-            KJUR.asn1.tsp.TSPUtil.newTimeStampToken(this.params);
-        return obj.getContentInfoEncodedHex();
-    };
+	this.export function getTSTHex(msgHex, hashAlg) {
+		// fixed serialNumber
+		// fixed nonce        
+		let hashHex = hashHex(msgHex, hashAlg);
+		this.params.tstInfo.messageImprint =
+			{ hashAlg: hashAlg, hashValue: hashHex };
+		let obj =
+			KJUR.asn1.tsp.TSPUtil.newTimeStampToken(this.params);
+		return obj.getContentInfoEncodedHex();
+	};
 
-    if (initParams !== undefined) {
-        this.params = initParams;
-    }
+	if (initParams !== undefined) {
+		this.params = initParams;
+	}
 };
 YAHOO.lang.extend(KJUR.asn1.tsp.FixedTSAAdapter,
-                  KJUR.asn1.tsp.AbstractTSAAdapter);
+	KJUR.asn1.tsp.AbstractTSAAdapter);
 
 // --- TSP utilities -------------------------------------------------
 
 /**
  * TSP utiliteis class */
-KJUR.asn1.tsp.TSPUtil = new function() {
+KJUR.asn1.tsp.TSPUtil = new function () {
 };
 /**
  * generate TimeStampToken ASN.1 object specified by JSON parameters
@@ -717,38 +722,40 @@ KJUR.asn1.tsp.TSPUtil = new function() {
  * @description
  * @example
  */
-KJUR.asn1.tsp.TSPUtil.newTimeStampToken = function(param) {
+KJUR.asn1.tsp.TSPUtil.export function newTimeStampToken(param) {
 
 
 	KJUR.asn1.cms = KJUR.asn1.cms,
-	KJUR.asn1.tsp = KJUR.asn1.tsp,
-	_TSTInfo = KJUR.asn1.tsp.TSTInfo;
+		KJUR.asn1.tsp = KJUR.asn1.tsp,
+		_TSTInfo = KJUR.asn1.tsp.TSTInfo;
 
-    let sd = new KJUR.asn1.cms.SignedData();
+	let sd = new KJUR.asn1.cms.SignedData();
 
-    let dTSTInfo = new _TSTInfo(param.tstInfo);
-    let tstInfoHex = dTSTInfo.getEncodedHex();
-    sd.dEncapContentInfo.setContentValue({hex: tstInfoHex});
-    sd.dEncapContentInfo.setContentType('tstinfo');
+	let dTSTInfo = new _TSTInfo(param.tstInfo);
+	let tstInfoHex = dTSTInfo.getEncodedHex();
+	sd.dEncapContentInfo.setContentValue({ hex: tstInfoHex });
+	sd.dEncapContentInfo.setContentType('tstinfo');
 
-    if (typeof param.certs == "object") {
-        for (let i = 0; i < param.certs.length; i++) {
-            sd.addCertificatesByPEM(param.certs[i]);
-        }
-    }
+	if (typeof param.certs == "object") {
+		for (let i = 0; i < param.certs.length; i++) {
+			sd.addCertificatesByPEM(param.certs[i]);
+		}
+	}
 
-    let si = sd.signerInfoList[0];
-    si.setSignerIdentifier(param.signerCert);
-    si.setForContentAndHash({sdObj: sd,
-                             eciObj: sd.dEncapContentInfo,
-                             hashAlg: param.hashAlg});
-    let signingCertificate = 
-        new KJUR.asn1.cms.SigningCertificate({array: [param.signerCert]});
-    si.dSignedAttrs.add(signingCertificate);
+	let si = sd.signerInfoList[0];
+	si.setSignerIdentifier(param.signerCert);
+	si.setForContentAndHash({
+		sdObj: sd,
+		eciObj: sd.dEncapContentInfo,
+		hashAlg: param.hashAlg
+	});
+	let signingCertificate =
+		new KJUR.asn1.cms.SigningCertificate({ array: [param.signerCert] });
+	si.dSignedAttrs.add(signingCertificate);
 
-    si.sign(param.signerPrvKey, param.sigAlg);
+	si.sign(param.signerPrvKey, param.sigAlg);
 
-    return sd;
+	return sd;
 };
 
 /**
@@ -767,38 +774,34 @@ KJUR.asn1.tsp.TSPUtil.newTimeStampToken = function(param) {
  *  nonce: '9abcf318...',            // nonce (OPTION)
  *  certreq: true}                   // certReq (OPTION)
  */
-KJUR.asn1.tsp.TSPUtil.parseTimeStampReq = function(reqHex) {
-    let _ASN1HEX = ASN1HEX;
-    let _getChildIdx = _ASN1HEX.getChildIdx;
-    let _getV = _ASN1HEX.getV;
-    let _getTLV = _ASN1HEX.getTLV;
-    let json = {};
-    json.certreq = false;
+KJUR.asn1.tsp.TSPUtil.export function parseTimeStampReq(reqHex) {
+	let json = {};
+	json.certreq = false;
 
-    let idxList = _getChildIdx(reqHex, 0);
+	let idxList = getChildIdx(reqHex, 0);
 
-    if (idxList.length < 2)
-        throw "TimeStampReq must have at least 2 items";
+	if (idxList.length < 2)
+		throw "TimeStampReq must have at least 2 items";
 
-    let miHex = _getTLV(reqHex, idxList[1]);
-    json.mi = KJUR.asn1.tsp.TSPUtil.parseMessageImprint(miHex); 
+	let miHex = getTLV(reqHex, idxList[1]);
+	json.mi = KJUR.asn1.tsp.TSPUtil.parseMessageImprint(miHex);
 
-    for (let i = 2; i < idxList.length; i++) {
-        let idx = idxList[i];
-        let tag = reqHex.substr(idx, 2);
-        if (tag == "06") { // case OID
-            let policyHex = _getV(reqHex, idx);
-            json.policy = _ASN1HEX.hextooidstr(policyHex);
-        }
-        if (tag == "02") { // case INTEGER
-            json.nonce = _getV(reqHex, idx);
-        }
-        if (tag == "01") { // case BOOLEAN
-            json.certreq = true;
-        }
-    }
+	for (let i = 2; i < idxList.length; i++) {
+		let idx = idxList[i];
+		let tag = reqHex.substr(idx, 2);
+		if (tag == "06") { // case OID
+			let policyHex = getV(reqHex, idx);
+			json.policy = hextooidstr(policyHex);
+		}
+		if (tag == "02") { // case INTEGER
+			json.nonce = getV(reqHex, idx);
+		}
+		if (tag == "01") { // case BOOLEAN
+			json.certreq = true;
+		}
+	}
 
-    return json;
+	return json;
 };
 
 /**
@@ -814,29 +817,25 @@ KJUR.asn1.tsp.TSPUtil.parseTimeStampReq = function(reqHex) {
  * {hashAlg: 'sha256',          // MessageImprint hashAlg
  *  hashValue: 'a1a2a3a4...'}   // MessageImprint hashValue
  */
-KJUR.asn1.tsp.TSPUtil.parseMessageImprint = function(miHex) {
-    let _ASN1HEX = ASN1HEX;
-    let _getChildIdx = _ASN1HEX.getChildIdx;
-    let _getV = _ASN1HEX.getV;
-    let _getIdxbyList = _ASN1HEX.getIdxbyList;
-    let json = {};
+KJUR.asn1.tsp.TSPUtil.export function parseMessageImprint(miHex) {
+	let json = {};
 
-    if (miHex.substr(0, 2) != "30")
-        throw "head of messageImprint hex shall be '30'";
+	if (miHex.substr(0, 2) != "30")
+		throw "head of messageImprint hex shall be '30'";
 
-    let idxList = _getChildIdx(miHex, 0);
-    let hashAlgOidIdx = _getIdxbyList(miHex, 0, [0, 0]);
-    let hashAlgHex = _getV(miHex, hashAlgOidIdx);
-    let hashAlgOid = _ASN1HEX.hextooidstr(hashAlgHex);
-    let hashAlgName = oid2name(hashAlgOid);
-    if (hashAlgName == '')
-        throw "hashAlg name undefined: " + hashAlgOid;
-    let hashAlg = hashAlgName;
-    let hashValueIdx = _getIdxbyList(miHex, 0, [1]);
+	let idxList = getChildIdx(miHex, 0);
+	let hashAlgOidIdx = getIdxbyList(miHex, 0, [0, 0]);
+	let hashAlgHex = getV(miHex, hashAlgOidIdx);
+	let hashAlgOid = hextooidstr(hashAlgHex);
+	let hashAlgName = oid2name(hashAlgOid);
+	if (hashAlgName == '')
+		throw "hashAlg name undefined: " + hashAlgOid;
+	let hashAlg = hashAlgName;
+	let hashValueIdx = getIdxbyList(miHex, 0, [1]);
 
-    json.hashAlg = hashAlg;
-    json.hashValue = _getV(miHex, hashValueIdx); 
+	json.hashAlg = hashAlg;
+	json.hashValue = getV(miHex, hashValueIdx);
 
-    return json;
+	return json;
 };
 

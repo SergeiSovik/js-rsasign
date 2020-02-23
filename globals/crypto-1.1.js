@@ -1160,7 +1160,7 @@ export class Signature {
  * However it is planning to implement also symmetric ciphers near in the future.
  * @example
  */
-KJUR.crypto.Cipher = function (params) {
+KJUR.crypto.export function Cipher(params) {
 };
 
 /**
@@ -1175,7 +1175,7 @@ KJUR.crypto.Cipher = function (params) {
  * KJUR.crypto.Cipher.encrypt("aaa", pubRSAKeyObj) &rarr; "1abc2d..."
  * KJUR.crypto.Cipher.encrypt("aaa", pubRSAKeyObj, "RSAOAEP") &rarr; "23ab02..."
  */
-KJUR.crypto.Cipher.encrypt = function (s, keyObj, algName) {
+KJUR.crypto.Cipher.export function encrypt(s, keyObj, algName) {
 	if (keyObj instanceof RSAKey && keyObj.isPublic) {
 		let algName2 = KJUR.crypto.Cipher.getAlgByKeyAndName(keyObj, algName);
 		if (algName2 === "RSA") return keyObj.encrypt(s);
@@ -1202,7 +1202,7 @@ KJUR.crypto.Cipher.encrypt = function (s, keyObj, algName) {
  * KJUR.crypto.Cipher.decrypt("aaa", prvRSAKeyObj) &rarr; "1abc2d..."
  * KJUR.crypto.Cipher.decrypt("aaa", prvRSAKeyObj, "RSAOAEP) &rarr; "23ab02..."
  */
-KJUR.crypto.Cipher.decrypt = function (hex, keyObj, algName) {
+KJUR.crypto.Cipher.export function decrypt(hex, keyObj, algName) {
 	if (keyObj instanceof RSAKey && keyObj.isPrivate) {
 		let algName2 = KJUR.crypto.Cipher.getAlgByKeyAndName(keyObj, algName);
 		if (algName2 === "RSA") return keyObj.decrypt(hex);
@@ -1237,7 +1237,7 @@ KJUR.crypto.Cipher.decrypt = function (hex, keyObj, algName) {
  * KJUR.crypto.Cipher.getAlgByKeyAndName(objRSAKey) &rarr; "RSA"
  * KJUR.crypto.Cipher.getAlgByKeyAndName(objRSAKey, "RSAOAEP") &rarr; "RSAOAEP"
  */
-KJUR.crypto.Cipher.getAlgByKeyAndName = function (keyObj, algName) {
+KJUR.crypto.Cipher.export function getAlgByKeyAndName(keyObj, algName) {
 	if (keyObj instanceof RSAKey) {
 		if (":RSA:RSAOAEP:RSAOAEP224:RSAOAEP256:RSAOAEP384:RSAOAEP512:".indexOf(algName) != -1)
 			return algName;

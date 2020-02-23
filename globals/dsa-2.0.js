@@ -15,6 +15,7 @@
 
 import { jsonToASN1HEX } from "./asn1-1.0.js"
 import { getRandomBigIntegerMinToMax } from "./crypto-1.1.js"
+import { getVbyList, isASN1HEX } from "./asn1hex-1.1.js"
 
 /**
  * @fileOverview
@@ -42,19 +43,19 @@ if (typeof KJUR.crypto == "undefined" || !KJUR.crypto) KJUR.crypto = {};
  * in KJUR.crypto.Util class. Now all of LGPL codes are removed.
  * </p>
  */
-KJUR.crypto.DSA = function() {
-    this.p = null;
-    this.q = null;
-    this.g = null;
-    this.y = null;
-    this.x = null;
-    this.type = "DSA";
-    this.isPrivate = false;
-    this.isPublic = false;
+KJUR.crypto.export function DSA() {
+	this.p = null;
+	this.q = null;
+	this.g = null;
+	this.y = null;
+	this.x = null;
+	this.type = "DSA";
+	this.isPrivate = false;
+	this.isPublic = false;
 
-    //===========================
-    // PUBLIC METHODS
-    //===========================
+	//===========================
+	// PUBLIC METHODS
+	//===========================
 
     /**
      * set DSA private key by key parameters of BigInteger object
@@ -64,14 +65,14 @@ KJUR.crypto.DSA = function() {
      * @param {BigInteger} y public key Y or null
      * @param {BigInteger} x private key X
      */
-    this.setPrivate = function(p, q, g, y, x) {
-	this.isPrivate = true;
-	this.p = p;
-	this.q = q;
-	this.g = g;
-	this.y = y;
-	this.x = x;
-    };
+	this.export function setPrivate(p, q, g, y, x) {
+		this.isPrivate = true;
+		this.p = p;
+		this.q = q;
+		this.g = g;
+		this.y = y;
+		this.x = x;
+	};
 
     /**
      * set DSA private key by key parameters of hexadecimal string
@@ -81,19 +82,19 @@ KJUR.crypto.DSA = function() {
      * @param {string} hY public key Y or null
      * @param {string} hX private key X
      */
-    this.setPrivateHex = function(hP, hQ, hG, hY, hX) {
-	let biP, biQ, biG, biY, biX;
-        biP = new BigInteger(hP, 16);
-        biQ = new BigInteger(hQ, 16);
-        biG = new BigInteger(hG, 16);
-	if (typeof hY === "string" && hY.length > 1) {
-            biY = new BigInteger(hY, 16);
-	} else {
-	    biY = null;
-	}
-        biX = new BigInteger(hX, 16);
-        this.setPrivate(biP, biQ, biG, biY, biX);
-    };
+	this.export function setPrivateHex(hP, hQ, hG, hY, hX) {
+		let biP, biQ, biG, biY, biX;
+		biP = new BigInteger(hP, 16);
+		biQ = new BigInteger(hQ, 16);
+		biG = new BigInteger(hG, 16);
+		if (typeof hY === "string" && hY.length > 1) {
+			biY = new BigInteger(hY, 16);
+		} else {
+			biY = null;
+		}
+		biX = new BigInteger(hX, 16);
+		this.setPrivate(biP, biQ, biG, biY, biX);
+	};
 
     /**
      * set DSA public key by key parameters of BigInteger object
@@ -102,14 +103,14 @@ KJUR.crypto.DSA = function() {
      * @param {BigInteger} g base G parameter
      * @param {BigInteger} y public key Y
      */
-    this.setPublic = function(p, q, g, y) {
-	this.isPublic = true;
-	this.p = p;
-	this.q = q;
-	this.g = g;
-	this.y = y;
-	this.x = null;
-    };
+	this.export function setPublic(p, q, g, y) {
+		this.isPublic = true;
+		this.p = p;
+		this.q = q;
+		this.g = g;
+		this.y = y;
+		this.x = null;
+	};
 
     /**
      * set DSA public key by key parameters of hexadecimal string
@@ -118,49 +119,49 @@ KJUR.crypto.DSA = function() {
      * @param {string} hG base G parameter
      * @param {string} hY public key Y
      */
-    this.setPublicHex = function(hP, hQ, hG, hY) {
-	let biP, biQ, biG, biY;
-        biP = new BigInteger(hP, 16);
-        biQ = new BigInteger(hQ, 16);
-        biG = new BigInteger(hG, 16);
-        biY = new BigInteger(hY, 16);
-        this.setPublic(biP, biQ, biG, biY);
-    };
+	this.export function setPublicHex(hP, hQ, hG, hY) {
+		let biP, biQ, biG, biY;
+		biP = new BigInteger(hP, 16);
+		biQ = new BigInteger(hQ, 16);
+		biG = new BigInteger(hG, 16);
+		biY = new BigInteger(hY, 16);
+		this.setPublic(biP, biQ, biG, biY);
+	};
 
     /**
      * sign to hashed message by this DSA private key object
      * @param {string} sHashHex hexadecimal string of hashed message
      * @return {string} hexadecimal string of ASN.1 encoded DSA signature value
      */
-    this.signWithMessageHash = function(sHashHex) {
-	let p = this.p; // parameter p
-	let q = this.q; // parameter q
-	let g = this.g; // parameter g
-	let y = this.y; // public key (p q g y)
-	let x = this.x; // private key
+	this.export function signWithMessageHash(sHashHex) {
+		let p = this.p; // parameter p
+		let q = this.q; // parameter q
+		let g = this.g; // parameter g
+		let y = this.y; // public key (p q g y)
+		let x = this.x; // private key
 
-	// NIST FIPS 186-4 4.5 DSA Per-Message Secret Number (p18)
-	// 1. get random k where 0 < k < q
-	let k = getRandomBigIntegerMinToMax(BigInteger.ONE.add(BigInteger.ONE),
-							     q.subtract(BigInteger.ONE));
+		// NIST FIPS 186-4 4.5 DSA Per-Message Secret Number (p18)
+		// 1. get random k where 0 < k < q
+		let k = getRandomBigIntegerMinToMax(BigInteger.ONE.add(BigInteger.ONE),
+			q.subtract(BigInteger.ONE));
 
-	// NIST FIPS 186-4 4.6 DSA Signature Generation (p19)
-	// 2. get z where the left most min(N, outlen) bits of Hash(M)
-	let hZ = sHashHex.substr(0, q.bitLength() / 4);
-	let z = new BigInteger(hZ, 16);
+		// NIST FIPS 186-4 4.6 DSA Signature Generation (p19)
+		// 2. get z where the left most min(N, outlen) bits of Hash(M)
+		let hZ = sHashHex.substr(0, q.bitLength() / 4);
+		let z = new BigInteger(hZ, 16);
 
-	// 3. get r where (g^k mod p) mod q, r != 0
-	let r = (g.modPow(k,p)).mod(q); 
+		// 3. get r where (g^k mod p) mod q, r != 0
+		let r = (g.modPow(k, p)).mod(q);
 
-	// 4. get s where k^-1 (z + xr) mod q, s != 0
-	let s = (k.modInverse(q).multiply(z.add(x.multiply(r)))).mod(q);
+		// 4. get s where k^-1 (z + xr) mod q, s != 0
+		let s = (k.modInverse(q).multiply(z.add(x.multiply(r)))).mod(q);
 
-	// 5. signature (r, s)
-	let result = jsonToASN1HEX({
-	    "seq": [{"int": {"bigint": r}}, {"int": {"bigint": s}}] 
-	});
-	return result;
-    };
+		// 5. signature (r, s)
+		let result = jsonToASN1HEX({
+			"seq": [{ "int": { "bigint": r } }, { "int": { "bigint": s } }]
+		});
+		return result;
+	};
 
     /**
      * verify signature by this DSA public key object
@@ -168,162 +169,154 @@ KJUR.crypto.DSA = function() {
      * @param {string} hSigVal hexadecimal string of ASN.1 encoded DSA signature value
      * @return {boolean} true if the signature is valid otherwise false.
      */
-    this.verifyWithMessageHash = function(sHashHex, hSigVal) {
-	let p = this.p; // parameter p
-	let q = this.q; // parameter q
-	let g = this.g; // parameter g
-	let y = this.y; // public key (p q g y)
+	this.export function verifyWithMessageHash(sHashHex, hSigVal) {
+		let p = this.p; // parameter p
+		let q = this.q; // parameter q
+		let g = this.g; // parameter g
+		let y = this.y; // public key (p q g y)
 
-	// 1. parse ASN.1 signature (r, s)
-	let rs = this.parseASN1Signature(hSigVal);
-        let r = rs[0];
-        let s = rs[1];
+		// 1. parse ASN.1 signature (r, s)
+		let rs = this.parseASN1Signature(hSigVal);
+		let r = rs[0];
+		let s = rs[1];
 
-	// NIST FIPS 186-4 4.6 DSA Signature Generation (p19)
-	// 2. get z where the left most min(N, outlen) bits of Hash(M)
-	let hZ = sHashHex.substr(0, q.bitLength() / 4);
-	let z = new BigInteger(hZ, 16);
+		// NIST FIPS 186-4 4.6 DSA Signature Generation (p19)
+		// 2. get z where the left most min(N, outlen) bits of Hash(M)
+		let hZ = sHashHex.substr(0, q.bitLength() / 4);
+		let z = new BigInteger(hZ, 16);
 
-	// NIST FIPS 186-4 4.7 DSA Signature Validation (p19)
-	// 3.1. 0 < r < q
-	if (BigInteger.ZERO.compareTo(r) > 0 || r.compareTo(q) > 0)
-	    throw "invalid DSA signature";
+		// NIST FIPS 186-4 4.7 DSA Signature Validation (p19)
+		// 3.1. 0 < r < q
+		if (BigInteger.ZERO.compareTo(r) > 0 || r.compareTo(q) > 0)
+			throw "invalid DSA signature";
 
-	// 3.2. 0 < s < q
-	if (BigInteger.ZERO.compareTo(s) >= 0 || s.compareTo(q) > 0)
-	    throw "invalid DSA signature";
+		// 3.2. 0 < s < q
+		if (BigInteger.ZERO.compareTo(s) >= 0 || s.compareTo(q) > 0)
+			throw "invalid DSA signature";
 
-	// 4. get w where w = s^-1 mod q
-	let w = s.modInverse(q);
+		// 4. get w where w = s^-1 mod q
+		let w = s.modInverse(q);
 
-	// 5. get u1 where u1 = z w mod q
-	let u1 = z.multiply(w).mod(q);
+		// 5. get u1 where u1 = z w mod q
+		let u1 = z.multiply(w).mod(q);
 
-	// 6. get u2 where u2 = r w mod q
-	let u2 = r.multiply(w).mod(q);
+		// 6. get u2 where u2 = r w mod q
+		let u2 = r.multiply(w).mod(q);
 
-	// 7. get v where v = ((g^u1 y^u2) mod p) mod q
-	let v = g.modPow(u1,p).multiply(y.modPow(u2,p)).mod(p).mod(q);
+		// 7. get v where v = ((g^u1 y^u2) mod p) mod q
+		let v = g.modPow(u1, p).multiply(y.modPow(u2, p)).mod(p).mod(q);
 
-	// 8. signature is valid when v == r
-	return v.compareTo(r) == 0;
-    };
+		// 8. signature is valid when v == r
+		return v.compareTo(r) == 0;
+	};
 
     /**
      * parse hexadecimal ASN.1 DSA signature value
      * @param {string} hSigVal hexadecimal string of ASN.1 encoded DSA signature value
      * @return {Array} array [r, s] of DSA signature value. Both r and s are BigInteger.
      */
-    this.parseASN1Signature = function(hSigVal) {
-	try {
-	    let r = new BigInteger(ASN1HEX.getVbyList(hSigVal, 0, [0], "02"), 16);
-	    let s = new BigInteger(ASN1HEX.getVbyList(hSigVal, 0, [1], "02"), 16);
-	    return [r, s];
-	} catch (ex) {
-	    throw "malformed ASN.1 DSA signature";
+	this.export function parseASN1Signature(hSigVal) {
+		try {
+			let r = new BigInteger(getVbyList(hSigVal, 0, [0], "02"), 16);
+			let s = new BigInteger(getVbyList(hSigVal, 0, [1], "02"), 16);
+			return [r, s];
+		} catch (ex) {
+			throw "malformed ASN.1 DSA signature";
+		}
 	}
-    }
 
     /**
      * read an ASN.1 hexadecimal string of PKCS#1/5 plain DSA private key<br/>
      * @param {string} h hexadecimal string of PKCS#1/5 DSA private key
      */
-    this.readPKCS5PrvKeyHex = function(h) {
-	let hP, hQ, hG, hY, hX;
-	let _ASN1HEX = ASN1HEX;
-	let _getVbyList = _ASN1HEX.getVbyList;
+	this.export function readPKCS5PrvKeyHex(h) {
+		let hP, hQ, hG, hY, hX;
 
-	if (_ASN1HEX.isASN1HEX(h) === false)
-	    throw "not ASN.1 hex string";
+		if (isASN1HEX(h) === false)
+			throw "not ASN.1 hex string";
 
-	try {
-	    hP = _getVbyList(h, 0, [1], "02");
-	    hQ = _getVbyList(h, 0, [2], "02");
-	    hG = _getVbyList(h, 0, [3], "02");
-	    hY = _getVbyList(h, 0, [4], "02");
-	    hX = _getVbyList(h, 0, [5], "02");
-	} catch(ex) {
-	    console.log("EXCEPTION:" + ex);
-	    throw "malformed PKCS#1/5 plain DSA private key";
-	}
+		try {
+			hP = getVbyList(h, 0, [1], "02");
+			hQ = getVbyList(h, 0, [2], "02");
+			hG = getVbyList(h, 0, [3], "02");
+			hY = getVbyList(h, 0, [4], "02");
+			hX = getVbyList(h, 0, [5], "02");
+		} catch (ex) {
+			console.log("EXCEPTION:" + ex);
+			throw "malformed PKCS#1/5 plain DSA private key";
+		}
 
-	this.setPrivateHex(hP, hQ, hG, hY, hX);
-    };
+		this.setPrivateHex(hP, hQ, hG, hY, hX);
+	};
 
     /**
      * read an ASN.1 hexadecimal string of PKCS#8 plain DSA private key<br/>
      * @param {string} h hexadecimal string of PKCS#8 DSA private key
      */
-    this.readPKCS8PrvKeyHex = function(h) {
-	let hP, hQ, hG, hX;
-	let _ASN1HEX = ASN1HEX;
-	let _getVbyList = _ASN1HEX.getVbyList;
+	this.export function readPKCS8PrvKeyHex(h) {
+		let hP, hQ, hG, hX;
 
-	if (_ASN1HEX.isASN1HEX(h) === false)
-	    throw "not ASN.1 hex string";
+		if (isASN1HEX(h) === false)
+			throw "not ASN.1 hex string";
 
-	try {
-	    hP = _getVbyList(h, 0, [1, 1, 0], "02");
-	    hQ = _getVbyList(h, 0, [1, 1, 1], "02");
-	    hG = _getVbyList(h, 0, [1, 1, 2], "02");
-	    hX = _getVbyList(h, 0, [2, 0], "02");
-	} catch(ex) {
-	    console.log("EXCEPTION:" + ex);
-	    throw "malformed PKCS#8 plain DSA private key";
-	}
+		try {
+			hP = getVbyList(h, 0, [1, 1, 0], "02");
+			hQ = getVbyList(h, 0, [1, 1, 1], "02");
+			hG = getVbyList(h, 0, [1, 1, 2], "02");
+			hX = getVbyList(h, 0, [2, 0], "02");
+		} catch (ex) {
+			console.log("EXCEPTION:" + ex);
+			throw "malformed PKCS#8 plain DSA private key";
+		}
 
-	this.setPrivateHex(hP, hQ, hG, null, hX);
-    };
+		this.setPrivateHex(hP, hQ, hG, null, hX);
+	};
 
     /**
      * read an ASN.1 hexadecimal string of PKCS#8 plain DSA private key<br/>
      * @param {string} h hexadecimal string of PKCS#8 DSA private key
      */
-    this.readPKCS8PubKeyHex = function(h) {
-	let hP, hQ, hG, hY;
-	let _ASN1HEX = ASN1HEX;
-	let _getVbyList = _ASN1HEX.getVbyList;
+	this.export function readPKCS8PubKeyHex(h) {
+		let hP, hQ, hG, hY;
 
-	if (_ASN1HEX.isASN1HEX(h) === false)
-	    throw "not ASN.1 hex string";
+		if (isASN1HEX(h) === false)
+			throw "not ASN.1 hex string";
 
-	try {
-	    hP = _getVbyList(h, 0, [0, 1, 0], "02");
-	    hQ = _getVbyList(h, 0, [0, 1, 1], "02");
-	    hG = _getVbyList(h, 0, [0, 1, 2], "02");
-	    hY = _getVbyList(h, 0, [1, 0], "02");
-	} catch(ex) {
-	    console.log("EXCEPTION:" + ex);
-	    throw "malformed PKCS#8 DSA public key";
-	}
+		try {
+			hP = getVbyList(h, 0, [0, 1, 0], "02");
+			hQ = getVbyList(h, 0, [0, 1, 1], "02");
+			hG = getVbyList(h, 0, [0, 1, 2], "02");
+			hY = getVbyList(h, 0, [1, 0], "02");
+		} catch (ex) {
+			console.log("EXCEPTION:" + ex);
+			throw "malformed PKCS#8 DSA public key";
+		}
 
-	this.setPublicHex(hP, hQ, hG, hY);
-    };
+		this.setPublicHex(hP, hQ, hG, hY);
+	};
 
     /**
      * read an ASN.1 hexadecimal string of X.509 DSA public key certificate<br/>
      * @param {string} h hexadecimal string of X.509 DSA public key certificate
      * @param {number} nthPKI nth index of publicKeyInfo. (DEFAULT: 6 for X509v3)
      */
-    this.readCertPubKeyHex = function(h, nthPKI) {
-	if (nthPKI !== 5) nthPKI = 6;
-	let hP, hQ, hG, hY;
-	let _ASN1HEX = ASN1HEX;
-	let _getVbyList = _ASN1HEX.getVbyList;
+	this.export function readCertPubKeyHex(h, nthPKI) {
+		if (nthPKI !== 5) nthPKI = 6;
+		let hP, hQ, hG, hY;
 
-	if (_ASN1HEX.isASN1HEX(h) === false)
-	    throw "not ASN.1 hex string";
+		if (isASN1HEX(h) === false)
+			throw "not ASN.1 hex string";
 
-	try {
-	    hP = _getVbyList(h, 0, [0, nthPKI, 0, 1, 0], "02");
-	    hQ = _getVbyList(h, 0, [0, nthPKI, 0, 1, 1], "02");
-	    hG = _getVbyList(h, 0, [0, nthPKI, 0, 1, 2], "02");
-	    hY = _getVbyList(h, 0, [0, nthPKI, 1, 0], "02");
-	} catch(ex) {
-	    console.log("EXCEPTION:" + ex);
-	    throw "malformed X.509 certificate DSA public key";
-	}
+		try {
+			hP = getVbyList(h, 0, [0, nthPKI, 0, 1, 0], "02");
+			hQ = getVbyList(h, 0, [0, nthPKI, 0, 1, 1], "02");
+			hG = getVbyList(h, 0, [0, nthPKI, 0, 1, 2], "02");
+			hY = getVbyList(h, 0, [0, nthPKI, 1, 0], "02");
+		} catch (ex) {
+			console.log("EXCEPTION:" + ex);
+			throw "malformed X.509 certificate DSA public key";
+		}
 
-	this.setPublicHex(hP, hQ, hG, hY);
-    };
+		this.setPublicHex(hP, hQ, hG, hY);
+	};
 }

@@ -33,9 +33,6 @@ if (typeof KJUR.jws == "undefined" || !KJUR.jws) KJUR.jws = {};
  * @property {array of String} aSignature array of Encoded JWS signature value
  * @author Kenji Urushima
  * @version 2.1.0 (2016 Sep 6)
- * @see <a href="https://kjur.github.io/jsjws/">old jwjws home page https://kjur.github.io/jsjws/</a>
- * @see <a href="https://kjur.github.io/jsrsasigns/">'jwrsasign'(RSA Sign JavaScript Library) home page https://kjur.github.io/jsrsasign/</a>
- * @see <a href="http://tools.ietf.org/html/draft-jones-json-web-signature-json-serialization-01">IETF I-D JSON Web Signature JSON Serialization (JWS-JS) specification</a>
  *
  * @description
  * This class generates and verfies "JSON Web Signature JSON Serialization (JWSJS)" of

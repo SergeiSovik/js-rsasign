@@ -14,24 +14,42 @@
 "use strict";
 
 import { oidHexToInt } from "./asn1-1.0.js"
-import { name2oid, oid2name, oid2atype } from "./asn1x509-1.0.js"
+import { name2oid, oid2name, oid2atype } from "./asn1oid.js"
+import { getChildIdx, getV, getTLV, getVbyList, getTLVbyList, getIdxbyList, getVidx, oidname, hextooidstr } from "./asn1hex-1.1.js"
+import { pemtohex, hextoutf8 } from "./base64x-1.1.js"
 
-/**
- * @fileOverview
- * @name x509-1.1.js
- * @author Kenji Urushima kenji.urushima@gmail.com
- * @version jsrsasign 8.0.10 x509 1.1.20 (2018-Apr-09)
- * @license <a href="https://kjur.github.io/jsrsasign/license/">MIT License</a>
- */
+/** @typedef {{
+	critical: boolean,
+	oid: string,
+	vidx: number
+}} ExtInfo */ var ExtInfo;
+
+/** @typedef {{
+	cA: (boolean | undefined),
+	pathLen: (number | undefined)
+}} ExtBasicConstraints */ var ExtBasicConstraints;
+
+/** @typedef {{
+	kid: (string | undefined)
+}} ExtAuthorityKeyIdentifier */ var ExtAuthorityKeyIdentifier;
+
+/** @typedef {{
+	ocsp: Array<string>,
+	caissuer: Array<string>
+}} ExtAIAInfo */ var ExtAIAInfo;
+
+/** @typedef {{
+	id: string,
+	cps: (string | undefined),
+	unotice: (string | undefined)
+}} ExtCertificatePolicie */ var ExtCertificatePolicie;
 
 /**
  * hexadecimal X.509 certificate ASN.1 parser class.<br/>
- * @class hexadecimal X.509 certificate ASN.1 parser class
  * @property {string} hex hexacedimal string for X.509 certificate.
  * @property {number} version format version (1: X509v1, 3: X509v3, otherwise: unknown) since jsrsasign 7.1.4
  * @author Kenji Urushima
  * @version 1.0.1 (08 May 2012)
- * @see <a href="https://kjur.github.io/jsrsasigns/">'jsrsasign'(RSA Sign JavaScript Library) home page https://kjur.github.io/jsrsasign/</a>
  * @description
  * X509 class provides following functionality:
  * <ul>
@@ -87,25 +105,15 @@ import { name2oid, oid2name, oid2atype } from "./asn1x509-1.0.js"
  * </li>
  * </ul>
  */
-function X509() {
-    let _ASN1HEX = ASN1HEX,
-	_getChildIdx = _ASN1HEX.getChildIdx,
-	_getV = _ASN1HEX.getV,
-	_getTLV = _ASN1HEX.getTLV,
-	_getVbyList = _ASN1HEX.getVbyList,
-	_getTLVbyList = _ASN1HEX.getTLVbyList,
-	_getIdxbyList = _ASN1HEX.getIdxbyList,
-	_getVidx = _ASN1HEX.getVidx,
-	_oidname = _ASN1HEX.oidname,
-	_X509 = X509,
-	_pemtohex = pemtohex;
+export class X509 {
+	constructor() {
+		/** @type {string | null} */ this.hex = null;
+		this.version = 0; // version (1: X509v1, 3: X509v3, others: unspecified)
+		this.foffset = 0; // field index offset (-1: for X509v1, 0: for X509v3)
+		/** @type {Array<ExtInfo>} */ this.aExtInfo = null;
+	}
 
-    this.hex = null;
-    this.version = 0; // version (1: X509v1, 3: X509v3, others: unspecified)
-    this.foffset = 0; // field index offset (-1: for X509v1, 0: for X509v3)
-    this.aExtInfo = null;
-
-    // ===== get basic fields from hex =====================================
+	// ===== get basic fields from hex =====================================
 
     /**
      * get format version (X.509v1 or v3 certificate)<br/>
@@ -123,20 +131,19 @@ function X509() {
      * version = x.getVersion();    // 1 or 3
      * sn = x.getSerialNumberHex(); // return string like "01ad..."
      */
-    this.getVersion = function() {
-	if (this.hex === null || this.version !== 0) return this.version;
+	getVersion() {
+		if (this.hex === null || this.version !== 0) return this.version;
 
-	// check if the first item of tbsCertificate "[0] { INTEGER 2 }"
-	if (_getTLVbyList(this.hex, 0, [0, 0]) !==
-	    "a003020102") {
-	    this.version = 1;
-	    this.foffset = -1;
-	    return 1;
+		// check if the first item of tbsCertificate "[0] { INTEGER 2 }"
+		if (getTLVbyList(this.hex, 0, [0, 0]) !== "a003020102") {
+			this.version = 1;
+			this.foffset = -1;
+			return 1;
+		}
+
+		this.version = 3;
+		return 3;
 	}
-
-	this.version = 3;
-	return 3;
-    };
 
     /**
      * get hexadecimal string of serialNumber field of certificate.<br/>
@@ -146,9 +153,9 @@ function X509() {
      * x.readCertPEM(sCertPEM);
      * let sn = x.getSerialNumberHex(); // return string like "01ad..."
      */
-    this.getSerialNumberHex = function() {
-	return _getVbyList(this.hex, 0, [0, 1 + this.foffset], "02");
-    };
+	getSerialNumberHex() {
+		return getVbyList(this.hex, 0, [0, 1 + this.foffset], "02");
+	}
 
     /**
      * get signature algorithm name in basic field
@@ -160,9 +167,9 @@ function X509() {
      * x.readCertPEM(sCertPEM);
      * algName = x.getSignatureAlgorithmField();
      */
-    this.getSignatureAlgorithmField = function() {
-	return _oidname(_getVbyList(this.hex, 0, [0, 2 + this.foffset, 0], "06"));
-    };
+	getSignatureAlgorithmField() {
+		return oidname(getVbyList(this.hex, 0, [0, 2 + this.foffset, 0], "06"));
+	}
 
     /**
      * get hexadecimal string of issuer field TLV of certificate.<br/>
@@ -172,9 +179,9 @@ function X509() {
      * x.readCertPEM(sCertPEM);
      * let issuer = x.getIssuerHex(); // return string like "3013..."
      */
-    this.getIssuerHex = function() {
-	return _getTLVbyList(this.hex, 0, [0, 3 + this.foffset], "30");
-    };
+	getIssuerHex() {
+		return getTLVbyList(this.hex, 0, [0, 3 + this.foffset], "30");
+	}
 
     /**
      * get string of issuer field of certificate.<br/>
@@ -184,9 +191,9 @@ function X509() {
      * x.readCertPEM(sCertPEM);
      * let issuer = x.getIssuerString(); // return string like "/C=US/O=TEST"
      */
-    this.getIssuerString = function() {
-        return _X509.hex2dn(this.getIssuerHex());
-    };
+	getIssuerString() {
+		return hex2dn(this.getIssuerHex());
+	}
 
     /**
      * get hexadecimal string of subject field of certificate.<br/>
@@ -196,9 +203,9 @@ function X509() {
      * x.readCertPEM(sCertPEM);
      * let subject = x.getSubjectHex(); // return string like "3013..."
      */
-    this.getSubjectHex = function() {
-	return _getTLVbyList(this.hex, 0, [0, 5 + this.foffset], "30");
-    };
+	getSubjectHex() {
+		return getTLVbyList(this.hex, 0, [0, 5 + this.foffset], "30");
+	}
 
     /**
      * get string of subject field of certificate.<br/>
@@ -208,9 +215,9 @@ function X509() {
      * x.readCertPEM(sCertPEM);
      * let subject = x.getSubjectString(); // return string like "/C=US/O=TEST"
      */
-    this.getSubjectString = function() {
-        return _X509.hex2dn(this.getSubjectHex());
-    };
+	getSubjectString() {
+		return hex2dn(this.getSubjectHex());
+	}
 
     /**
      * get notBefore field string of certificate.<br/>
@@ -220,12 +227,12 @@ function X509() {
      * x.readCertPEM(sCertPEM);
      * let notBefore = x.getNotBefore(); // return string like "151231235959Z"
      */
-    this.getNotBefore = function() {
-        let s = _getVbyList(this.hex, 0, [0, 4 + this.foffset, 0]);
-        s = s.replace(/(..)/g, "%$1");
-        s = decodeURIComponent(s);
-        return s;
-    };
+	getNotBefore() {
+		let s = getVbyList(this.hex, 0, [0, 4 + this.foffset, 0]);
+		s = s.replace(/(..)/g, "%$1");
+		s = decodeURIComponent(s);
+		return s;
+	}
 
     /**
      * get notAfter field string of certificate.<br/>
@@ -235,12 +242,12 @@ function X509() {
      * x.readCertPEM(sCertPEM);
      * let notAfter = x.getNotAfter(); // return string like "151231235959Z"
      */
-    this.getNotAfter = function() {
-	let s = _getVbyList(this.hex, 0, [0, 4 + this.foffset, 1]);
-        s = s.replace(/(..)/g, "%$1");
-        s = decodeURIComponent(s);
-        return s;
-    };
+	getNotAfter() {
+		let s = getVbyList(this.hex, 0, [0, 4 + this.foffset, 1]);
+		s = s.replace(/(..)/g, "%$1");
+		s = decodeURIComponent(s);
+		return s;
+	}
 
     /**
      * get a hexadecimal string of subjectPublicKeyInfo field.<br/>
@@ -250,9 +257,9 @@ function X509() {
      * x.readCertPEM(sCertPEM);
      * hSPKI = x.getPublicKeyHex(); // return string like "30820122..."
      */
-    this.getPublicKeyHex = function() {
-	return _ASN1HEX.getTLVbyList(this.hex, 0, [0, 6 + this.foffset], "30");
-    };
+	getPublicKeyHex() {
+		return getTLVbyList(this.hex, 0, [0, 6 + this.foffset], "30");
+	}
 
     /**
      * get a string index of subjectPublicKeyInfo field for hexadecimal string certificate.<br/>
@@ -262,9 +269,9 @@ function X509() {
      * x.readCertPEM(sCertPEM);
      * idx = x.getPublicKeyIdx(); // return string index in x.hex parameter
      */
-    this.getPublicKeyIdx = function() {
-	return _getIdxbyList(this.hex, 0, [0, 6 + this.foffset], "30");
-    };
+	getPublicKeyIdx() {
+		return getIdxbyList(this.hex, 0, [0, 6 + this.foffset], "30");
+	}
 
     /**
      * get a string index of contents of subjectPublicKeyInfo BITSTRING value from hexadecimal certificate<br/>
@@ -274,11 +281,11 @@ function X509() {
      * x.readCertPEM(sCertPEM);
      * idx = x.getPublicKeyContentIdx(); // return string index in x.hex parameter
      */
-    // NOTE: Without BITSTRING encapsulation.
-    this.getPublicKeyContentIdx = function() {
-	let idx = this.getPublicKeyIdx();
-	return _getIdxbyList(this.hex, idx, [1, 0], "30");
-    };
+	// NOTE: Without BITSTRING encapsulation.
+	getPublicKeyContentIdx() {
+		let idx = this.getPublicKeyIdx();
+		return getIdxbyList(this.hex, idx, [1, 0], "30");
+	}
 
     /**
      * get a RSAKey/ECDSA/DSA public key object of subjectPublicKeyInfo field.<br/>
@@ -288,9 +295,9 @@ function X509() {
      * x.readCertPEM(sCertPEM);
      * pubkey= x.getPublicKey();
      */
-    this.getPublicKey = function() {
-	return KEYUTIL.getKey(this.getPublicKeyHex(), null, "pkcs8pub");
-    };
+	getPublicKey() {
+		return KEYUTIL.getKey(this.getPublicKeyHex(), null, "pkcs8pub");
+	}
 
     /**
      * get signature algorithm name from hexadecimal certificate data
@@ -303,9 +310,9 @@ function X509() {
      * x.readCertPEM(sCertPEM);
      * x.getSignatureAlgorithmName() &rarr; "SHA256withRSA"
      */
-    this.getSignatureAlgorithmName = function() {
-	return _oidname(_getVbyList(this.hex, 0, [1, 0], "06"));
-    };
+	getSignatureAlgorithmName() {
+		return oidname(getVbyList(this.hex, 0, [1, 0], "06"));
+	}
 
     /**
      * get signature value in hexadecimal string<br/>
@@ -317,9 +324,9 @@ function X509() {
      * x.readCertPEM(sCertPEM);
      * x.getSignatureValueHex() &rarr "8a4c47913..."
      */
-    this.getSignatureValueHex = function() {
-	return _getVbyList(this.hex, 0, [2], "03", true);
-    };
+	getSignatureValueHex() {
+		return getVbyList(this.hex, 0, [2], "03", true);
+	}
 
     /**
      * verifies signature value by public key<br/>
@@ -334,18 +341,18 @@ function X509() {
      * x.readCertPEM(pemCert);
      * x.verifySignature(pubKey) &rarr; true, false or raising exception
      */
-    this.verifySignature = function(pubKey) {
-	let algName = this.getSignatureAlgorithmName();
-	let hSigVal = this.getSignatureValueHex();
-	let hTbsCert = _getTLVbyList(this.hex, 0, [0], "30");
-	
-	let sig = new KJUR.crypto.Signature({alg: algName});
-	sig.init(pubKey);
-	sig.updateHex(hTbsCert);
-	return sig.verify(hSigVal);
-    };
+	verifySignature(pubKey) {
+		let algName = this.getSignatureAlgorithmName();
+		let hSigVal = this.getSignatureValueHex();
+		let hTbsCert = getTLVbyList(this.hex, 0, [0], "30");
 
-    // ===== parse extension ======================================
+		let sig = new KJUR.crypto.Signature({ alg: algName });
+		sig.init(pubKey);
+		sig.updateHex(hTbsCert);
+		return sig.verify(hSigVal);
+	}
+
+	// ===== parse extension ======================================
     /**
      * set array of X.509v3 extesion information such as extension OID, criticality and value index.<br/>
      * @description
@@ -362,34 +369,33 @@ function X509() {
      * x.aExtInfo &rarr;
      * [ { oid: "2.5.29,19", critical: true, vidx: 2504 }, ... ]
      */
-    this.parseExt = function() {
-	if (this.version !== 3) return -1;
-	let iExtSeq = _getIdxbyList(this.hex, 0, [0, 7, 0], "30");
-	let aExtIdx = _getChildIdx(this.hex, iExtSeq);
+	parseExt() {
+		if (this.version !== 3) return -1;
+		let iExtSeq = getIdxbyList(this.hex, 0, [0, 7, 0], "30");
+		let aExtIdx = getChildIdx(this.hex, iExtSeq);
 
-	this.aExtInfo = new Array();
-	for (let i = 0; i < aExtIdx.length; i++) {
-	    let item = {};
-	    item.critical = false;
-	    let a = _getChildIdx(this.hex, aExtIdx[i]);
-	    let offset = 0;
+		this.aExtInfo = new Array();
+		for (let i = 0; i < aExtIdx.length; i++) {
+			let critical = false;
+			let a = getChildIdx(this.hex, aExtIdx[i]);
+			let offset = 0;
 
-	    if (a.length === 3) {
-		item.critical = true;
-		offset = 1;
-	    }
+			if (a.length === 3) {
+				critical = true;
+				offset = 1;
+			}
 
-	    item.oid = _ASN1HEX.hextooidstr(_getVbyList(this.hex, aExtIdx[i], [0], "06"));
-	    let octidx = _getIdxbyList(this.hex, aExtIdx[i], [1 + offset]);
-	    item.vidx = _getVidx(this.hex, octidx);
-	    this.aExtInfo.push(item);
+			let oid = hextooidstr(getVbyList(this.hex, aExtIdx[i], [0], "06"));
+			let octidx = getIdxbyList(this.hex, aExtIdx[i], [1 + offset]);
+			let vidx = getVidx(this.hex, octidx);
+			this.aExtInfo.push({critical: critical, oid: oid, vidx: vidx});
+		}
 	}
-    };
 
     /**
      * get a X.509v3 extesion information such as extension OID, criticality and value index for specified oid or name.<br/>
      * @param {string} oidOrName X.509 extension oid or name (ex. keyUsage or 2.5.29.19)
-     * @return X.509 extension information such as extension OID or value indx (see {@link X509#parseExt})
+     * @return {ExtInfo | undefined} X.509 extension information such as extension OID or value indx (see {@link X509#parseExt})
      * @description
      * This method will get an X.509v3 extension information JSON object
      * having extension OID, criticality and value idx for specified
@@ -402,23 +408,23 @@ function X509() {
      * x.getExtInfo("keyUsage") &rarr; { oid: "2.5.29.15", critical: true, vidx: 1714 }
      * x.getExtInfo("unknownExt") &rarr; undefined
      */
-    this.getExtInfo = function(oidOrName) {
-	let a = this.aExtInfo;
-	let oid = oidOrName;
-	if (! oidOrName.match(/^[0-9.]+$/)) {
-	    oid = name2oid(oidOrName);
-	}
-	if (oid === '') return undefined;
+	getExtInfo(oidOrName) {
+		let a = this.aExtInfo;
+		let oid = oidOrName;
+		if (!oidOrName.match(/^[0-9.]+$/)) {
+			oid = name2oid(oidOrName);
+		}
+		if (oid === '') return undefined;
 
-	for (let i = 0; i < a.length; i++) {
-	    if (a[i].oid === oid) return a[i];
+		for (let i = 0; i < a.length; i++) {
+			if (a[i].oid === oid) return a[i];
+		}
+		return undefined;
 	}
-	return undefined;
-    };
 
     /**
      * get BasicConstraints extension value as object in the certificate
-     * @return {Object} associative array which may have "cA" and "pathLen" parameters
+     * @return {ExtBasicConstraints} associative array which may have "cA" and "pathLen" parameters
      * @description
      * This method will get basic constraints extension value as object with following paramters.
      * <ul>
@@ -437,21 +443,20 @@ function X509() {
      * x.readCertPEM(sCertPEM); // parseExt() will also be called internally.
      * x.getExtBasicConstraints() &rarr; { cA: true, pathLen: 3 };
      */
-    this.getExtBasicConstraints = function() {
-	let info = this.getExtInfo("basicConstraints");
-	if (info === undefined) return info;
+	getExtBasicConstraints() {
+		let info = this.getExtInfo("basicConstraints");
+		if (info === undefined) return undefined;
 
-	let hBC = _getV(this.hex, info.vidx);
-	if (hBC === '') return {};
-	if (hBC === '0101ff') return { cA: true };
-	if (hBC.substr(0, 8) === '0101ff02') {
-	    let pathLexHex = _getV(hBC, 6);
-	    let pathLen = parseInt(pathLexHex, 16);
-	    return { cA: true, pathLen: pathLen };
+		let hBC = getV(this.hex, info.vidx);
+		if (hBC === '') return {};
+		if (hBC === '0101ff') return { cA: true };
+		if (hBC.substr(0, 8) === '0101ff02') {
+			let pathLexHex = getV(hBC, 6);
+			let pathLen = parseInt(pathLexHex, 16);
+			return { cA: true, pathLen: pathLen };
+		}
+		throw "basicConstraints parse error";
 	}
-	throw "basicConstraints parse error";
-    };
-
 
     /**
      * get KeyUsage extension value as binary string in the certificate<br/>
@@ -470,17 +475,17 @@ function X509() {
      * // 0 - nonRepudiation
      * // 1 - keyEncipherment
      */
-    this.getExtKeyUsageBin = function() {
-	let info = this.getExtInfo("keyUsage");
-	if (info === undefined) return '';
-	
-	let hKeyUsage = _getV(this.hex, info.vidx);
-	if (hKeyUsage.length % 2 != 0 || hKeyUsage.length <= 2)
-	    throw "malformed key usage value";
-	let unusedBits = parseInt(hKeyUsage.substr(0, 2));
-	let bKeyUsage = parseInt(hKeyUsage.substr(2), 16).toString(2);
-	return bKeyUsage.substr(0, bKeyUsage.length - unusedBits);
-    };
+	getExtKeyUsageBin() {
+		let info = this.getExtInfo("keyUsage");
+		if (info === undefined) return '';
+
+		let hKeyUsage = getV(this.hex, info.vidx);
+		if (hKeyUsage.length % 2 != 0 || hKeyUsage.length <= 2)
+			throw "malformed key usage value";
+		let unusedBits = parseInt(hKeyUsage.substr(0, 2));
+		let bKeyUsage = parseInt(hKeyUsage.substr(2), 16).toString(2);
+		return bKeyUsage.substr(0, bKeyUsage.length - unusedBits);
+	}
 
     /**
      * get KeyUsage extension value as names in the certificate<br/>
@@ -495,14 +500,14 @@ function X509() {
      * x.readCertPEM(sCertPEM); // parseExt() will also be called internally.
      * x.getExtKeyUsageString() &rarr; "digitalSignature,keyEncipherment"
      */
-    this.getExtKeyUsageString = function() {
-	let bKeyUsage = this.getExtKeyUsageBin();
-	let a = new Array();
-	for (let i = 0; i < bKeyUsage.length; i++) {
-	    if (bKeyUsage.substr(i, 1) == "1") a.push(X509.KEYUSAGE_NAME[i]);
+	getExtKeyUsageString() {
+		let bKeyUsage = this.getExtKeyUsageBin();
+		/** @type {Array<string>} */ let a = new Array();
+		for (let i = 0; i < bKeyUsage.length; i++) {
+			if (bKeyUsage.substr(i, 1) == "1") a.push(KEYUSAGE_NAME[i]);
+		}
+		return a.join(",");
 	}
-	return a.join(",");
-    };
 
     /**
      * get subjectKeyIdentifier value as hexadecimal string in the certificate<br/>
@@ -516,16 +521,16 @@ function X509() {
      * x.readCertPEM(sCertPEM); // parseExt() will also be called internally.
      * x.getExtSubjectKeyIdentifier() &rarr; "1b3347ab...";
      */
-    this.getExtSubjectKeyIdentifier = function() {
-	let info = this.getExtInfo("subjectKeyIdentifier");
-	if (info === undefined) return info;
+	getExtSubjectKeyIdentifier() {
+		let info = this.getExtInfo("subjectKeyIdentifier");
+		if (info === undefined) return undefined;
 
-	return _getV(this.hex, info.vidx);
-    };
+		return getV(this.hex, info.vidx);
+	}
 
     /**
      * get authorityKeyIdentifier value as JSON object in the certificate<br/>
-     * @return {Object} JSON object of authority key identifier or null
+     * @return {ExtAuthorityKeyIdentifier} JSON object of authority key identifier or null
      * @description
      * This method will get authority key identifier extension value
      * as JSON object.
@@ -539,23 +544,23 @@ function X509() {
      * x.readCertPEM(sCertPEM); // parseExt() will also be called internally.
      * x.getExtAuthorityKeyIdentifier() &rarr; { kid: "1234abcd..." }
      */
-    this.getExtAuthorityKeyIdentifier = function() {
-	let info = this.getExtInfo("authorityKeyIdentifier");
-	if (info === undefined) return info;
+	getExtAuthorityKeyIdentifier() {
+		let info = this.getExtInfo("authorityKeyIdentifier");
+		if (info === undefined) return undefined;
 
-	let result = {};
-	let hAKID = _getTLV(this.hex, info.vidx);
-	let a = _getChildIdx(hAKID, 0);
-	for (let i = 0; i < a.length; i++) {
-	    if (hAKID.substr(a[i], 2) === "80")
-		result.kid = _getV(hAKID, a[i]);
+		/** @type {ExtAuthorityKeyIdentifier} */ let result = {};
+		let hAKID = getTLV(this.hex, info.vidx);
+		let a = getChildIdx(hAKID, 0);
+		for (let i = 0; i < a.length; i++) {
+			if (hAKID.substr(a[i], 2) === "80")
+				result.kid = getV(hAKID, a[i]);
+		}
+		return result;
 	}
-	return result;
-    };
 
     /**
      * get extKeyUsage value as array of name string in the certificate<br/>
-     * @return {Object} array of extended key usage ID name or oid
+     * @return {Array<string>} array of extended key usage ID name or oid
      * @description
      * This method will get extended key usage extension value
      * as array of name or OID string.
@@ -568,26 +573,26 @@ function X509() {
      * x.readCertPEM(sCertPEM); // parseExt() will also be called internally.
      * x.getExtExtKeyUsageName() &rarr; ["serverAuth", "clientAuth", "0.1.2.3.4.5"]
      */
-    this.getExtExtKeyUsageName = function() {
-	let info = this.getExtInfo("extKeyUsage");
-	if (info === undefined) return info;
+	getExtExtKeyUsageName() {
+		let info = this.getExtInfo("extKeyUsage");
+		if (info === undefined) return info;
 
-	let result = new Array();
-	
-	let h = _getTLV(this.hex, info.vidx);
-	if (h === '') return result;
+		/** @type {Array<string>} */ let result = new Array();
 
-	let a = _getChildIdx(h, 0);
-	for (let i = 0; i < a.length; i++) {
-	    result.push(_oidname(_getV(h, a[i])));
+		let h = getTLV(this.hex, info.vidx);
+		if (h === '') return result;
+
+		let a = getChildIdx(h, 0);
+		for (let i = 0; i < a.length; i++) {
+			result.push(oidname(getV(h, a[i])));
+		}
+
+		return result;
 	}
-
-	return result;
-    };
 
     /**
      * (DEPRECATED) get subjectAltName value as array of string in the certificate
-     * @return {Object} array of alt names
+     * @return {Array<string>} array of alt names
      * @deprecated since jsrsasign 8.0.1 x509 1.1.17. Please move to {@link X509#getExtSubjectAltName2}
      * @description
      * This method will get subject alt name extension value
@@ -601,19 +606,19 @@ function X509() {
      * x.readCertPEM(sCertPEM); // parseExt() will also be called internally.
      * x.getExtSubjectAltName() &rarr; ["example.com", "example.org"]
      */
-    this.getExtSubjectAltName = function() {
-	let a = this.getExtSubjectAltName2();
-	let result = new Array();
+	getExtSubjectAltName() {
+		let a = this.getExtSubjectAltName2();
+		/** @type {Array<string>} */ let result = new Array();
 
-	for (let i = 0; i < a.length; i++) {
-	    if (a[i][0] === "DNS") result.push(a[i][1]);
+		for (let i = 0; i < a.length; i++) {
+			if (a[i][0] === "DNS") result.push(a[i][1]);
+		}
+		return result;
 	}
-	return result;
-    };
 
     /**
      * get subjectAltName value as array of string in the certificate
-     * @return {Object} array of alt name array
+     * @return {Array<Array<string>>} array of alt name array
      * @description
      * This method will get subject alt name extension value
      * as array of type and name.
@@ -637,46 +642,48 @@ function X509() {
      *  ["IP",   "2001:db8::2:1"],
      *  ["DN",   "/C=US/O=TEST1"]]
      */
-    this.getExtSubjectAltName2 = function() {
-	let gnValueHex, gnValueStr, gnTag;
-	let info = this.getExtInfo("subjectAltName");
-	if (info === undefined) return info;
+	getExtSubjectAltName2() {
+		/** @type {string} */ let gnValueHex;
+		/** @type {string} */ let gnValueStr;
+		/** @type {string} */ let gnTag;
+		let info = this.getExtInfo("subjectAltName");
+		if (info === undefined) return undefined;
 
-	let result = new Array();
-	let h = _getTLV(this.hex, info.vidx);
+		/** @type {Array<Array<string>>} */ let result = new Array();
+		let h = getTLV(this.hex, info.vidx);
 
-	let a = _getChildIdx(h, 0);
-	for (let i = 0; i < a.length; i++) {
-	    gnTag = h.substr(a[i], 2);
-	    gnValueHex = _getV(h, a[i]);
-	    
-	    if (gnTag === "81") { // rfc822Name [1]
-		gnValueStr = hextoutf8(gnValueHex);
-		result.push(["MAIL", gnValueStr]);
-	    }
-	    if (gnTag === "82") { // dNSName [2]
-		gnValueStr = hextoutf8(gnValueHex);
-		result.push(["DNS", gnValueStr]);
-	    }
-	    if (gnTag === "84") { // directoryName [4]
-		gnValueStr = X509.hex2dn(gnValueHex, 0);
-		result.push(["DN", gnValueStr]);
-	    }
-	    if (gnTag === "86") { // uniformResourceIdentifier [6]
-		gnValueStr = hextoutf8(gnValueHex);
-		result.push(["URI", gnValueStr]);
-	    }
-	    if (gnTag === "87") { // iPAddress [7]
-		gnValueStr = hextoip(gnValueHex);
-		result.push(["IP", gnValueStr]);
-	    }
+		let a = getChildIdx(h, 0);
+		for (let i = 0; i < a.length; i++) {
+			gnTag = h.substr(a[i], 2);
+			gnValueHex = getV(h, a[i]);
+
+			if (gnTag === "81") { // rfc822Name [1]
+				gnValueStr = hextoutf8(gnValueHex);
+				result.push(["MAIL", gnValueStr]);
+			}
+			if (gnTag === "82") { // dNSName [2]
+				gnValueStr = hextoutf8(gnValueHex);
+				result.push(["DNS", gnValueStr]);
+			}
+			if (gnTag === "84") { // directoryName [4]
+				gnValueStr = X509.hex2dn(gnValueHex, 0);
+				result.push(["DN", gnValueStr]);
+			}
+			if (gnTag === "86") { // uniformResourceIdentifier [6]
+				gnValueStr = hextoutf8(gnValueHex);
+				result.push(["URI", gnValueStr]);
+			}
+			if (gnTag === "87") { // iPAddress [7]
+				gnValueStr = hextoip(gnValueHex);
+				result.push(["IP", gnValueStr]);
+			}
+		}
+		return result;
 	}
-	return result;
-    };
 
     /**
      * get array of string for fullName URIs in cRLDistributionPoints(CDP) in the certificate
-     * @return {Object} array of fullName URIs of CDP of the certificate
+     * @return {Array<string>} array of fullName URIs of CDP of the certificate
      * @description
      * This method will get all fullName URIs of cRLDistributionPoints extension
      * in the certificate as array of URI string.
@@ -690,26 +697,26 @@ function X509() {
      * x.getExtCRLDistributionPointsURI() &rarr;
      * ["http://example.com/aaa.crl", "http://example.org/aaa.crl"]
      */
-    this.getExtCRLDistributionPointsURI = function() {
-	let info = this.getExtInfo("cRLDistributionPoints");
-	if (info === undefined) return info;
+	getExtCRLDistributionPointsURI() {
+		let info = this.getExtInfo("cRLDistributionPoints");
+		if (info === undefined) return undefined;
 
-	let result = new Array();
-	let a = _getChildIdx(this.hex, info.vidx);
-	for (let i = 0; i < a.length; i++) {
-	    try {
-		let hURI = _getVbyList(this.hex, a[i], [0, 0, 0], "86");
-		let uri = hextoutf8(hURI);
-		result.push(uri);
-	    } catch(ex) {};
+		/** @type {Array<string>} */ let result = new Array();
+		let a = getChildIdx(this.hex, info.vidx);
+		for (let i = 0; i < a.length; i++) {
+			try {
+				let hURI = getVbyList(this.hex, a[i], [0, 0, 0], "86");
+				let uri = hextoutf8(hURI);
+				result.push(uri);
+			} catch (ex) { };
+		}
+
+		return result;
 	}
-
-	return result;
-    };
 
     /**
      * get AuthorityInfoAccess extension value in the certificate as associative array
-     * @return {Object} associative array of AIA extension properties
+     * @return {ExtAIAInfo} associative array of AIA extension properties
      * @description
      * This method will get authority info access value
      * as associate array which has following properties:
@@ -725,29 +732,29 @@ function X509() {
      * { ocsp:     ["http://ocsp.foo.com"],
      *   caissuer: ["http://rep.foo.com/aaa.p8m"] }
      */
-    this.getExtAIAInfo = function() {
-	let info = this.getExtInfo("authorityInfoAccess");
-	if (info === undefined) return info;
+	getExtAIAInfo() {
+		let info = this.getExtInfo("authorityInfoAccess");
+		if (info === undefined) return undefined;
 
-	let result = { ocsp: [], caissuer: [] };
-	let a = _getChildIdx(this.hex, info.vidx);
-	for (let i = 0; i < a.length; i++) {
-	    let hOID = _getVbyList(this.hex, a[i], [0], "06");
-	    let hName = _getVbyList(this.hex, a[i], [1], "86");
-	    if (hOID === "2b06010505073001") {
-		result.ocsp.push(hextoutf8(hName));
-	    }
-	    if (hOID === "2b06010505073002") {
-		result.caissuer.push(hextoutf8(hName));
-	    }
+		/** @type {ExtAIAInfo} */ let result = { ocsp: [], caissuer: [] };
+		let a = getChildIdx(this.hex, info.vidx);
+		for (let i = 0; i < a.length; i++) {
+			let hOID = getVbyList(this.hex, a[i], [0], "06");
+			let hName = getVbyList(this.hex, a[i], [1], "86");
+			if (hOID === "2b06010505073001") {
+				result.ocsp.push(hextoutf8(hName));
+			}
+			if (hOID === "2b06010505073002") {
+				result.caissuer.push(hextoutf8(hName));
+			}
+		}
+
+		return result;
 	}
-
-	return result;
-    };
 
     /**
      * get CertificatePolicies extension value in the certificate as array
-     * @return {Object} array of PolicyInformation JSON object
+     * @return {Array<ExtCertificatePolicie>} array of PolicyInformation JSON object
      * @description
      * This method will get certificate policies value
      * as an array of JSON object which has following properties:
@@ -766,42 +773,40 @@ function X509() {
      *    cps: "http://example.com/cps",
      *    unotice: "explicit text" }]
      */
-    this.getExtCertificatePolicies = function() {
-	let info = this.getExtInfo("certificatePolicies");
-	if (info === undefined) return info;
-	
-	let hExt = _getTLV(this.hex, info.vidx);
-	let result = [];
+	getExtCertificatePolicies() {
+		let info = this.getExtInfo("certificatePolicies");
+		if (info === undefined) return undefined;
 
-	let a = _getChildIdx(hExt, 0);
-	for (let i = 0; i < a.length; i++) {
-	    let policyInfo = {};
-	    let a1 = _getChildIdx(hExt, a[i]);
+		let hExt = getTLV(this.hex, info.vidx);
+		/** @type {Array<ExtCertificatePolicie>} */ let result = [];
 
-	    policyInfo.id = _oidname(_getV(hExt, a1[0]));
+		let a = getChildIdx(hExt, 0);
+		for (let i = 0; i < a.length; i++) {
+			let a1 = getChildIdx(hExt, a[i]);
+			/** @type {ExtCertificatePolicie} */ let policyInfo = { id: oidname(getV(hExt, a1[0])) };
 
-	    if (a1.length === 2) {
-		let a2 = _getChildIdx(hExt, a1[1]);
+			if (a1.length === 2) {
+				let a2 = getChildIdx(hExt, a1[1]);
 
-		for (let j = 0; j < a2.length; j++) {
-		    let hQualifierId = _getVbyList(hExt, a2[j], [0], "06");
+				for (let j = 0; j < a2.length; j++) {
+					let hQualifierId = getVbyList(hExt, a2[j], [0], "06");
 
-		    if (hQualifierId === "2b06010505070201") { // cps
-			policyInfo.cps = hextoutf8(_getVbyList(hExt, a2[j], [1]));
-		    } else if (hQualifierId === "2b06010505070202") { // unotice
-			policyInfo.unotice =
-			    hextoutf8(_getVbyList(hExt, a2[j], [1, 0]));
-		    }
+					if (hQualifierId === "2b06010505070201") { // cps
+						policyInfo.cps = hextoutf8(getVbyList(hExt, a2[j], [1]));
+					} else if (hQualifierId === "2b06010505070202") { // unotice
+						policyInfo.unotice =
+							hextoutf8(getVbyList(hExt, a2[j], [1, 0]));
+					}
+				}
+			}
+
+			result.push(policyInfo);
 		}
-	    }
 
-	    result.push(policyInfo);
+		return result;
 	}
 
-	return result;
-    }
-
-    // ===== read certificate =====================================
+	// ===== read certificate =====================================
     /**
      * read PEM formatted X.509 certificate from string.<br/>
      * @param {string} sCertPEM string for PEM formatted X.509 certificate
@@ -809,9 +814,9 @@ function X509() {
      * x = new X509();
      * x.readCertPEM(sCertPEM); // read certificate
      */
-    this.readCertPEM = function(sCertPEM) {
-        this.readCertHex(_pemtohex(sCertPEM));
-    };
+	readCertPEM(sCertPEM) {
+		this.readCertHex(pemtohex(sCertPEM));
+	}
 
     /**
      * read a hexadecimal string of X.509 certificate<br/>
@@ -822,15 +827,15 @@ function X509() {
      * x = new X509();
      * x.readCertHex("3082..."); // read certificate
      */
-    this.readCertHex = function(sCertHex) {
-        this.hex = sCertHex;
-	this.getVersion(); // set version parameter
+	readCertHex(sCertHex) {
+		this.hex = sCertHex;
+		this.getVersion(); // set version parameter
 
-	try {
-	    _getIdxbyList(this.hex, 0, [0, 7], "a3"); // has [3] v3ext
-	    this.parseExt();
-	} catch(ex) {};
-    };
+		try {
+			getIdxbyList(this.hex, 0, [0, 7], "a3"); // has [3] v3ext
+			this.parseExt();
+		} catch (ex) { };
+	}
 
     /**
      * get certificate information as string.<br/>
@@ -863,128 +868,126 @@ function X509() {
      * signature algorithm: SHA1withRSA
      * signature: 1c1a0697dcd79c9f...
      */
-    this.getInfo = function() {
-	let _X509 = X509;
-	let s, pubkey, aExt;
-	s  = "Basic Fields\n";
-        s += "  serial number: " + this.getSerialNumberHex() + "\n";
-	s += "  signature algorithm: " + this.getSignatureAlgorithmField() + "\n";
-	s += "  issuer: " + this.getIssuerString() + "\n";
-	s += "  notBefore: " + this.getNotBefore() + "\n";
-	s += "  notAfter: " + this.getNotAfter() + "\n";
-	s += "  subject: " + this.getSubjectString() + "\n";
-	s += "  subject public key info: " + "\n";
+	getInfo() {
+		let s = "Basic Fields\n";
+		s += "  serial number: " + this.getSerialNumberHex() + "\n";
+		s += "  signature algorithm: " + this.getSignatureAlgorithmField() + "\n";
+		s += "  issuer: " + this.getIssuerString() + "\n";
+		s += "  notBefore: " + this.getNotBefore() + "\n";
+		s += "  notAfter: " + this.getNotAfter() + "\n";
+		s += "  subject: " + this.getSubjectString() + "\n";
+		s += "  subject public key info: " + "\n";
 
-	// subject public key info
-	pubkey = this.getPublicKey();
-	s += "    key algorithm: " + pubkey.type + "\n";
+		// subject public key info
+		let pubkey = this.getPublicKey();
+		s += "    key algorithm: " + pubkey.type + "\n";
 
-	if (pubkey.type === "RSA") {
-	    s += "    n=" + hextoposhex(pubkey.n.toString(16)).substr(0, 16) + "...\n";
-	    s += "    e=" + hextoposhex(pubkey.e.toString(16)) + "\n";
-	}
-
-	// X.509v3 Extensions
-        aExt = this.aExtInfo;
-
-	if (aExt !== undefined && aExt !== null) {
-            s += "X509v3 Extensions:\n";
-	    
-            for (let i = 0; i < aExt.length; i++) {
-		let info = aExt[i];
-
-		// show extension name and critical flag
-		let extName = oid2name(info["oid"]);
-		if (extName === '') extName = info["oid"];
-
-		let critical = '';
-		if (info["critical"] === true) critical = "CRITICAL";
-
-		s += "  " + extName + " " + critical + ":\n";
-
-		// show extension value if supported
-		if (extName === "basicConstraints") {
-		    let bc = this.getExtBasicConstraints();
-		    if (bc.cA === undefined) {
-			s += "    {}\n";
-		    } else {
-			s += "    cA=true";
-			if (bc.pathLen !== undefined)
-			    s += ", pathLen=" + bc.pathLen;
-			s += "\n";
-		    }
-		} else if (extName === "keyUsage") {
-		    s += "    " + this.getExtKeyUsageString() + "\n";
-		} else if (extName === "subjectKeyIdentifier") {
-		    s += "    " + this.getExtSubjectKeyIdentifier() + "\n";
-		} else if (extName === "authorityKeyIdentifier") {
-		    let akid = this.getExtAuthorityKeyIdentifier();
-		    if (akid.kid !== undefined)
-			s += "    kid=" + akid.kid + "\n";
-		} else if (extName === "extKeyUsage") {
-		    let eku = this.getExtExtKeyUsageName();
-		    s += "    " + eku.join(", ") + "\n";
-		} else if (extName === "subjectAltName") {
-		    let san = this.getExtSubjectAltName2();
-		    s += "    " + san + "\n";
-		} else if (extName === "cRLDistributionPoints") {
-		    let cdp = this.getExtCRLDistributionPointsURI();
-		    s += "    " + cdp + "\n";
-		} else if (extName === "authorityInfoAccess") {
-		    let aia = this.getExtAIAInfo();
-		    if (aia.ocsp !== undefined)
-			s += "    ocsp: " + aia.ocsp.join(",") + "\n";
-		    if (aia.caissuer !== undefined)
-			s += "    caissuer: " + aia.caissuer.join(",") + "\n";
-		} else if (extName === "certificatePolicies") {
-		    let aCP = this.getExtCertificatePolicies();
-		    for (let j = 0; j < aCP.length; j++) {
-			if (aCP[j].id !== undefined)
-			    s += "    policy oid: " + aCP[j].id + "\n";
-			if (aCP[j].cps !== undefined)
-			    s += "    cps: " + aCP[j].cps + "\n";
-		    }
+		if (pubkey.type === "RSA") {
+			s += "    n=" + hextoposhex(pubkey.n.toString(16)).substr(0, 16) + "...\n";
+			s += "    e=" + hextoposhex(pubkey.e.toString(16)) + "\n";
 		}
-	    }
-        }
 
-	s += "signature algorithm: " + this.getSignatureAlgorithmName() + "\n";
-	s += "signature: " + this.getSignatureValueHex().substr(0, 16) + "...\n";
-	return s;
-    };
-};
+		// X.509v3 Extensions
+		let aExt = this.aExtInfo;
+
+		if (aExt !== undefined && aExt !== null) {
+			s += "X509v3 Extensions:\n";
+
+			for (let i = 0; i < aExt.length; i++) {
+				let info = aExt[i];
+
+				// show extension name and critical flag
+				let extName = oid2name(info.oid);
+				if (extName === '') extName = info.oid;
+
+				let critical = '';
+				if (info.critical === true) critical = "CRITICAL";
+
+				s += "  " + extName + " " + critical + ":\n";
+
+				// show extension value if supported
+				if (extName === "basicConstraints") {
+					let bc = this.getExtBasicConstraints();
+					if (bc.cA === undefined) {
+						s += "    {}\n";
+					} else {
+						s += "    cA=true";
+						if (bc.pathLen !== undefined)
+							s += ", pathLen=" + bc.pathLen;
+						s += "\n";
+					}
+				} else if (extName === "keyUsage") {
+					s += "    " + this.getExtKeyUsageString() + "\n";
+				} else if (extName === "subjectKeyIdentifier") {
+					s += "    " + this.getExtSubjectKeyIdentifier() + "\n";
+				} else if (extName === "authorityKeyIdentifier") {
+					let akid = this.getExtAuthorityKeyIdentifier();
+					if (akid.kid !== undefined)
+						s += "    kid=" + akid.kid + "\n";
+				} else if (extName === "extKeyUsage") {
+					let eku = this.getExtExtKeyUsageName();
+					s += "    " + eku.join(", ") + "\n";
+				} else if (extName === "subjectAltName") {
+					let san = this.getExtSubjectAltName2();
+					s += "    " + san + "\n";
+				} else if (extName === "cRLDistributionPoints") {
+					let cdp = this.getExtCRLDistributionPointsURI();
+					s += "    " + cdp + "\n";
+				} else if (extName === "authorityInfoAccess") {
+					let aia = this.getExtAIAInfo();
+					if (aia.ocsp !== undefined)
+						s += "    ocsp: " + aia.ocsp.join(",") + "\n";
+					if (aia.caissuer !== undefined)
+						s += "    caissuer: " + aia.caissuer.join(",") + "\n";
+				} else if (extName === "certificatePolicies") {
+					let aCP = this.getExtCertificatePolicies();
+					for (let j = 0; j < aCP.length; j++) {
+						if (aCP[j].id !== undefined)
+							s += "    policy oid: " + aCP[j].id + "\n";
+						if (aCP[j].cps !== undefined)
+							s += "    cps: " + aCP[j].cps + "\n";
+					}
+				}
+			}
+		}
+
+		s += "signature algorithm: " + this.getSignatureAlgorithmName() + "\n";
+		s += "signature: " + this.getSignatureValueHex().substr(0, 16) + "...\n";
+		return s;
+	}
+}
 
 /**
  * get distinguished name string in OpenSSL online format from hexadecimal string of ASN.1 DER X.500 name<br/>
  * @param {string} hex hexadecimal string of ASN.1 DER distinguished name
- * @param {number} idx index of hexadecimal string (DEFAULT=0)
+ * @param {number=} idx index of hexadecimal string (DEFAULT=0)
  * @return {string} OpenSSL online format distinguished name
  * @description
  * This static method converts from a hexadecimal string of 
  * distinguished name (DN)
  * specified by 'hex' and 'idx' to OpenSSL oneline string representation (ex. /C=US/O=a).
  * @example
- * X509.hex2dn("3031310b3...") &rarr; /C=US/O=a/CN=b2+OU=b1
+ * hex2dn("3031310b3...") &rarr; /C=US/O=a/CN=b2+OU=b1
  */
-X509.hex2dn = function(hex, idx) {
-    if (idx === undefined) idx = 0;
-    if (hex.substr(idx, 2) !== "30") throw "malformed DN";
+export function hex2dn(hex, idx) {
+	if (idx === undefined) idx = 0;
+	if (hex.substr(idx, 2) !== "30") throw "malformed DN";
 
-    let a = new Array();
+	let a = new Array();
 
-    let aIdx = ASN1HEX.getChildIdx(hex, idx);
-    for (let i = 0; i < aIdx.length; i++) {
-	a.push(X509.hex2rdn(hex, aIdx[i]));
-    }
+	let aIdx = getChildIdx(hex, idx);
+	for (let i = 0; i < aIdx.length; i++) {
+		a.push(hex2rdn(hex, aIdx[i]));
+	}
 
-    a = a.map(function(s) { return s.replace("/", "\\/"); });
-    return "/" + a.join("/");
-};
+	a = a.map(function (s) { return s.replace("/", "\\/"); });
+	return "/" + a.join("/");
+}
 
 /**
  * get relative distinguished name string in OpenSSL online format from hexadecimal string of ASN.1 DER RDN<br/>
  * @param {string} hex hexadecimal string of ASN.1 DER concludes relative distinguished name
- * @param {number} idx index of hexadecimal string (DEFAULT=0)
+ * @param {number=} idx index of hexadecimal string (DEFAULT=0)
  * @return {string} OpenSSL online format relative distinguished name
  * @description
  * This static method converts from a hexadecimal string of 
@@ -992,68 +995,65 @@ X509.hex2dn = function(hex, idx) {
  * specified by 'hex' and 'idx' to LDAP string representation (ex. O=test+CN=test).<br/>
  * NOTE: Multi-valued RDN is supported since jsnrsasign 6.2.2 x509 1.1.10.
  * @example
- * X509.hex2rdn("310a3008060355040a0c0161") &rarr; O=a
- * X509.hex2rdn("31143008060355040a0c01613008060355040a0c0162") &rarr; O=a+O=b
+ * hex2rdn("310a3008060355040a0c0161") &rarr; O=a
+ * hex2rdn("31143008060355040a0c01613008060355040a0c0162") &rarr; O=a+O=b
  */
-X509.hex2rdn = function(hex, idx) {
-    if (idx === undefined) idx = 0;
-    if (hex.substr(idx, 2) !== "31") throw "malformed RDN";
+export function hex2rdn(hex, idx) {
+	if (idx === undefined) idx = 0;
+	if (hex.substr(idx, 2) !== "31") throw "malformed RDN";
 
-    let a = new Array();
+	/** @type {Array<string>} */ let a = new Array();
 
-    let aIdx = ASN1HEX.getChildIdx(hex, idx);
-    for (let i = 0; i < aIdx.length; i++) {
-	a.push(X509.hex2attrTypeValue(hex, aIdx[i]));
-    }
+	let aIdx = getChildIdx(hex, idx);
+	for (let i = 0; i < aIdx.length; i++) {
+		a.push(hex2attrTypeValue(hex, aIdx[i]));
+	}
 
-    a = a.map(function(s) { return s.replace("+", "\\+"); });
-    return a.join("+");
-};
+	a = a.map(function (s) { return s.replace("+", "\\+"); });
+	return a.join("+");
+}
 
 /**
  * get string from hexadecimal string of ASN.1 DER AttributeTypeAndValue<br/>
  * @param {string} hex hexadecimal string of ASN.1 DER concludes AttributeTypeAndValue
- * @param {number} idx index of hexadecimal string (DEFAULT=0)
+ * @param {number=} idx index of hexadecimal string (DEFAULT=0)
  * @return {string} string representation of AttributeTypeAndValue (ex. C=US)
  * @description
  * This static method converts from a hexadecimal string of AttributeTypeAndValue
  * specified by 'hex' and 'idx' to LDAP string representation (ex. C=US).
  * @example
- * X509.hex2attrTypeValue("3008060355040a0c0161") &rarr; O=a
- * X509.hex2attrTypeValue("300806035504060c0161") &rarr; C=a
- * X509.hex2attrTypeValue("...3008060355040a0c0161...", 128) &rarr; O=a
+ * hex2attrTypeValue("3008060355040a0c0161") &rarr; O=a
+ * hex2attrTypeValue("300806035504060c0161") &rarr; C=a
+ * hex2attrTypeValue("...3008060355040a0c0161...", 128) &rarr; O=a
  */
-X509.hex2attrTypeValue = function(hex, idx) {
-    let _ASN1HEX = ASN1HEX;
-    let _getV = _ASN1HEX.getV;
+export function hex2attrTypeValue(hex, idx) {
+	if (idx === undefined) idx = 0;
+	if (hex.substr(idx, 2) !== "30") throw "malformed attribute type and value";
 
-    if (idx === undefined) idx = 0;
-    if (hex.substr(idx, 2) !== "30") throw "malformed attribute type and value";
+	let aIdx = getChildIdx(hex, idx);
+	if (aIdx.length !== 2 || hex.substr(aIdx[0], 2) !== "06")
+		"malformed attribute type and value";
 
-    let aIdx = _ASN1HEX.getChildIdx(hex, idx);
-    if (aIdx.length !== 2 || hex.substr(aIdx[0], 2) !== "06")
-	"malformed attribute type and value";
+	let oidHex = getV(hex, aIdx[0]);
+	let oidInt = oidHexToInt(oidHex);
+	let atype = oid2atype(oidInt);
 
-    let oidHex = _getV(hex, aIdx[0]);
-    let oidInt = oidHexToInt(oidHex);
-    let atype = oid2atype(oidInt);
+	let hV = getV(hex, aIdx[1]);
+	let rawV = hextorstr(hV);
 
-    let hV = _getV(hex, aIdx[1]);
-    let rawV = hextorstr(hV);
-
-    return atype + "=" + rawV;
-};
+	return atype + "=" + rawV;
+}
 
 /**
  * get RSA/DSA/ECDSA public key object from X.509 certificate hexadecimal string<br/>
  * @param {string} h hexadecimal string of X.509 certificate for RSA/ECDSA/DSA public key
  * @return returns RSAKey/KJUR.crypto.{ECDSA,DSA} object of public key
  */
-X509.getPublicKeyFromCertHex = function(h) {
-    let x = new X509();
-    x.readCertHex(h);
-    return x.getPublicKey();
-};
+export function getPublicKeyFromCertHex(h) {
+	let x = new X509();
+	x.readCertHex(h);
+	return x.getPublicKey();
+}
 
 /**
  * get RSA/DSA/ECDSA public key object from PEM certificate string
@@ -1062,11 +1062,11 @@ X509.getPublicKeyFromCertHex = function(h) {
  * @description
  * NOTE: DSA is also supported since x509 1.1.2.
  */
-X509.getPublicKeyFromCertPEM = function(sCertPEM) {
-    let x = new X509();
-    x.readCertPEM(sCertPEM);
-    return x.getPublicKey();
-};
+export function getPublicKeyFromCertPEM(sCertPEM) {
+	let x = new X509();
+	x.readCertPEM(sCertPEM);
+	return x.getPublicKey();
+}
 
 /**
  * get public key information from PEM certificate
@@ -1081,40 +1081,37 @@ X509.getPublicKeyFromCertPEM = function(sCertPEM) {
  * </ul>
  * NOTE: X509v1 certificate is also supported since x509.js 1.1.9.
  */
-X509.getPublicKeyInfoPropOfCertPEM = function(sCertPEM) {
-    let _ASN1HEX = ASN1HEX;
-    let _getVbyList = _ASN1HEX.getVbyList;
+export function getPublicKeyInfoPropOfCertPEM(sCertPEM) {
+	let result = {};
+	let x, hSPKI, pubkey;
+	result.algparam = null;
 
-    let result = {};
-    let x, hSPKI, pubkey;
-    result.algparam = null;
+	x = new X509();
+	x.readCertPEM(sCertPEM);
 
-    x = new X509();
-    x.readCertPEM(sCertPEM);
+	hSPKI = x.getPublicKeyHex();
+	result.keyhex = getVbyList(hSPKI, 0, [1], "03").substr(2);
+	result.algoid = getVbyList(hSPKI, 0, [0, 0], "06");
 
-    hSPKI = x.getPublicKeyHex();
-    result.keyhex = _getVbyList(hSPKI, 0, [1], "03").substr(2);
-    result.algoid = _getVbyList(hSPKI, 0, [0, 0], "06");
+	if (result.algoid === "2a8648ce3d0201") { // ecPublicKey
+		result.algparam = getVbyList(hSPKI, 0, [0, 1], "06");
+	};
 
-    if (result.algoid === "2a8648ce3d0201") { // ecPublicKey
-	result.algparam = _getVbyList(hSPKI, 0, [0, 1], "06");
-    };
-
-    return result;
-};
+	return result;
+}
 
 /* ======================================================================
  *   Specific V3 Extensions
  * ====================================================================== */
 
-X509.KEYUSAGE_NAME = [
-    "digitalSignature",
-    "nonRepudiation",
-    "keyEncipherment",
-    "dataEncipherment",
-    "keyAgreement",
-    "keyCertSign",
-    "cRLSign",
-    "encipherOnly",
-    "decipherOnly"
+export const KEYUSAGE_NAME = [
+	"digitalSignature",
+	"nonRepudiation",
+	"keyEncipherment",
+	"dataEncipherment",
+	"keyAgreement",
+	"keyCertSign",
+	"cRLSign",
+	"encipherOnly",
+	"decipherOnly"
 ];

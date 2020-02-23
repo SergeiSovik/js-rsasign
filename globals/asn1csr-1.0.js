@@ -15,6 +15,7 @@
 
 import { DERInteger, DERBitString, DERNull, DERObjectIdentifier, DERSequence, DERSet, DERTaggedObject } from "./asn1-1.0.js"
 import { AlgorithmIdentifier, X500Name, X500Extension, SubjectPublicKeyInfo } from "./asn1x509-1.0.js"
+import { getTLVbyList } from "./asn1hex-1.1.js"
 
 /**
  * @fileOverview
@@ -199,7 +200,6 @@ KJUR.asn1.csr.CertificationRequestInfo = function(params) {
      * @description
      * @example
      * csri.setSubjectByParam({'str': '/C=US/CN=b'});
-     * @see X500Name
      */
     this.setSubjectByParam = function(x500NameParam) {
         this.asn1Subject = new _X500Name(x500NameParam);
@@ -213,8 +213,6 @@ KJUR.asn1.csr.CertificationRequestInfo = function(params) {
      * csri.setSubjectPublicKeyByGetKeyParam(certPEMString); // or 
      * csri.setSubjectPublicKeyByGetKeyParam(pkcs8PublicKeyPEMString); // or 
      * csir.setSubjectPublicKeyByGetKeyParam(kjurCryptoECDSAKeyObject); // et.al.
-     * @see SubjectPublicKeyInfo
-     * @see KEYUTIL.getKey
      */
     this.setSubjectPublicKeyByGetKey = function(keyParam) {
         let keyObj = _KEYUTIL.getKey(keyParam);
@@ -226,7 +224,6 @@ KJUR.asn1.csr.CertificationRequestInfo = function(params) {
      * append X.509v3 extension to this object by name and parameters
      * @param {name} name name of X.509v3 Extension object
      * @param {Array} extParams parameters as argument of Extension constructor.
-     * @see X500Extension
      * @description
      * @example
      * let o = new KJUR.asn1.csr.CertificationRequestInfo();
@@ -395,9 +392,6 @@ KJUR.asn1.csr.CSRUtil.newCSRPEM = function(param) {
  * console.log(o.subject.name) &rarr; "/C=US/O=Test"
  */
 KJUR.asn1.csr.CSRUtil.getInfo = function(sPEM) {
-    let _ASN1HEX = ASN1HEX;
-    let _getTLVbyList = _ASN1HEX.getTLVbyList;
-
     let result = {};
     result.subject = {};
     result.pubkey = {};
@@ -407,10 +401,10 @@ KJUR.asn1.csr.CSRUtil.getInfo = function(sPEM) {
 
     let hex = pemtohex(sPEM, "CERTIFICATE REQUEST");
 
-    result.subject.hex = _getTLVbyList(hex, 0, [0, 1]);
+    result.subject.hex = getTLVbyList(hex, 0, [0, 1]);
     result.subject.name = X509.hex2dn(result.subject.hex);
 
-    result.pubkey.hex = _getTLVbyList(hex, 0, [0, 2]);
+    result.pubkey.hex = getTLVbyList(hex, 0, [0, 2]);
     result.pubkey.obj = KEYUTIL.getKey(result.pubkey.hex, null, "pkcs8pub");
 
     return result;

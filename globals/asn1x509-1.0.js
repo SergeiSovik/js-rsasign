@@ -13,7 +13,10 @@
 
 "use strict";
 
-import { DERBoolean, DERInteger, DERBitString, DEROctetString, DERObjectIdentifier, DERIA5String, DERUTCTime, DERGeneralizedTime, DERSequence, DERSet, DERTaggedObject, newObject } from "./asn1-1.0.js"
+import { ASN1Object, DERNull, DERBoolean, DERInteger, DERAbstractString, DERBitString, DEROctetString, DERUTF8String, DERPrintableString, DERTeletexString, DERObjectIdentifier, DERIA5String, DERAbstractTime, DERUTCTime, DERGeneralizedTime, DERSequence, DERSet, DERTaggedObject, newObject } from "./asn1-1.0.js"
+import { name2obj, atype2obj } from "./asn1oid.js"
+import { KEYUSAGE_NAME, X509 } from "./x509-1.1.js"
+import { hextob64nl, pemtohex } from "./base64x-1.1.js"
 
 /**
  * ASN.1 module for X.509 certificate
@@ -82,18 +85,28 @@ import { DERBoolean, DERInteger, DERBitString, DEROctetString, DERObjectIdentifi
  * //     signatureAlgorithm   AlgorithmIdentifier,
  * //     signature            BIT STRING  }
  */
-Certificate = function (params) {
-	Certificate.superclass.constructor.call(this);
-	let asn1TBSCert = null,
-		asn1SignatureAlg = null,
-		asn1Sig = null,
-		hexSig = null,
-		prvKey = null,
-		KJUR = KJUR,
-		KJUR.crypto = KJUR.crypto,
+export class Certificate extends ASN1Object {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super();
 
+		/** @type {???? | null} */ this.asn1TBSCert = null;
+		/** @type {???? | null} */ this.asn1SignatureAlg = null;
+		/** @type {DERBitString | null} */ this.asn1Sig = null;
+		/** @type {string | null} */ this.hexSig = null;
+		/** @type {???? | null} */ this.prvKey = null;
 
-		DERBitString = KJUR.asn1.DERBitString;
+		if (params !== undefined) {
+			if (params['tbscertobj'] !== undefined) {
+				this.asn1TBSCert = params['tbscertobj'];
+			}
+			if (params['prvkeyobj'] !== undefined) {
+				this.prvKey = params['prvkeyobj'];
+			}
+		}
+	}
 
     /**
      * sign TBSCertificate and set signature value internally
@@ -102,7 +115,7 @@ Certificate = function (params) {
      * let cert = new Certificate({tbscertobj: tbs, prvkeyobj: prvKey});
      * cert.sign();
      */
-	this.sign = function () {
+	sign() {
 		this.asn1SignatureAlg = this.asn1TBSCert.asn1SignatureAlg;
 
 		let sig = new KJUR.crypto.Signature({ alg: this.asn1SignatureAlg.nameAlg });
@@ -112,14 +125,10 @@ Certificate = function (params) {
 
 		this.asn1Sig = new DERBitString({ 'hex': '00' + this.hexSig });
 
-		let seq = new DERSequence({
-			'array': [this.asn1TBSCert,
-			this.asn1SignatureAlg,
-			this.asn1Sig]
-		});
+		let seq = new DERSequence({ 'array': [this.asn1TBSCert, this.asn1SignatureAlg, this.asn1Sig] });
 		this.hTLV = seq.getEncodedHex();
 		this.isModified = false;
-	};
+	}
 
     /**
      * set signature value internally by hex string
@@ -128,7 +137,7 @@ Certificate = function (params) {
      * let cert = new Certificate({'tbscertobj': tbs});
      * cert.setSignatureHex('01020304');
      */
-	this.setSignatureHex = function (sigHex) {
+	setSignatureHex(sigHex) {
 		this.asn1SignatureAlg = this.asn1TBSCert.asn1SignatureAlg;
 		this.hexSig = sigHex;
 		this.asn1Sig = new DERBitString({ 'hex': '00' + this.hexSig });
@@ -140,12 +149,16 @@ Certificate = function (params) {
 		});
 		this.hTLV = seq.getEncodedHex();
 		this.isModified = false;
-	};
+	}
 
-	this.getEncodedHex = function () {
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
 		if (this.isModified == false && this.hTLV != null) return this.hTLV;
 		throw "not signed yet";
-	};
+	}
 
     /**
      * get PEM formatted certificate string after signed
@@ -156,23 +169,13 @@ Certificate = function (params) {
      * cert.sign();
      * let sPEM = cert.getPEMString();
      */
-	this.getPEMString = function () {
+	getPEMString() {
 		let pemBody = hextob64nl(this.getEncodedHex());
 		return "-----BEGIN CERTIFICATE-----\r\n" +
 			pemBody +
 			"\r\n-----END CERTIFICATE-----\r\n";
-	};
-
-	if (params !== undefined) {
-		if (params['tbscertobj'] !== undefined) {
-			this.asn1TBSCert = params['tbscertobj'];
-		}
-		if (params['prvkeyobj'] !== undefined) {
-			this.prvKey = params['prvkeyobj'];
-		}
 	}
-};
-YAHOO.lang.extend(Certificate, KJUR.asn1.ASN1Object);
+}
 
 /**
  * ASN.1 TBSCertificate structure class
@@ -192,103 +195,91 @@ YAHOO.lang.extend(Certificate, KJUR.asn1.ASN1Object);
  *  o.appendExtension(new BasicConstraints({'cA':true}));
  *  o.appendExtension(new KeyUsage({'bin':'11'}));
  */
-TBSCertificate = function (params) {
-	TBSCertificate.superclass.constructor.call(this);
+export class TBSCertificate extends ASN1Object {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super();
 
+		/** @type {Array<ASN1Object>} */ this.asn1Array = new Array();
 
-
-
-
-
-	KJUR.asn1.x509 = KJUR.asn1.x509,
-		_Time = Time,
-		_X500Name = X500Name,
-		_SubjectPublicKeyInfo = SubjectPublicKeyInfo;
-
-	this._initialize = function () {
-		this.asn1Array = new Array();
-
-		this.asn1Version =
-			new DERTaggedObject({ 'obj': new DERInteger({ 'int': 2 }) });
-		this.asn1SerialNumber = null;
-		this.asn1SignatureAlg = null;
-		this.asn1Issuer = null;
-		this.asn1NotBefore = null;
-		this.asn1NotAfter = null;
-		this.asn1Subject = null;
-		this.asn1SubjPKey = null;
-		this.extensionsArray = new Array();
-	};
+		/** @type {DERTaggetObject} */ this.asn1Version = new DERTaggedObject({ 'obj': new DERInteger({ 'int': 2 }) });
+		/** @type {DERInteger | null} */ this.asn1SerialNumber = null;
+		/** @type {AlgorithmIdentifier | null} */ this.asn1SignatureAlg = null;
+		/** @type {X500Name | null} */ this.asn1Issuer = null;
+		/** @type {Time | null} */ this.asn1NotBefore = null;
+		/** @type {Time | null} */ this.asn1NotAfter = null;
+		/** @type {X500Name | null} */ this.asn1Subject = null;
+		/** @type {SubjectPublicKeyInfo | null} */ this.asn1SubjPKey = null;
+		/** @type {Array<X500Extension>} */ this.extensionsArray = new Array();
+	}
 
     /**
      * set serial number field by parameter
-     * @param {Array} intParam DERInteger param
+     * @param {Object | number} intParam DERInteger param
      * @description
      * @example
      * tbsc.setSerialNumberByParam({'int': 3});
      */
-	this.setSerialNumberByParam = function (intParam) {
+	setSerialNumberByParam(intParam) {
 		this.asn1SerialNumber = new DERInteger(intParam);
-	};
+	}
 
     /**
      * set signature algorithm field by parameter
-     * @param {Array} algIdParam AlgorithmIdentifier parameter
+     * @param {Object} algIdParam AlgorithmIdentifier parameter
      * @description
      * @example
      * tbsc.setSignatureAlgByParam({'name': 'SHA1withRSA'});
      */
-	this.setSignatureAlgByParam = function (algIdParam) {
+	setSignatureAlgByParam(algIdParam) {
 		this.asn1SignatureAlg = new AlgorithmIdentifier(algIdParam);
-	};
+	}
 
     /**
      * set issuer name field by parameter
-     * @param {Array} x500NameParam X500Name parameter
+     * @param {Object} x500NameParam X500Name parameter
      * @description
      * @example
      * tbsc.setIssuerParam({'str': '/C=US/CN=b'});
-     * @see X500Name
      */
-	this.setIssuerByParam = function (x500NameParam) {
-		this.asn1Issuer = new _X500Name(x500NameParam);
-	};
+	setIssuerByParam(x500NameParam) {
+		this.asn1Issuer = new X500Name(x500NameParam);
+	}
 
     /**
      * set notBefore field by parameter
-     * @param {Array} timeParam Time parameter
+     * @param {Object} timeParam Time parameter
      * @description
      * @example
      * tbsc.setNotBeforeByParam({'str': '130508235959Z'});
-     * @see Time
      */
-	this.setNotBeforeByParam = function (timeParam) {
-		this.asn1NotBefore = new _Time(timeParam);
-	};
+	setNotBeforeByParam(timeParam) {
+		this.asn1NotBefore = new Time(timeParam);
+	}
 
     /**
      * set notAfter field by parameter
-     * @param {Array} timeParam Time parameter
+     * @param {Object} timeParam Time parameter
      * @description
      * @example
      * tbsc.setNotAfterByParam({'str': '130508235959Z'});
-     * @see Time
      */
-	this.setNotAfterByParam = function (timeParam) {
-		this.asn1NotAfter = new _Time(timeParam);
-	};
+	setNotAfterByParam(timeParam) {
+		this.asn1NotAfter = new Time(timeParam);
+	}
 
     /**
      * set subject name field by parameter
-     * @param {Array} x500NameParam X500Name parameter
+     * @param {Object} x500NameParam X500Name parameter
      * @description
      * @example
      * tbsc.setSubjectParam({'str': '/C=US/CN=b'});
-     * @see X500Name
      */
-	this.setSubjectByParam = function (x500NameParam) {
-		this.asn1Subject = new _X500Name(x500NameParam);
-	};
+	setSubjectByParam(x500NameParam) {
+		this.asn1Subject = new X500Name(x500NameParam);
+	}
 
     /**
      * set subject public key info field by key object
@@ -296,11 +287,10 @@ TBSCertificate = function (params) {
      * @description
      * @example
      * tbsc.setSubjectPublicKey(keyobj);
-     * @see SubjectPublicKeyInfo
      */
-	this.setSubjectPublicKey = function (param) {
-		this.asn1SubjPKey = new _SubjectPublicKeyInfo(param);
-	};
+	setSubjectPublicKey(param) {
+		this.asn1SubjPKey = new SubjectPublicKeyInfo(param);
+	}
 
     /**
      * set subject public key info by RSA/ECDSA/DSA key parameter
@@ -310,31 +300,28 @@ TBSCertificate = function (params) {
      * tbsc.setSubjectPublicKeyByGetKeyParam(certPEMString); // or
      * tbsc.setSubjectPublicKeyByGetKeyParam(pkcs8PublicKeyPEMString); // or
      * tbsc.setSubjectPublicKeyByGetKeyParam(kjurCryptoECDSAKeyObject); // et.al.
-     * @see SubjectPublicKeyInfo
-     * @see KEYUTIL.getKey
      */
-	this.setSubjectPublicKeyByGetKey = function (keyParam) {
+	setSubjectPublicKeyByGetKey(keyParam) {
 		let keyObj = KEYUTIL.getKey(keyParam);
-		this.asn1SubjPKey = new _SubjectPublicKeyInfo(keyObj);
-	};
+		this.asn1SubjPKey = new SubjectPublicKeyInfo(keyObj);
+	}
 
     /**
      * append X.509v3 extension to this object
-     * @param {Extension} extObj X.509v3 Extension object
+     * @param {X500Extension} extObj X.509v3 Extension object
      * @description
      * @example
      * tbsc.appendExtension(new BasicConstraints({'cA':true, 'critical': true}));
      * tbsc.appendExtension(new KeyUsage({'bin':'11'}));
-     * @see X500Extension
      */
-	this.appendExtension = function (extObj) {
+	appendExtension(extObj) {
 		this.extensionsArray.push(extObj);
-	};
+	}
 
     /**
      * append X.509v3 extension to this object by name and parameters
      * @param {name} name name of X.509v3 Extension object
-     * @param {Array} extParams parameters as argument of Extension constructor.
+     * @param {Object} extParams parameters as argument of Extension constructor.
      * @description
      * This method adds a X.509v3 extension specified by name 
      * and extParams to internal extension array of X.509v3 extension objects.
@@ -357,15 +344,18 @@ TBSCertificate = function (params) {
      * o.appendExtensionByName('ExtKeyUsage', {array: [{name: 'clientAuth'}]});
      * o.appendExtensionByName('AuthorityKeyIdentifier', {kid: '1234ab..'});
      * o.appendExtensionByName('AuthorityInfoAccess', {array: [{accessMethod:{oid:...},accessLocation:{uri:...}}]});
-     * @see X500Extension
      */
-	this.appendExtensionByName = function (name, extParams) {
+	appendExtensionByName(name, extParams) {
 		X500Extension.appendByNameToArray(name,
 			extParams,
 			this.extensionsArray);
-	};
+	}
 
-	this.getEncodedHex = function () {
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
 		if (this.asn1NotBefore == null || this.asn1NotAfter == null)
 			throw "notBefore and/or notAfter not set";
 		let asn1Validity =
@@ -395,18 +385,12 @@ TBSCertificate = function (params) {
 		this.hTLV = o.getEncodedHex();
 		this.isModified = false;
 		return this.hTLV;
-	};
-
-	this._initialize();
-};
-YAHOO.lang.extend(TBSCertificate, KJUR.asn1.ASN1Object);
-
-// === END   TBSCertificate ===================================================
-
-// === BEGIN X.509v3 Extensions Related =======================================
+	}
+}
 
 /**
  * base Extension ASN.1 structure class
+ * @abstract
  * @param {Object} params dictionary of parameters (ex. {'critical': true})
  * @description
  * @example
@@ -415,87 +399,93 @@ YAHOO.lang.extend(TBSCertificate, KJUR.asn1.ASN1Object);
  * //     critical    BOOLEAN DEFAULT FALSE,
  * //     extnValue   OCTET STRING  }
  */
-X500Extension = function (params) {
-	X500Extension.superclass.constructor.call(this);
-	let asn1ExtnValue = null,
-		KJUR = KJUR,
+export class X500Extension extends ASN1Object {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super();
 
+		/** @type {ASN1Object | null} */ this.asn1ExtnValue = null;
 
+		this.critical = false;
+		if (params !== undefined) {
+			if (params['critical'] !== undefined) {
+				this.critical = params['critical'] ? true : false;
+			}
+		}
+	}
 
-
-		DERSequence = KJUR.asn1.DERSequence;
-
-	this.getEncodedHex = function () {
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
 		let asn1Oid = new DERObjectIdentifier({ 'oid': this.oid });
-		let asn1EncapExtnValue =
-			new DEROctetString({ 'hex': this.getExtnValueHex() });
+		let asn1EncapExtnValue = new DEROctetString({ 'hex': this.getExtnValueHex() });
 
-		let asn1Array = new Array();
+		/** @type {Array<ASN1Object> */ let asn1Array = new Array();
 		asn1Array.push(asn1Oid);
 		if (this.critical) asn1Array.push(new DERBoolean());
 		asn1Array.push(asn1EncapExtnValue);
 
 		let asn1Seq = new DERSequence({ 'array': asn1Array });
 		return asn1Seq.getEncodedHex();
-	};
+	}
 
-	this.critical = false;
-	if (params !== undefined) {
-		if (params['critical'] !== undefined) {
-			this.critical = params['critical'];
+	/**
+	 * append X.509v3 extension to any specified array<br/>
+	 * @param {string} name X.509v3 extension name
+	 * @param {Object} extParams associative array of extension parameters
+	 * @param {Array<ASN1Object>} a array to add specified extension
+	 * @description
+	 * This static function add a X.509v3 extension specified by name and extParams to
+	 * array 'a' so that 'a' will be an array of X.509v3 extension objects.
+	 * See {@link TBSCertificate#appendExtensionByName}
+	 * for supported names of extensions.
+	 * @example
+	 * let a = new Array();
+	 * X500Extension.appendByNameToArray("BasicConstraints", {'cA':true, 'critical': true}, a);
+	 * X500Extension.appendByNameToArray("KeyUsage", {'bin':'11'}, a);
+	 */
+	static appendByNameToArray(name, extParams, a) {
+		let lowname = name.toLowerCase(),
+
+		if (lowname == "basicconstraints") {
+			let extObj = new BasicConstraints(extParams);
+			a.push(extObj);
+		} else if (lowname == "keyusage") {
+			let extObj = new KeyUsage(extParams);
+			a.push(extObj);
+		} else if (lowname == "crldistributionpoints") {
+			let extObj = new CRLDistributionPoints(extParams);
+			a.push(extObj);
+		} else if (lowname == "extkeyusage") {
+			let extObj = new ExtKeyUsage(extParams);
+			a.push(extObj);
+		} else if (lowname == "authoritykeyidentifier") {
+			let extObj = new AuthorityKeyIdentifier(extParams);
+			a.push(extObj);
+		} else if (lowname == "authorityinfoaccess") {
+			let extObj = new AuthorityInfoAccess(extParams);
+			a.push(extObj);
+		} else if (lowname == "subjectaltname") {
+			let extObj = new SubjectAltName(extParams);
+			a.push(extObj);
+		} else if (lowname == "issueraltname") {
+			let extObj = new IssuerAltName(extParams);
+			a.push(extObj);
+		} else {
+			throw "unsupported extension name: " + name;
 		}
 	}
-};
-YAHOO.lang.extend(X500Extension, KJUR.asn1.ASN1Object);
 
-/**
- * append X.509v3 extension to any specified array<br/>
- * @param {string} name X.509v3 extension name
- * @param {Object} extParams associative array of extension parameters
- * @param {Array} a array to add specified extension
- * @see X500Extension
- * @description
- * This static function add a X.509v3 extension specified by name and extParams to
- * array 'a' so that 'a' will be an array of X.509v3 extension objects.
- * See {@link TBSCertificate#appendExtensionByName}
- * for supported names of extensions.
- * @example
- * let a = new Array();
- * X500Extension.appendByNameToArray("BasicConstraints", {'cA':true, 'critical': true}, a);
- * X500Extension.appendByNameToArray("KeyUsage", {'bin':'11'}, a);
- */
-X500Extension.appendByNameToArray = function (name, extParams, a) {
-	let _lowname = name.toLowerCase(),
-		KJUR.asn1.x509 = KJUR.asn1.x509;
-
-	if (_lowname == "basicconstraints") {
-		let extObj = new BasicConstraints(extParams);
-		a.push(extObj);
-	} else if (_lowname == "keyusage") {
-		let extObj = new KeyUsage(extParams);
-		a.push(extObj);
-	} else if (_lowname == "crldistributionpoints") {
-		let extObj = new CRLDistributionPoints(extParams);
-		a.push(extObj);
-	} else if (_lowname == "extkeyusage") {
-		let extObj = new ExtKeyUsage(extParams);
-		a.push(extObj);
-	} else if (_lowname == "authoritykeyidentifier") {
-		let extObj = new AuthorityKeyIdentifier(extParams);
-		a.push(extObj);
-	} else if (_lowname == "authorityinfoaccess") {
-		let extObj = new AuthorityInfoAccess(extParams);
-		a.push(extObj);
-	} else if (_lowname == "subjectaltname") {
-		let extObj = new SubjectAltName(extParams);
-		a.push(extObj);
-	} else if (_lowname == "issueraltname") {
-		let extObj = new IssuerAltName(extParams);
-		a.push(extObj);
-	} else {
-		throw "unsupported extension name: " + name;
-	}
-};
+	/**
+	 * @abstract
+	 * @returns {string}
+	 */
+	getExtnValueHex() {}
+}
 
 /**
  * KeyUsage ASN.1 structure class
@@ -517,40 +507,47 @@ X500Extension.appendByNameToArray = function (name, extParams, a) {
  * </pre><br/>
  * NOTE: 'names' parameter is supprted since jsrsasign 8.0.14.
  * @example
- * o = new KeyUsage({bin: "11"});
- * o = new KeyUsage({critical: true, bin: "11"});
- * o = new KeyUsage({names: ['digitalSignature', 'keyAgreement']});
+ * o = new KeyUsage({'bin': "11"});
+ * o = new KeyUsage({'critical': true, 'bin': "11"});
+ * o = new KeyUsage({'names': ['digitalSignature', 'keyAgreement']});
  */
-KeyUsage = function (params) {
-	KeyUsage.superclass.constructor.call(this, params);
-	let _KEYUSAGE_NAME = X509.KEYUSAGE_NAME;
+export class KeyUsage extends X500Extension {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super(params);
 
-	this.getExtnValueHex = function () {
-		return this.asn1ExtnValue.getEncodedHex();
-	};
+		this.oid = "2.5.29.15";
+		/** @type {DERBitString | null} */ this.asn1ExtnValue;
 
-	this.oid = "2.5.29.15";
-	if (params !== undefined) {
-		if (params['bin'] !== undefined) {
-			this.asn1ExtnValue = new DERBitString(params);
-		}
-		if (params['names'] !== undefined &&
-			params.names.length !== undefined) {
-			let names = params['names'];
-			let s = "000000000";
-			for (let i = 0; i < names.length; i++) {
-				for (let j = 0; j < _KEYUSAGE_NAME.length; j++) {
-					if (names[i] === _KEYUSAGE_NAME[j]) {
-						s = s.substring(0, j) + '1' +
-							s.substring(j + 1, s.length);
+		if (params !== undefined) {
+			if (params['bin'] !== undefined) {
+				this.asn1ExtnValue = new DERBitString(params);
+			}
+			if (params['names'] !== undefined && params['names'].length !== undefined) {
+				let names = params['names'];
+				let s = "000000000";
+				for (let i = 0; i < names.length; i++) {
+					for (let j = 0; j < KEYUSAGE_NAME.length; j++) {
+						if (names[i] === KEYUSAGE_NAME[j]) {
+							s = s.substring(0, j) + '1' +
+								s.substring(j + 1, s.length);
+						}
 					}
 				}
+				this.asn1ExtnValue = new DERBitString({ bin: s });
 			}
-			this.asn1ExtnValue = new DERBitString({ bin: s });
 		}
 	}
-};
-YAHOO.lang.extend(KeyUsage, X500Extension);
+
+	/**
+	 * @returns {string}
+	 */
+	getExtnValueHex() {
+		return this.asn1ExtnValue.getEncodedHex();
+	}
+}
 
 /**
  * BasicConstraints ASN.1 structure class
@@ -558,34 +555,42 @@ YAHOO.lang.extend(KeyUsage, X500Extension);
  * @description
  * @example
  */
-BasicConstraints = function (params) {
-	BasicConstraints.superclass.constructor.call(this, params);
-	let cA = false;
-	let pathLen = -1;
+export class BasicConstraints extends X500Extension {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super(params);
 
-	this.getExtnValueHex = function () {
-		let asn1Array = new Array();
+		/** @type {DERSequence | null} */ this.asn1ExtnValue;
+
+		this.oid = "2.5.29.19";
+		this.cA = false;
+		this.pathLen = -1;
+
+		if (params !== undefined) {
+			if (params['cA'] !== undefined) {
+				this.cA = params['cA'];
+			}
+			if (params['pathLen'] !== undefined) {
+				this.pathLen = params['pathLen'];
+			}
+		}	
+	}
+
+	/**
+	 * @returns {string}
+	 */
+	getExtnValueHex() {
+		/** @type {Array<ASN1Object>} */ let asn1Array = new Array();
 		if (this.cA) asn1Array.push(new DERBoolean());
 		if (this.pathLen > -1)
 			asn1Array.push(new DERInteger({ 'int': this.pathLen }));
 		let asn1Seq = new DERSequence({ 'array': asn1Array });
 		this.asn1ExtnValue = asn1Seq;
 		return this.asn1ExtnValue.getEncodedHex();
-	};
-
-	this.oid = "2.5.29.19";
-	this.cA = false;
-	this.pathLen = -1;
-	if (params !== undefined) {
-		if (params['cA'] !== undefined) {
-			this.cA = params['cA'];
-		}
-		if (params['pathLen'] !== undefined) {
-			this.pathLen = params['pathLen'];
-		}
 	}
-};
-YAHOO.lang.extend(BasicConstraints, X500Extension);
+}
 
 /**
  * CRLDistributionPoints ASN.1 structure class
@@ -618,37 +623,41 @@ YAHOO.lang.extend(BasicConstraints, X500Extension);
  * </pre>
  * @example
  */
-CRLDistributionPoints = function (params) {
-	CRLDistributionPoints.superclass.constructor.call(this, params);
+export class CRLDistributionPoints extends X500Extension {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super(params);
 
+		this.oid = "2.5.29.31";
+		if (params !== undefined) {
+			if (params['array'] !== undefined) {
+				this.setByDPArray(params['array']);
+			} else if (params['uri'] !== undefined) {
+				this.setByOneURI(params['uri']);
+			}
+		}
+	}
 
-	KJUR.asn1.x509 = KJUR.asn1.x509;
-
-	this.getExtnValueHex = function () {
+	/**
+	 * @returns {string}
+	 */
+	getExtnValueHex() {
 		return this.asn1ExtnValue.getEncodedHex();
-	};
+	}
 
-	this.setByDPArray = function (dpArray) {
+	setByDPArray(dpArray) {
 		this.asn1ExtnValue = new KJUR.asn1.DERSequence({ 'array': dpArray });
-	};
+	}
 
-	this.setByOneURI = function (uri) {
+	setByOneURI(uri) {
 		let gn1 = new GeneralNames([{ 'uri': uri }]);
 		let dpn1 = new DistributionPointName(gn1);
 		let dp1 = new DistributionPoint({ 'dpobj': dpn1 });
 		this.setByDPArray([dp1]);
-	};
-
-	this.oid = "2.5.29.31";
-	if (params !== undefined) {
-		if (params['array'] !== undefined) {
-			this.setByDPArray(params['array']);
-		} else if (params['uri'] !== undefined) {
-			this.setByOneURI(params['uri']);
-		}
 	}
-};
-YAHOO.lang.extend(CRLDistributionPoints, X500Extension);
+}
 
 /**
  * KeyUsage ASN.1 structure class
@@ -666,31 +675,41 @@ YAHOO.lang.extend(CRLDistributionPoints, X500Extension);
  * // ExtKeyUsageSyntax ::= SEQUENCE SIZE (1..MAX) OF KeyPurposeId
  * // KeyPurposeId ::= OBJECT IDENTIFIER
  */
-ExtKeyUsage = function (params) {
-	ExtKeyUsage.superclass.constructor.call(this, params);
+export class ExtKeyUsage extends X500Extension {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super(params);
 
-	KJUR.asn1 = KJUR.asn1;
+		/** @type {DERSequence | null} */ this.asn1ExtnValue;
 
-	this.setPurposeArray = function (purposeArray) {
-		this.asn1ExtnValue = new KJUR.asn1.DERSequence();
-		for (let i = 0; i < purposeArray.length; i++) {
-			let o = new KJUR.asn1.DERObjectIdentifier(purposeArray[i]);
-			this.asn1ExtnValue.appendASN1Object(o);
-		}
-	};
-
-	this.getExtnValueHex = function () {
-		return this.asn1ExtnValue.getEncodedHex();
-	};
-
-	this.oid = "2.5.29.37";
-	if (params !== undefined) {
-		if (params['array'] !== undefined) {
-			this.setPurposeArray(params['array']);
+		this.oid = "2.5.29.37";
+		if (params !== undefined) {
+			if (params['array'] !== undefined) {
+				this.setPurposeArray(params['array']);
+			}
 		}
 	}
-};
-YAHOO.lang.extend(ExtKeyUsage, X500Extension);
+
+	/**
+	 * @param {Array<Object>} purposeArray 
+	 */
+	setPurposeArray(purposeArray) {
+		this.asn1ExtnValue = new DERSequence();
+		for (let i = 0; i < purposeArray.length; i++) {
+			let o = new DERObjectIdentifier(purposeArray[i]);
+			this.asn1ExtnValue.appendASN1Object(o);
+		}
+	}
+
+	/**
+	 * @returns {string}
+	 */
+	getExtnValueHex() {
+		return this.asn1ExtnValue.getEncodedHex();
+	}
+}
 
 /**
  * AuthorityKeyIdentifier ASN.1 structure class
@@ -712,18 +731,38 @@ YAHOO.lang.extend(ExtKeyUsage, X500Extension);
  *   sn:     {hex: '1234'}
  * });
  */
-AuthorityKeyIdentifier = function (params) {
-	AuthorityKeyIdentifier.superclass.constructor.call(this, params);
+export class AuthorityKeyIdentifier extends X500Extension {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super(params);
 
+		/** @type {DERSequence | null} */ this.asn1ExtnValue;
 
-	DERTaggedObject = KJUR.asn1.DERTaggedObject;
+		/** @type {DEROctetString | null} */ this.asn1KID = null;
+		/** @type {X500Name | null} */ this.asn1CertIssuer = null;
+		/** @type {DERInteger | null} */ this.asn1CertSN = null;
 
-	this.asn1KID = null;
-	this.asn1CertIssuer = null;
-	this.asn1CertSN = null;
+		this.oid = "2.5.29.35";
+		if (params !== undefined) {
+			if (params['kid'] !== undefined) {
+				this.setKIDByParam(params['kid']);
+			}
+			if (params['issuer'] !== undefined) {
+				this.setCertIssuerByParam(params['issuer']);
+			}
+			if (params['sn'] !== undefined) {
+				this.setCertSNByParam(params['sn']);
+			}
+		}	
+	}
 
-	this.getExtnValueHex = function () {
-		let a = new Array();
+	/**
+	 * @returns {string}
+	 */
+	getExtnValueHex() {
+		/** @type {Array<ASN1Object>} */ let a = new Array();
 		if (this.asn1KID)
 			a.push(new DERTaggedObject({
 				'explicit': false,
@@ -743,10 +782,10 @@ AuthorityKeyIdentifier = function (params) {
 				'obj': this.asn1CertSN
 			}));
 
-		let asn1Seq = new KJUR.asn1.DERSequence({ 'array': a });
+		let asn1Seq = new DERSequence({ 'array': a });
 		this.asn1ExtnValue = asn1Seq;
 		return this.asn1ExtnValue.getEncodedHex();
-	};
+	}
 
     /**
      * set keyIdentifier value by DERInteger parameter
@@ -755,9 +794,9 @@ AuthorityKeyIdentifier = function (params) {
      * NOTE: Automatic keyIdentifier value calculation by an issuer
      * public key will be supported in future version.
      */
-	this.setKIDByParam = function (param) {
+	setKIDByParam(param) {
 		this.asn1KID = new DEROctetString(param);
-	};
+	}
 
     /**
      * set authorityCertIssuer value by X500Name parameter
@@ -766,9 +805,9 @@ AuthorityKeyIdentifier = function (params) {
      * NOTE: Automatic authorityCertIssuer name setting by an issuer
      * certificate will be supported in future version.
      */
-	this.setCertIssuerByParam = function (param) {
+	setCertIssuerByParam(param) {
 		this.asn1CertIssuer = new X500Name(param);
-	};
+	}
 
     /**
      * set authorityCertSerialNumber value by DERInteger parameter
@@ -777,24 +816,10 @@ AuthorityKeyIdentifier = function (params) {
      * NOTE: Automatic authorityCertSerialNumber setting by an issuer
      * certificate will be supported in future version.
      */
-	this.setCertSNByParam = function (param) {
+	setCertSNByParam(param) {
 		this.asn1CertSN = new DERInteger(param);
-	};
-
-	this.oid = "2.5.29.35";
-	if (params !== undefined) {
-		if (params['kid'] !== undefined) {
-			this.setKIDByParam(params['kid']);
-		}
-		if (params['issuer'] !== undefined) {
-			this.setCertIssuerByParam(params['issuer']);
-		}
-		if (params['sn'] !== undefined) {
-			this.setCertSNByParam(params['sn']);
-		}
 	}
-};
-YAHOO.lang.extend(AuthorityKeyIdentifier, X500Extension);
+}
 
 /**
  * AuthorityInfoAccess ASN.1 structure class
@@ -814,48 +839,55 @@ YAHOO.lang.extend(AuthorityKeyIdentifier, X500Extension);
  * </pre>
  * @example
  * e1 = new AuthorityInfoAccess({
- *   array: [{
- *     accessMethod:{'oid': '1.3.6.1.5.5.7.48.1'},
- *     accessLocation:{'uri': 'http://ocsp.cacert.org'}
+ *   'array': [{
+ *     'accessMethod': {'oid': '1.3.6.1.5.5.7.48.1'},
+ *     'accessLocation': {'uri': 'http://ocsp.cacert.org'}
  *   }]
  * });
  */
-AuthorityInfoAccess = function (params) {
-	AuthorityInfoAccess.superclass.constructor.call(this, params);
+export class AuthorityInfoAccess extends X500Extension {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super(params);
 
-	this.setAccessDescriptionArray = function (accessDescriptionArray) {
-		let array = new Array(),
-			KJUR = KJUR,
+		/** @type {DERSequence | null} */ this.asn1ExtnValue;
 
-			DERSequence = KJUR.asn1.DERSequence;
+		this.oid = "1.3.6.1.5.5.7.1.1";		
+		if (params !== undefined) {
+			if (params['array'] !== undefined) {
+				this.setAccessDescriptionArray(params['array']);
+			}
+		}
+	}
+	
+	/**
+	 * @param {Array<Object>} accessDescriptionArray 
+	 */
+	setAccessDescriptionArray(accessDescriptionArray) {
+		/** @type {Array<DERSequence>} */ let array = new Array();
 
 		for (let i = 0; i < accessDescriptionArray.length; i++) {
-			let o = new KJUR.asn1.DERObjectIdentifier(accessDescriptionArray[i].accessMethod);
-			let gn = new GeneralName(accessDescriptionArray[i].accessLocation);
+			let o = new DERObjectIdentifier(accessDescriptionArray[i]['accessMethod']);
+			let gn = new GeneralName(accessDescriptionArray[i]['accessLocation']);
 			let accessDescription = new DERSequence({ 'array': [o, gn] });
 			array.push(accessDescription);
 		}
 		this.asn1ExtnValue = new DERSequence({ 'array': array });
-	};
-
-	this.getExtnValueHex = function () {
-		return this.asn1ExtnValue.getEncodedHex();
-	};
-
-	this.oid = "1.3.6.1.5.5.7.1.1";
-	if (params !== undefined) {
-		if (params['array'] !== undefined) {
-			this.setAccessDescriptionArray(params['array']);
-		}
 	}
-};
-YAHOO.lang.extend(AuthorityInfoAccess, X500Extension);
+
+	/**
+	 * @returns {string}
+	 */
+	getExtnValueHex() {
+		return this.asn1ExtnValue.getEncodedHex();
+	}
+}
 
 /**
  * SubjectAltName ASN.1 structure class<br/>
  * @param {Object} params dictionary of parameters
- * @see GeneralNames
- * @see GeneralName
  * @description
  * This class provides X.509v3 SubjectAltName extension.
  * <pre>
@@ -875,35 +907,45 @@ YAHOO.lang.extend(AuthorityInfoAccess, X500Extension);
  * </pre>
  * @example
  * e1 = new SubjectAltName({
- *   critical: true,
- *   array: [{uri: 'http://aaa.com/'}, {uri: 'http://bbb.com/'}]
+ *   'critical': true,
+ *   'array': [{'uri': 'http://aaa.com/'}, {'uri': 'http://bbb.com/'}]
  * });
  */
-SubjectAltName = function (params) {
-	SubjectAltName.superclass.constructor.call(this, params)
+export class SubjectAltName extends X500Extension {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super(params);
 
-	this.setNameArray = function (paramsArray) {
-		this.asn1ExtnValue = new GeneralNames(paramsArray);
-	};
+		/** @type {GeneralNames | null} */ this.asn1ExtnValue;
 
-	this.getExtnValueHex = function () {
-		return this.asn1ExtnValue.getEncodedHex();
-	};
-
-	this.oid = "2.5.29.17";
-	if (params !== undefined) {
-		if (params['array'] !== undefined) {
-			this.setNameArray(params['array']);
-		}
+		this.oid = "2.5.29.17";
+		if (params !== undefined) {
+			if (params['array'] !== undefined) {
+				this.setNameArray(params['array']);
+			}
+		}	
 	}
-};
-YAHOO.lang.extend(SubjectAltName, X500Extension);
+
+	/**
+	 * @param {Array<Object>} paramsArray 
+	 */
+	setNameArray(paramsArray) {
+		this.asn1ExtnValue = new GeneralNames(paramsArray);
+	}
+
+	/**
+	 * @returns {string}
+	 */
+	getExtnValueHex() {
+		return this.asn1ExtnValue.getEncodedHex();
+	}
+}
 
 /**
  * IssuerAltName ASN.1 structure class<br/>
  * @param {Object} params dictionary of parameters
- * @see GeneralNames
- * @see GeneralName
  * @description
  * This class provides X.509v3 IssuerAltName extension.
  * <pre>
@@ -927,29 +969,38 @@ YAHOO.lang.extend(SubjectAltName, X500Extension);
  *   array: [{uri: 'http://aaa.com/'}, {uri: 'http://bbb.com/'}]
  * });
  */
-IssuerAltName = function (params) {
-	IssuerAltName.superclass.constructor.call(this, params)
+export class IssuerAltName extends X500Extension {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super(params);
 
-	this.setNameArray = function (paramsArray) {
-		this.asn1ExtnValue = new GeneralNames(paramsArray);
-	};
+		/** @type {GeneralNames | null} */ this.asn1ExtnValue;
 
-	this.getExtnValueHex = function () {
-		return this.asn1ExtnValue.getEncodedHex();
-	};
-
-	this.oid = "2.5.29.18";
-	if (params !== undefined) {
-		if (params['array'] !== undefined) {
-			this.setNameArray(params['array']);
+		this.oid = "2.5.29.18";
+		if (params !== undefined) {
+			if (params['array'] !== undefined) {
+				this.setNameArray(params['array']);
+			}
 		}
 	}
-};
-YAHOO.lang.extend(IssuerAltName, X500Extension);
+		
+	/**
+	 * @param {Array<Object>} paramsArray 
+	 */
+	setNameArray(paramsArray) {
+		this.asn1ExtnValue = new GeneralNames(paramsArray);
+	}
 
-// === END   X.509v3 Extensions Related =======================================
+	/**
+	 * @returns {string}
+	 */
+	getExtnValueHex() {
+		return this.asn1ExtnValue.getEncodedHex();
+	}
+}
 
-// === BEGIN CRL Related ===================================================
 /**
  * X.509 CRL class to sign and generate hex encoded CRL
  * @param {Object} params dictionary of parameters (ex. {'tbsobj': obj, 'rsaprvkey': key})
@@ -975,14 +1026,28 @@ YAHOO.lang.extend(IssuerAltName, X500Extension);
  * //     signatureAlgorithm   AlgorithmIdentifier,
  * //     signatureValue       BIT STRING  }
  */
-CRL = function (params) {
-	CRL.superclass.constructor.call(this);
+export class CRL extends ASN1Object {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super();
 
-	let asn1TBSCertList = null,
-		asn1SignatureAlg = null,
-		asn1Sig = null,
-		hexSig = null,
-		prvKey = null;
+		this.asn1TBSCertList = null,
+		this.asn1SignatureAlg = null,
+		/** @type {DERBitString | null} */ this.asn1Sig = null,
+		/** @type {string | null} */ this.hexSig = null,
+		this.prvKey = null;
+
+		if (params !== undefined) {
+			if (params['tbsobj'] !== undefined) {
+				this.asn1TBSCertList = params['tbsobj'];
+			}
+			if (params['prvkeyobj'] !== undefined) {
+				this.prvKey = params['prvkeyobj'];
+			}
+		}
+	}
 
     /**
      * sign TBSCertList and set signature value internally
@@ -991,7 +1056,7 @@ CRL = function (params) {
      * let cert = new CRL({'tbsobj': tbs, 'prvkeyobj': prvKey});
      * cert.sign();
      */
-	this.sign = function () {
+	sign() {
 		this.asn1SignatureAlg = this.asn1TBSCertList.asn1SignatureAlg;
 
 		sig = new KJUR.crypto.Signature({ 'alg': 'SHA1withRSA', 'prov': 'cryptojs/jsrsa' });
@@ -1008,39 +1073,33 @@ CRL = function (params) {
 		});
 		this.hTLV = seq.getEncodedHex();
 		this.isModified = false;
-	};
+	}
 
-	this.getEncodedHex = function () {
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
 		if (this.isModified == false && this.hTLV != null) return this.hTLV;
 		throw "not signed yet";
-	};
+	}
 
     /**
      * get PEM formatted CRL string after signed
-     * @return PEM formatted string of certificate
+     * @return {string} PEM formatted string of certificate
      * @description
      * @example
      * let cert = new CRL({'tbsobj': tbs, 'rsaprvkey': prvKey});
      * cert.sign();
      * let sPEM =  cert.getPEMString();
      */
-	this.getPEMString = function () {
+	getPEMString() {
 		let pemBody = hextob64nl(this.getEncodedHex());
 		return "-----BEGIN X509 CRL-----\r\n" +
 			pemBody +
 			"\r\n-----END X509 CRL-----\r\n";
-	};
-
-	if (params !== undefined) {
-		if (params['tbsobj'] !== undefined) {
-			this.asn1TBSCertList = params['tbsobj'];
-		}
-		if (params['prvkeyobj'] !== undefined) {
-			this.prvKey = params['prvkeyobj'];
-		}
 	}
-};
-YAHOO.lang.extend(CRL, KJUR.asn1.ASN1Object);
+}
 
 /**
  * ASN.1 TBSCertList structure class for CRL
@@ -1072,73 +1131,75 @@ YAHOO.lang.extend(CRL, KJUR.asn1.ASN1Object);
  * //                                  }  OPTIONAL,
  * //        crlExtensions           [0]  EXPLICIT Extensions OPTIONAL
  */
-TBSCertList = function (params) {
-	TBSCertList.superclass.constructor.call(this);
-	let aRevokedCert = null,
-		KJUR = KJUR,
+export class TBSCertList extends ASN1Object {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super();
 
-
-		KJUR.asn1.x509 = KJUR.asn1.x509,
-		_Time = Time;
+		/** @type {Array<ASN1Object>} */ this.asn1Array;
+		/** @type {DERTaggetObject | null} */ this.asn1Version = null;
+		/** @type {AlgorithmIdentifier | null} */ this.asn1SignatureAlg = null;
+		/** @type {X500Name | null} */ this.asn1Issuer = null;
+		/** @type {Time | null} */ this.asn1ThisUpdate = null;
+		/** @type {Time | null} */ this.asn1NextUpdate = null;
+		/** @type {Array<CRLEntry>} */ this.aRevokedCert = new Array();
+	}
 
     /**
      * set signature algorithm field by parameter
-     * @param {Array} algIdParam AlgorithmIdentifier parameter
+     * @param {Object} algIdParam AlgorithmIdentifier parameter
      * @description
      * @example
      * tbsc.setSignatureAlgByParam({'name': 'SHA1withRSA'});
      */
-	this.setSignatureAlgByParam = function (algIdParam) {
-		this.asn1SignatureAlg =
-			new AlgorithmIdentifier(algIdParam);
-	};
+	setSignatureAlgByParam(algIdParam) {
+		this.asn1SignatureAlg =	new AlgorithmIdentifier(algIdParam);
+	}
 
     /**
      * set issuer name field by parameter
-     * @param {Array} x500NameParam X500Name parameter
+     * @param {Object} x500NameParam X500Name parameter
      * @description
      * @example
      * tbsc.setIssuerParam({'str': '/C=US/CN=b'});
-     * @see X500Name
      */
-	this.setIssuerByParam = function (x500NameParam) {
+	setIssuerByParam(x500NameParam) {
 		this.asn1Issuer = new X500Name(x500NameParam);
-	};
+	}
 
     /**
      * set thisUpdate field by parameter
-     * @param {Array} timeParam Time parameter
+     * @param {Object} timeParam Time parameter
      * @description
      * @example
      * tbsc.setThisUpdateByParam({'str': '130508235959Z'});
-     * @see Time
      */
-	this.setThisUpdateByParam = function (timeParam) {
-		this.asn1ThisUpdate = new _Time(timeParam);
-	};
+	setThisUpdateByParam(timeParam) {
+		this.asn1ThisUpdate = new Time(timeParam);
+	}
 
     /**
      * set nextUpdate field by parameter
-     * @param {Array} timeParam Time parameter
+     * @param {Object} timeParam Time parameter
      * @description
      * @example
      * tbsc.setNextUpdateByParam({'str': '130508235959Z'});
-     * @see Time
      */
-	this.setNextUpdateByParam = function (timeParam) {
-		this.asn1NextUpdate = new _Time(timeParam);
-	};
+	setNextUpdateByParam(timeParam) {
+		this.asn1NextUpdate = new Time(timeParam);
+	}
 
     /**
      * add revoked certificate by parameter
-     * @param {Array} snParam DERInteger parameter for certificate serial number
-     * @param {Array} timeParam Time parameter for revocation date
+     * @param {Object} snParam DERInteger parameter for certificate serial number
+     * @param {Object} timeParam Time parameter for revocation date
      * @description
      * @example
      * tbsc.addRevokedCert({'int': 3}, {'str': '130508235959Z'});
-     * @see Time
      */
-	this.addRevokedCert = function (snParam, timeParam) {
+	addRevokedCert(snParam, timeParam) {
 		let param = {};
 		if (snParam != undefined && snParam != null)
 			param['sn'] = snParam;
@@ -1146,9 +1207,13 @@ TBSCertList = function (params) {
 			param['time'] = timeParam;
 		let o = new CRLEntry(param);
 		this.aRevokedCert.push(o);
-	};
+	}
 
-	this.getEncodedHex = function () {
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
 		this.asn1Array = new Array();
 
 		if (this.asn1Version != null) this.asn1Array.push(this.asn1Version);
@@ -1166,20 +1231,8 @@ TBSCertList = function (params) {
 		this.hTLV = o.getEncodedHex();
 		this.isModified = false;
 		return this.hTLV;
-	};
-
-	this._initialize = function () {
-		this.asn1Version = null;
-		this.asn1SignatureAlg = null;
-		this.asn1Issuer = null;
-		this.asn1ThisUpdate = null;
-		this.asn1NextUpdate = null;
-		this.aRevokedCert = new Array();
-	};
-
-	this._initialize();
-};
-YAHOO.lang.extend(TBSCertList, KJUR.asn1.ASN1Object);
+	}
+}
 
 /**
  * ASN.1 CRLEntry structure class for CRL
@@ -1194,61 +1247,62 @@ YAHOO.lang.extend(TBSCertList, KJUR.asn1.ASN1Object);
  * //     crlEntryExtensions      Extensions OPTIONAL
  * //                             -- if present, version MUST be v2 }
  */
-CRLEntry = function (params) {
-	CRLEntry.superclass.constructor.call(this);
-	let sn = null,
-		time = null,
-		KJUR = KJUR,
-		KJUR.asn1 = KJUR.asn1;
+export class CRLEntry extends ASN1Object {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super(params);
+
+		/** @type {DERInteger | null} */ this.sn = null;
+		/** @type {Time | null} */ this.time = null;
+
+		if (params !== undefined) {
+			if (params['time'] !== undefined) {
+				this.setRevocationDate(params['time']);
+			}
+			if (params['sn'] !== undefined) {
+				this.setCertSerial(params['sn']);
+			}
+		}
+	}
 
     /**
      * set DERInteger parameter for serial number of revoked certificate
-     * @param {Array} intParam DERInteger parameter for certificate serial number
+     * @param {Object} intParam DERInteger parameter for certificate serial number
      * @description
      * @example
      * entry.setCertSerial({'int': 3});
      */
-	this.setCertSerial = function (intParam) {
-		this.sn = new KJUR.asn1.DERInteger(intParam);
-	};
+	setCertSerial(intParam) {
+		this.sn = new DERInteger(intParam);
+	}
 
     /**
      * set Time parameter for revocation date
-     * @param {Array} timeParam Time parameter for revocation date
+     * @param {Object} timeParam Time parameter for revocation date
      * @description
      * @example
      * entry.setRevocationDate({'str': '130508235959Z'});
      */
-	this.setRevocationDate = function (timeParam) {
+	setRevocationDate(timeParam) {
 		this.time = new Time(timeParam);
-	};
+	}
 
-	this.getEncodedHex = function () {
-		let o = new KJUR.asn1.DERSequence({ "array": [this.sn, this.time] });
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
+		let o = new DERSequence({ "array": [this.sn, this.time] });
 		this.TLV = o.getEncodedHex();
 		return this.TLV;
-	};
-
-	if (params !== undefined) {
-		if (params['time'] !== undefined) {
-			this.setRevocationDate(params['time']);
-		}
-		if (params['sn'] !== undefined) {
-			this.setCertSerial(params['sn']);
-		}
 	}
-};
-YAHOO.lang.extend(CRLEntry, KJUR.asn1.ASN1Object);
+}
 
-// === END   CRL Related ===================================================
-
-// === BEGIN X500Name Related =================================================
 /**
  * X500Name ASN.1 structure class
  * @param {Object} params dictionary of parameters (ex. {'str': '/C=US/O=a'})
- * @see X500Name
- * @see RDN
- * @see AttributeTypeAndValue
  * @description
  * This class provides DistinguishedName ASN.1 class structure
  * defined in <a href="https://tools.ietf.org/html/rfc2253#section-2">RFC 2253 section 2</a>.
@@ -1276,13 +1330,39 @@ YAHOO.lang.extend(CRLEntry, KJUR.asn1.ASN1Object);
  * // 2. construct by object
  * o = new X500Name({C: "US", O: "aaa", CN: "http://example.com/"});
  */
-X500Name = function (params) {
-	X500Name.superclass.constructor.call(this);
-	this.asn1Array = new Array();
+export class X500Name extends ASN1Object {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super();
 
+		/** @type {Array<RDN>} */ this.asn1Array = new Array();
 
-	KJUR.asn1.x509 = KJUR.asn1.x509,
-		_pemtohex = pemtohex;
+		if (params !== undefined) {
+			if (params['str'] !== undefined) {
+				this.setByString(params['str']);
+			} else if (params['ldapstr'] !== undefined) {
+				this.setByLdapString(params['ldapstr']);
+				// If params is an object, then set the ASN1 array just using the object
+				// attributes. This is nice for fields that have lots of special
+				// characters (i.e. CN: 'https://www.github.com/kjur//').
+			} else if (typeof params === "object") {
+				this.setByObject(params);
+			}
+	
+			if (params['certissuer'] !== undefined) {
+				let x = new X509();
+				x.hex = pemtohex(params['certissuer']);
+				this.hTLV = x.getIssuerHex();
+			}
+			if (params['certsubject'] !== undefined) {
+				let x = new X509();
+				x.hex = pemtohex(params['certsubject']);
+				this.hTLV = x.getSubjectHex();
+			}
+		}
+	}
 
     /**
      * set DN by OpenSSL oneline distinguished name string<br/>
@@ -1298,7 +1378,7 @@ X500Name = function (params) {
      * // no need to escape slash in an attribute value
      * name.setByString("/C=US/O=aaa/CN=1980/12/31");
      */
-	this.setByString = function (dnStr) {
+	setByString(dnStr) {
 		let a = dnStr.split('/');
 		a.shift();
 
@@ -1315,7 +1395,7 @@ X500Name = function (params) {
 		for (let i = 0; i < a1.length; i++) {
 			this.asn1Array.push(new RDN({ 'str': a1[i] }));
 		}
-	};
+	}
 
     /**
      * set DN by LDAP(RFC 2253) distinguished name string<br/>
@@ -1325,20 +1405,20 @@ X500Name = function (params) {
      * name = new X500Name();
      * name.setByLdapString("CN=foo@example.com,OU=bbb,O=aaa,C=US");
      */
-	this.setByLdapString = function (dnStr) {
+	setByLdapString(dnStr) {
 		let oneline = X500Name.ldapToOneline(dnStr);
 		this.setByString(oneline);
-	};
+	}
 
     /**
      * set DN by associative array<br/>
-     * @param {Array} dnObj associative array of DN (ex. {C: "US", O: "aaa"})
+     * @param {Object} dnObj associative array of DN (ex. {C: "US", O: "aaa"})
      * @description
      * @example
      * name = new X500Name();
      * name.setByObject({C: "US", O: "aaa", CN="http://example.com/"1});
      */
-	this.setByObject = function (dnObj) {
+	setByObject(dnObj) {
 		// Get all the dnObject attributes and stuff them in the ASN.1 array.
 		for (let x in dnObj) {
 			if (dnObj.hasOwnProperty(x)) {
@@ -1349,112 +1429,85 @@ X500Name = function (params) {
 					: this.asn1Array = [newRDN];
 			}
 		}
-	};
+	}
 
-	this.getEncodedHex = function () {
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
 		if (typeof this.hTLV == "string") return this.hTLV;
-		let o = new KJUR.asn1.DERSequence({ "array": this.asn1Array });
+		let o = new DERSequence({ "array": this.asn1Array });
 		this.hTLV = o.getEncodedHex();
 		return this.hTLV;
-	};
-
-	if (params !== undefined) {
-		if (params['str'] !== undefined) {
-			this.setByString(params['str']);
-		} else if (params['ldapstr'] !== undefined) {
-			this.setByLdapString(params['ldapstr']);
-			// If params is an object, then set the ASN1 array just using the object
-			// attributes. This is nice for fields that have lots of special
-			// characters (i.e. CN: 'https://www.github.com/kjur//').
-		} else if (typeof params === "object") {
-			this.setByObject(params);
-		}
-
-		if (params['certissuer'] !== undefined) {
-			let x = new X509();
-			x.hex = _pemtohex(params['certissuer']);
-			this.hTLV = x.getIssuerHex();
-		}
-		if (params['certsubject'] !== undefined) {
-			let x = new X509();
-			x.hex = _pemtohex(params['certsubject']);
-			this.hTLV = x.getSubjectHex();
-		}
-	}
-};
-YAHOO.lang.extend(X500Name, KJUR.asn1.ASN1Object);
-
-/**
- * convert OpenSSL oneline distinguished name format string to LDAP(RFC 2253) format<br/>
- * @param {string} s distinguished name string in OpenSSL oneline format (ex. /C=US/O=test)
- * @return {string} distinguished name string in LDAP(RFC 2253) format (ex. O=test,C=US)
- * @description
- * This static method converts a distinguished name string in OpenSSL oneline 
- * format to LDAP(RFC 2253) format.
- * @see <a href="https://github.com/kjur/jsrsasign/wiki/NOTE-distinguished-name-representation-in-jsrsasign">jsrsasign wiki: distinguished name string difference between OpenSSL oneline and LDAP(RFC 2253)</a>
- * @example
- * X500Name.onelineToLDAP("/C=US/O=test") &rarr; 'O=test,C=US'
- * X500Name.onelineToLDAP("/C=US/O=a,a") &rarr; 'O=a\,a,C=US'
- */
-X500Name.onelineToLDAP = function (s) {
-	if (s.substr(0, 1) !== "/") throw "malformed input";
-
-	let result = "";
-	s = s.substr(1);
-
-	let a = s.split("/");
-	a.reverse();
-	a = a.map(function (s) { return s.replace(/,/, "\\,") });
-
-	return a.join(",");
-};
-
-/**
- * convert LDAP(RFC 2253) distinguished name format string to OpenSSL oneline format<br/>
- * @param {string} s distinguished name string in LDAP(RFC 2253) format (ex. O=test,C=US)
- * @return {string} distinguished name string in OpenSSL oneline format (ex. /C=US/O=test)
- * @description
- * This static method converts a distinguished name string in 
- * LDAP(RFC 2253) format to OpenSSL oneline format.
- * @see <a href="https://github.com/kjur/jsrsasign/wiki/NOTE-distinguished-name-representation-in-jsrsasign">jsrsasign wiki: distinguished name string difference between OpenSSL oneline and LDAP(RFC 2253)</a>
- * @example
- * X500Name.ldapToOneline('O=test,C=US') &rarr; '/C=US/O=test'
- * X500Name.ldapToOneline('O=a\,a,C=US') &rarr; '/C=US/O=a,a'
- * X500Name.ldapToOneline('O=a/a,C=US')  &rarr; '/C=US/O=a\/a'
- */
-X500Name.ldapToOneline = function (s) {
-	let a = s.split(",");
-
-	// join \,
-	let isBSbefore = false;
-	let a2 = [];
-	for (let i = 0; a.length > 0; i++) {
-		let item = a.shift();
-		//console.log("item=" + item);
-
-		if (isBSbefore === true) {
-			let a2last = a2.pop();
-			let newitem = (a2last + "," + item).replace(/\\,/g, ",");
-			a2.push(newitem);
-			isBSbefore = false;
-		} else {
-			a2.push(item);
-		}
-
-		if (item.substr(-1, 1) === "\\") isBSbefore = true;
 	}
 
-	a2 = a2.map(function (s) { return s.replace("/", "\\/") });
-	a2.reverse();
-	return "/" + a2.join("/");
-};
+	/**
+	 * convert OpenSSL oneline distinguished name format string to LDAP(RFC 2253) format<br/>
+	 * @param {string} s distinguished name string in OpenSSL oneline format (ex. /C=US/O=test)
+	 * @return {string} distinguished name string in LDAP(RFC 2253) format (ex. O=test,C=US)
+	 * @description
+	 * This static method converts a distinguished name string in OpenSSL oneline 
+	 * format to LDAP(RFC 2253) format.
+	 * @example
+	 * X500Name.onelineToLDAP("/C=US/O=test") &rarr; 'O=test,C=US'
+	 * X500Name.onelineToLDAP("/C=US/O=a,a") &rarr; 'O=a\,a,C=US'
+	 */
+	static onelineToLDAP(s) {
+		if (s.substr(0, 1) !== "/") throw "malformed input";
+
+		s = s.substr(1);
+
+		let a = s.split("/");
+		a.reverse();
+		a = a.map(function (s) { return s.replace(/,/, "\\,") });
+
+		return a.join(",");
+	}
+
+	/**
+	 * convert LDAP(RFC 2253) distinguished name format string to OpenSSL oneline format<br/>
+	 * @param {string} s distinguished name string in LDAP(RFC 2253) format (ex. O=test,C=US)
+	 * @return {string} distinguished name string in OpenSSL oneline format (ex. /C=US/O=test)
+	 * @description
+	 * This static method converts a distinguished name string in 
+	 * LDAP(RFC 2253) format to OpenSSL oneline format.
+	 * @example
+	 * X500Name.ldapToOneline('O=test,C=US') &rarr; '/C=US/O=test'
+	 * X500Name.ldapToOneline('O=a\,a,C=US') &rarr; '/C=US/O=a,a'
+	 * X500Name.ldapToOneline('O=a/a,C=US')  &rarr; '/C=US/O=a\/a'
+	 */
+	static ldapToOneline(s) {
+		let a = s.split(",");
+
+		// join \,
+		let isBSbefore = false;
+		let a2 = [];
+		for (let i = 0; a.length > 0; i++) {
+			let item = a.shift();
+			//console.log("item=" + item);
+
+			if (isBSbefore === true) {
+				let a2last = a2.pop();
+				let newitem = (a2last + "," + item).replace(/\\,/g, ",");
+				a2.push(newitem);
+				isBSbefore = false;
+			} else {
+				a2.push(item);
+			}
+
+			if (item.substr(-1, 1) === "\\") isBSbefore = true;
+		}
+
+		a2 = a2.map(function (s) { return s.replace("/", "\\/") });
+		a2.reverse();
+		return "/" + a2.join("/");
+	}
+}
 
 /**
  * RDN (Relative Distinguished Name) ASN.1 structure class
  * @param {Object} params dictionary of parameters (ex. {'str': 'C=US'})
- * @see X500Name
- * @see RDN
- * @see AttributeTypeAndValue
  * @description
  * This class provides RelativeDistinguishedName ASN.1 class structure
  * defined in <a href="https://tools.ietf.org/html/rfc2253#section-2">RFC 2253 section 2</a>.
@@ -1474,9 +1527,21 @@ X500Name.ldapToOneline = function (s) {
  * rdn = new RDN({str: "O=a+O=b\\+b+O=c"}); // plus escaped
  * rdn = new RDN({str: "O=a+O=\"b+b\"+O=c"}); // double quoted
  */
-RDN = function (params) {
-	RDN.superclass.constructor.call(this);
-	this.asn1Array = new Array();
+export class RDN extends ASN1Object {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super();
+
+		/** @type {Array<AttributeTypeAndValue>} */ this.asn1Array = new Array();
+
+		if (params !== undefined) {
+			if (params['str'] !== undefined) {
+				this.addByMultiValuedString(params['str']);
+			}
+		}
+	}
 
     /**
      * add one AttributeTypeAndValue by string<br/>
@@ -1489,9 +1554,9 @@ RDN = function (params) {
      * rdn.addByString("CN=john");
      * rdn.addByString("serialNumber=1234"); // for multi-valued RDN
      */
-	this.addByString = function (s) {
+	addByString(s) {
 		this.asn1Array.push(new AttributeTypeAndValue({ 'str': s }));
-	};
+	}
 
     /**
      * add one AttributeTypeAndValue by multi-valued string<br/>
@@ -1505,149 +1570,159 @@ RDN = function (params) {
      * rdn.addByMultiValuedString("O=a+O=b\+b\+b+O=c"); // multi-valued RDN with quoted plus
      * rdn.addByMultiValuedString("O=a+O=\"b+b+b\"+O=c"); // multi-valued RDN with quoted quotation
      */
-	this.addByMultiValuedString = function (s) {
+	addByMultiValuedString(s) {
 		let a = RDN.parseString(s);
 		for (let i = 0; i < a.length; i++) {
 			this.addByString(a[i]);
 		}
-	};
+	}
 
-	this.getEncodedHex = function () {
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
 		let o = new DERSet({ "array": this.asn1Array });
 		this.TLV = o.getEncodedHex();
 		return this.TLV;
-	};
-
-	if (params !== undefined) {
-		if (params['str'] !== undefined) {
-			this.addByMultiValuedString(params['str']);
-		}
-	}
-};
-YAHOO.lang.extend(RDN, KJUR.asn1.ASN1Object);
-
-/**
- * parse multi-valued RDN string and split into array of 'AttributeTypeAndValue'<br/>
- * @param {string} s multi-valued string of RDN
- * @return {Array} array of string of AttributeTypeAndValue
- * @description
- * This static method parses multi-valued RDN string and split into
- * array of AttributeTypeAndValue.
- * @example
- * RDN.parseString("CN=john") &rarr; ["CN=john"]
- * RDN.parseString("CN=john+OU=test") &rarr; ["CN=john", "OU=test"]
- * RDN.parseString('CN="jo+hn"+OU=test') &rarr; ["CN=jo+hn", "OU=test"]
- * RDN.parseString('CN=jo\+hn+OU=test') &rarr; ["CN=jo+hn", "OU=test"]
- * RDN.parseString("CN=john+OU=test+OU=t1") &rarr; ["CN=john", "OU=test", "OU=t1"]
- */
-RDN.parseString = function (s) {
-	let a = s.split(/\+/);
-
-	// join \+
-	let isBSbefore = false;
-	let a2 = [];
-	for (let i = 0; a.length > 0; i++) {
-		let item = a.shift();
-		//console.log("item=" + item);
-
-		if (isBSbefore === true) {
-			let a2last = a2.pop();
-			let newitem = (a2last + "+" + item).replace(/\\\+/g, "+");
-			a2.push(newitem);
-			isBSbefore = false;
-		} else {
-			a2.push(item);
-		}
-
-		if (item.substr(-1, 1) === "\\") isBSbefore = true;
 	}
 
-	// join quote
-	let beginQuote = false;
-	let a3 = [];
-	for (let i = 0; a2.length > 0; i++) {
-		let item = a2.shift();
+	/**
+	 * parse multi-valued RDN string and split into array of 'AttributeTypeAndValue'<br/>
+	 * @param {string} s multi-valued string of RDN
+	 * @return {Array<string>} array of string of AttributeTypeAndValue
+	 * @description
+	 * This static method parses multi-valued RDN string and split into
+	 * array of AttributeTypeAndValue.
+	 * @example
+	 * RDN.parseString("CN=john") &rarr; ["CN=john"]
+	 * RDN.parseString("CN=john+OU=test") &rarr; ["CN=john", "OU=test"]
+	 * RDN.parseString('CN="jo+hn"+OU=test') &rarr; ["CN=jo+hn", "OU=test"]
+	 * RDN.parseString('CN=jo\+hn+OU=test') &rarr; ["CN=jo+hn", "OU=test"]
+	 * RDN.parseString("CN=john+OU=test+OU=t1") &rarr; ["CN=john", "OU=test", "OU=t1"]
+	 */
+	static parseString(s) {
+		let a = s.split(/\+/);
 
-		if (beginQuote === true) {
-			let a3last = a3.pop();
-			if (item.match(/"$/)) {
-				let newitem = (a3last + "+" + item).replace(/^([^=]+)="(.*)"$/, "$1=$2");
-				a3.push(newitem);
-				beginQuote = false;
+		// join \+
+		let isBSbefore = false;
+		/** @type {Array<string>} */ let a2 = [];
+		for (let i = 0; a.length > 0; i++) {
+			let item = a.shift();
+			//console.log("item=" + item);
+
+			if (isBSbefore === true) {
+				let a2last = a2.pop();
+				let newitem = (a2last + "+" + item).replace(/\\\+/g, "+");
+				a2.push(newitem);
+				isBSbefore = false;
 			} else {
-				a3.push(a3last + "+" + item);
+				a2.push(item);
 			}
-		} else {
-			a3.push(item);
+
+			if (item.substr(-1, 1) === "\\") isBSbefore = true;
 		}
 
-		if (item.match(/^[^=]+="/)) {
-			//console.log(i + "=" + item);
-			beginQuote = true;
+		// join quote
+		let beginQuote = false;
+		/** @type {Array<string>} */ let a3 = [];
+		for (let i = 0; a2.length > 0; i++) {
+			let item = a2.shift();
+
+			if (beginQuote === true) {
+				let a3last = a3.pop();
+				if (item.match(/"$/)) {
+					let newitem = (a3last + "+" + item).replace(/^([^=]+)="(.*)"$/, "$1=$2");
+					a3.push(newitem);
+					beginQuote = false;
+				} else {
+					a3.push(a3last + "+" + item);
+				}
+			} else {
+				a3.push(item);
+			}
+
+			if (item.match(/^[^=]+="/)) {
+				//console.log(i + "=" + item);
+				beginQuote = true;
+			}
 		}
+
+		return a3;
 	}
-
-	return a3;
-};
+}
 
 /**
  * AttributeTypeAndValue ASN.1 structure class
  * @param {Object} params dictionary of parameters (ex. {'str': 'C=US'})
  * @description
- * @see X500Name
- * @see RDN
- * @see AttributeTypeAndValue
  * @example
  */
-AttributeTypeAndValue = function (params) {
-	AttributeTypeAndValue.superclass.constructor.call(this);
-	let typeObj = null,
-		valueObj = null,
-		defaultDSType = "utf8",
-		KJUR = KJUR,
-		KJUR.asn1 = KJUR.asn1;
+export class AttributeTypeAndValue extends ASN1Object {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super();
 
-	this.setByString = function (attrTypeAndValueStr) {
+		/** @type {DERObjectIdentifier | null} */ this.typeObj = null,
+		/** @type {DERAbstractString | null} */ this.valueObj = null,
+		this.defaultDSType = "utf8";
+
+		if (params !== undefined) {
+			if (params['str'] !== undefined) {
+				this.setByString(params['str']);
+			}
+		}	
+	}
+
+	/**
+	 * @param {string} attrTypeAndValueStr 
+	 */
+	setByString(attrTypeAndValueStr) {
 		let matchResult = attrTypeAndValueStr.match(/^([^=]+)=(.+)$/);
 		if (matchResult) {
 			this.setByAttrTypeAndValueStr(matchResult[1], matchResult[2]);
 		} else {
 			throw "malformed attrTypeAndValueStr: " + attrTypeAndValueStr;
 		}
-	};
+	}
 
-	this.setByAttrTypeAndValueStr = function (shortAttrType, valueStr) {
+	/**
+	 * @param {string} shortAttrType 
+	 * @param {string} valueStr 
+	 */
+	setByAttrTypeAndValueStr(shortAttrType, valueStr) {
 		this.typeObj = atype2obj(shortAttrType);
 		let dsType = defaultDSType;
 		if (shortAttrType == "C") dsType = "prn";
 		this.valueObj = this.getValueObj(dsType, valueStr);
-	};
+	}
 
-	this.getValueObj = function (dsType, valueStr) {
-		if (dsType == "utf8") return new KJUR.asn1.DERUTF8String({ "str": valueStr });
-		if (dsType == "prn") return new KJUR.asn1.DERPrintableString({ "str": valueStr });
-		if (dsType == "tel") return new KJUR.asn1.DERTeletexString({ "str": valueStr });
-		if (dsType == "ia5") return new KJUR.asn1.DERIA5String({ "str": valueStr });
+	/**
+	 * @param {string} dsType 
+	 * @param {string} valueStr 
+	 * @returns {DERAbstractString}
+	 * @throws
+	 */
+	getValueObj(dsType, valueStr) {
+		if (dsType == "utf8") return new DERUTF8String({ "str": valueStr });
+		if (dsType == "prn") return new DERPrintableString({ "str": valueStr });
+		if (dsType == "tel") return new DERTeletexString({ "str": valueStr });
+		if (dsType == "ia5") return new DERIA5String({ "str": valueStr });
 		throw "unsupported directory string type: type=" + dsType + " value=" + valueStr;
-	};
+	}
 
-	this.getEncodedHex = function () {
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
 		let o = new KJUR.asn1.DERSequence({ "array": [this.typeObj, this.valueObj] });
 		this.TLV = o.getEncodedHex();
 		return this.TLV;
-	};
-
-	if (params !== undefined) {
-		if (params['str'] !== undefined) {
-			this.setByString(params['str']);
-		}
 	}
-};
-YAHOO.lang.extend(AttributeTypeAndValue, KJUR.asn1.ASN1Object);
-
-// === END   X500Name Related =================================================
-
-// === BEGIN Other ASN1 structure class  ======================================
+}
 
 /**
  * SubjectPublicKeyInfo ASN.1 structure class
@@ -1669,26 +1744,24 @@ YAHOO.lang.extend(AttributeTypeAndValue, KJUR.asn1.ASN1Object);
  * spki = new SubjectPublicKeyInfo(KJURcryptoECDSA_object);
  * spki = new SubjectPublicKeyInfo(KJURcryptoDSA_object);
  */
-SubjectPublicKeyInfo = function (params) {
-	SubjectPublicKeyInfo.superclass.constructor.call(this);
-	let asn1AlgId = null,
-		asn1SubjPKey = null,
-		KJUR = KJUR,
+export class SubjectPublicKeyInfo extends ASN1Object {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super();
 
+		/** @type {AlgorithmIdentifier | null} */ this.asn1AlgId = null;
+		/** @type {DERBitString | null} */ this.asn1SubjPKey = null;
 
-
-
-
-		newObject = KJUR.asn1.ASN1Util.newObject,
-		KJUR.asn1.x509 = KJUR.asn1.x509,
-		AlgorithmIdentifier = AlgorithmIdentifier,
-		KJUR.crypto = KJUR.crypto,
-		KJUR.crypto_ECDSA = KJUR.crypto.ECDSA,
-		KJUR.crypto_DSA = KJUR.crypto.DSA;
+		if (params !== undefined) {
+			this.setPubKey(params);
+		}
+	}
 
     /*
      */
-	this.getASN1Object = function () {
+	getASN1Object() {
 		if (this.asn1AlgId == null || this.asn1SubjPKey == null)
 			throw "algId and/or subjPubKey not set";
 		let o = new DERSequence({
@@ -1696,13 +1769,17 @@ SubjectPublicKeyInfo = function (params) {
 				[this.asn1AlgId, this.asn1SubjPKey]
 		});
 		return o;
-	};
+	}
 
-	this.getEncodedHex = function () {
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
 		let o = this.getASN1Object();
 		this.hTLV = o.getEncodedHex();
 		return this.hTLV;
-	};
+	}
 
     /**
      * @param {Object} {@link RSAKey}, {@link KJUR.crypto.ECDSA} or {@link KJUR.crypto.DSA} object
@@ -1712,7 +1789,7 @@ SubjectPublicKeyInfo = function (params) {
      * pubKey = KEYUTIL.getKey(PKCS8PUBKEYPEM);
      * spki.setPubKey(pubKey);
      */
-	this.setPubKey = function (key) {
+	setPubKey(key) {
 		try {
 			if (key instanceof RSAKey) {
 				let asn1RsaPub = newObject({
@@ -1753,13 +1830,8 @@ SubjectPublicKeyInfo = function (params) {
 					new DERBitString({ 'hex': '00' + pubInt.getEncodedHex() });
 			}
 		} catch (ex) { };
-	};
-
-	if (params !== undefined) {
-		this.setPubKey(params);
 	}
-};
-YAHOO.lang.extend(SubjectPublicKeyInfo, KJUR.asn1.ASN1Object);
+}
 
 /**
  * Time ASN.1 structure class
@@ -1771,21 +1843,43 @@ YAHOO.lang.extend(SubjectPublicKeyInfo, KJUR.asn1.ASN1Object);
  * let t1 = new Time{'str': '130508235959Z'} // UTCTime by default
  * let t2 = new Time{'type': 'gen',  'str': '20130508235959Z'} // GeneralizedTime
  */
-Time = function (params) {
-	Time.superclass.constructor.call(this);
-	let type = null,
-		timeParams = null,
-		KJUR = KJUR,
+export class Time extends ASN1Object {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super();
 
+		/** @type {string | null} */ this.type = null;
+		/** @type {Object | null} */ this.timeParams = null;
 
-		DERGeneralizedTime = KJUR.asn1.DERGeneralizedTime;
+		this.type = "utc";
+		if (params !== undefined) {
+			if (params['type'] !== undefined) {
+				this.type = params['type'];
+			} else {
+				if (params['str'] !== undefined) {
+					if (params['str'].match(/^[0-9]{12}Z$/)) this.type = "utc";
+					if (params['str'].match(/^[0-9]{14}Z$/)) this.type = "gen";
+				}
+			}
+			this.timeParams = params;
+		}
+	}
 
-	this.setTimeParams = function (timeParams) {
+	/**
+	 * @param {Object} timeParams 
+	 */
+	setTimeParams(timeParams) {
 		this.timeParams = timeParams;
 	}
 
-	this.getEncodedHex = function () {
-		let o = null;
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
+		/** @type {DERAbstractTime | null} */ let o = null;
 
 		if (this.timeParams != null) {
 			if (this.type == "utc") {
@@ -1802,22 +1896,8 @@ Time = function (params) {
 		}
 		this.TLV = o.getEncodedHex();
 		return this.TLV;
-	};
-
-	this.type = "utc";
-	if (params !== undefined) {
-		if (params['type'] !== undefined) {
-			this.type = params['type'];
-		} else {
-			if (params['str'] !== undefined) {
-				if (params.str.match(/^[0-9]{12}Z$/)) this.type = "utc";
-				if (params.str.match(/^[0-9]{14}Z$/)) this.type = "gen";
-			}
-		}
-		this.timeParams = params;
 	}
-};
-YAHOO.lang.extend(Time, KJUR.asn1.ASN1Object);
+}
 
 /**
  * AlgorithmIdentifier ASN.1 structure class
@@ -1844,16 +1924,48 @@ YAHOO.lang.extend(Time, KJUR.asn1.ASN1Object);
  * // SHA256withRSA and set parameter empty by force
  * algId = new AlgorithmIdentifier({name: "SHA256withRSA", paramempty: true});
  */
-AlgorithmIdentifier = function (params) {
-	AlgorithmIdentifier.superclass.constructor.call(this);
-	this.nameAlg = null;
-	this.asn1Alg = null;
-	this.asn1Params = null;
-	this.paramEmpty = false;
+export class AlgorithmIdentifier extends ASN1Object {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super();
 
-	KJUR.asn1 = KJUR.asn1;
+		/** @type {string | null} */ this.nameAlg = null;
+		/** @type {DERObjectIdentifier | null} */ this.asn1Alg = null;
+		/** @type {ASN1Object | null} */ this.asn1Params = null;
+		this.paramEmpty = false;
 
-	this.getEncodedHex = function () {
+		if (params !== undefined) {
+			if (params['name'] !== undefined) {
+				this.nameAlg = String(params['name']);
+			}
+			if (params['asn1params'] !== undefined) {
+				this.asn1Params = params['asn1params'];
+			}
+			if (params['paramempty'] !== undefined) {
+				this.paramEmpty = params['paramempty'] ? true : false;
+			}
+		}
+	
+		// set algorithm parameters will be ommitted for
+		// "*withDSA" or "*withECDSA" otherwise will be NULL.
+		if (this.asn1Params === null &&
+			this.paramEmpty === false &&
+			this.nameAlg !== null) {
+			let lcNameAlg = this.nameAlg.toLowerCase();
+			if (lcNameAlg.substr(-7, 7) !== "withdsa" &&
+				lcNameAlg.substr(-9, 9) !== "withecdsa") {
+				this.asn1Params = new DERNull();
+			}
+		}
+	}
+
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
 		if (this.nameAlg === null && this.asn1Alg === null) {
 			throw "algorithm not specified";
 		}
@@ -1863,36 +1975,11 @@ AlgorithmIdentifier = function (params) {
 		let a = [this.asn1Alg];
 		if (this.asn1Params !== null) a.push(this.asn1Params);
 
-		let o = new KJUR.asn1.DERSequence({ 'array': a });
+		let o = new DERSequence({ 'array': a });
 		this.hTLV = o.getEncodedHex();
 		return this.hTLV;
-	};
-
-	if (params !== undefined) {
-		if (params['name'] !== undefined) {
-			this.nameAlg = params['name'];
-		}
-		if (params['asn1params'] !== undefined) {
-			this.asn1Params = params['asn1params'];
-		}
-		if (params['paramempty'] !== undefined) {
-			this.paramEmpty = params['paramempty'];
-		}
 	}
-
-	// set algorithm parameters will be ommitted for
-	// "*withDSA" or "*withECDSA" otherwise will be NULL.
-	if (this.asn1Params === null &&
-		this.paramEmpty === false &&
-		this.nameAlg !== null) {
-		let lcNameAlg = this.nameAlg.toLowerCase();
-		if (lcNameAlg.substr(-7, 7) !== "withdsa" &&
-			lcNameAlg.substr(-9, 9) !== "withecdsa") {
-			this.asn1Params = new KJUR.asn1.DERNull();
-		}
-	}
-};
-YAHOO.lang.extend(AlgorithmIdentifier, KJUR.asn1.ASN1Object);
+}
 
 /**
  * GeneralName ASN.1 structure class<br/> * @description
@@ -1940,54 +2027,57 @@ YAHOO.lang.extend(AlgorithmIdentifier, KJUR.asn1.ASN1Object);
  * gn = new GeneralName({ip:         '2001:db4::4:1'});
  * gn = new GeneralName({ip:         'c0a80101'});
  */
-GeneralName = function (params) {
-	GeneralName.superclass.constructor.call(this);
-	let asn1Obj = null,
-		type = null,
-		pTag = { rfc822: '81', dns: '82', dn: 'a4', uri: '86', ip: '87' },
-		KJUR = KJUR,
+export class GeneralName extends ASN1Object {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super();
 
+		this.asn1Obj = null;
+		/** @type {string | null} */ this.type = null;
+		this.pTag = { 'rfc822': '81', 'dns': '82', 'dn': 'a4', 'uri': '86', 'ip': '87' };
 
+		this.explicit = false;
 
+		if (params !== undefined) {
+			this.setByParam(params);
+		}
+	}
 
-
-		_ASN1Object = KJUR.asn1.ASN1Object,
-		_X500Name = X500Name,
-		_pemtohex = pemtohex;
-
-	this.explicit = false;
-
-	this.setByParam = function (params) {
-		let str = null;
-		let v = null;
+	/**
+	 * @param {Object} params 
+	 */
+	setByParam(params) {
+		/** @type {ASN1Object | null} */ let v = null;
 
 		if (params === undefined) return;
 
 		if (params['rfc822'] !== undefined) {
 			this.type = 'rfc822';
-			v = new DERIA5String({ str: params[this.type] });
+			v = new DERIA5String({ 'str': params[this.type] });
 		}
 
 		if (params['dns'] !== undefined) {
 			this.type = 'dns';
-			v = new DERIA5String({ str: params[this.type] });
+			v = new DERIA5String({ 'str': params[this.type] });
 		}
 
 		if (params['uri'] !== undefined) {
 			this.type = 'uri';
-			v = new DERIA5String({ str: params[this.type] });
+			v = new DERIA5String({ 'str': params[this.type] });
 		}
 
 		if (params['dn'] !== undefined) {
 			this.type = 'dn';
 			this.explicit = true;
-			v = new _X500Name({ str: params.dn });
+			v = new X500Name({ 'str': params['dn'] });
 		}
 
 		if (params['ldapdn'] !== undefined) {
 			this.type = 'dn';
 			this.explicit = true;
-			v = new _X500Name({ ldapstr: params.ldapdn });
+			v = new X500Name({ 'ldapstr': params['ldapdn'] });
 		}
 
 		if (params['certissuer'] !== undefined) {
@@ -2001,14 +2091,14 @@ GeneralName = function (params) {
 			}
 
 			if (certStr.indexOf("-----BEGIN ") != -1) {
-				certHex = _pemtohex(certStr);
+				certHex = pemtohex(certStr);
 			}
 
 			if (certHex == null) throw "certissuer param not cert";
 			let x = new X509();
 			x.hex = certHex;
 			let dnHex = x.getIssuerHex();
-			v = new _ASN1Object();
+			v = new ASN1Object();
 			v.hTLV = dnHex;
 		}
 
@@ -2021,13 +2111,13 @@ GeneralName = function (params) {
 				certHex == certStr;
 			}
 			if (certStr.indexOf("-----BEGIN ") != -1) {
-				certHex = _pemtohex(certStr);
+				certHex = pemtohex(certStr);
 			}
 			if (certHex == null) throw "certsubj param not cert";
 			let x = new X509();
 			x.hex = certHex;
 			let dnHex = x.getSubjectHex();
-			v = new _ASN1Object();
+			v = new ASN1Object();
 			v.hTLV = dnHex;
 		}
 
@@ -2047,7 +2137,7 @@ GeneralName = function (params) {
 			} else {
 				throw malformedIPMsg;
 			}
-			v = new DEROctetString({ hex: hIP });
+			v = new DEROctetString({ 'hex': hIP });
 		}
 
 		if (this.type == null)
@@ -2057,18 +2147,16 @@ GeneralName = function (params) {
 			'tag': pTag[this.type],
 			'obj': v
 		});
-	};
+	}
 
-	this.getEncodedHex = function () {
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
 		return this.asn1Obj.getEncodedHex();
 	}
-
-	if (params !== undefined) {
-		this.setByParam(params);
-	}
-
-};
-YAHOO.lang.extend(GeneralName, KJUR.asn1.ASN1Object);
+}
 
 /**
  * GeneralNames ASN.1 structure class<br/> * @description
@@ -2079,11 +2167,19 @@ YAHOO.lang.extend(GeneralName, KJUR.asn1.ASN1Object);
  *
  * GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
  */
-GeneralNames = function (paramsArray) {
-	GeneralNames.superclass.constructor.call(this);
-	let asn1Array = null,
-		KJUR = KJUR,
-		KJUR.asn1 = KJUR.asn1;
+export class GeneralNames extends ASN1Object {
+	/**
+	 * @param {Array<Object>=} paramsArray 
+	 */
+	constructor(paramsArray) {
+		super();
+
+		/** @type {Array<GeneralName>} */ this.asn1Array = new Array();
+
+		if (typeof paramsArray != "undefined") {
+			this.setByParamArray(paramsArray);
+		}
+	}
 
     /**
      * set a array of {@link GeneralName} parameters<br/>
@@ -2095,24 +2191,22 @@ GeneralNames = function (paramsArray) {
      * gns = new GeneralNames();
      * gns.setByParamArray([{uri: 'http://aaa.com/'}, {uri: 'http://bbb.com/'}]);
      */
-	this.setByParamArray = function (paramsArray) {
+	setByParamArray(paramsArray) {
 		for (let i = 0; i < paramsArray.length; i++) {
 			let o = new GeneralName(paramsArray[i]);
 			this.asn1Array.push(o);
 		}
-	};
-
-	this.getEncodedHex = function () {
-		let o = new KJUR.asn1.DERSequence({ 'array': this.asn1Array });
-		return o.getEncodedHex();
-	};
-
-	this.asn1Array = new Array();
-	if (typeof paramsArray != "undefined") {
-		this.setByParamArray(paramsArray);
 	}
-};
-YAHOO.lang.extend(GeneralNames, KJUR.asn1.ASN1Object);
+
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
+		let o = new DERSequence({ 'array': this.asn1Array });
+		return o.getEncodedHex();
+	}
+}
 
 /**
  * DistributionPointName ASN.1 structure class<br/> * @description
@@ -2139,17 +2233,34 @@ YAHOO.lang.extend(GeneralNames, KJUR.asn1.ASN1Object);
  * </pre>
  * @example
  */
-DistributionPointName = function (gnOrRdn) {
-	DistributionPointName.superclass.constructor.call(this);
-	let asn1Obj = null,
-		type = null,
-		tag = null,
-		asn1V = null,
-		KJUR = KJUR,
+export class DistributionPointName extends ASN1Object {
+	/**
+	 * @param {Object=} gnOrRdn 
+	 */
+	constructor(gnOrRdn) {
+		super();
 
-		DERTaggedObject = KJUR.asn1.DERTaggedObject;
+		/** @type {DERTaggedObject | null} */ this.asn1Obj = null;
+		/** @type {string | null} */ this.type = null;
+		/** @type {string | null} */ this.tag = null;
+		/** @type {GeneralNames | null} */ this.asn1V = null;
 
-	this.getEncodedHex = function () {
+		if (gnOrRdn !== undefined) {
+			if (gnOrRdn instanceof GeneralNames) {
+				this.type = "full";
+				this.tag = "a0";
+				this.asn1V = gnOrRdn;
+			} else {
+				throw "This class supports GeneralNames only as argument";
+			}
+		}
+	}
+
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
 		if (this.type != "full")
 			throw "currently type shall be 'full': " + this.type;
 		this.asn1Obj = new DERTaggedObject({
@@ -2159,19 +2270,8 @@ DistributionPointName = function (gnOrRdn) {
 		});
 		this.hTLV = this.asn1Obj.getEncodedHex();
 		return this.hTLV;
-	};
-
-	if (gnOrRdn !== undefined) {
-		if (GeneralNames.prototype.isPrototypeOf(gnOrRdn)) {
-			this.type = "full";
-			this.tag = "a0";
-			this.asn1V = gnOrRdn;
-		} else {
-			throw "This class supports GeneralNames only as argument";
-		}
 	}
-};
-YAHOO.lang.extend(DistributionPointName, KJUR.asn1.ASN1Object);
+}
 
 /**
  * DistributionPoint ASN.1 structure class<br/> * @description
@@ -2198,16 +2298,30 @@ YAHOO.lang.extend(DistributionPointName, KJUR.asn1.ASN1Object);
  * </pre>
  * @example
  */
-DistributionPoint = function (params) {
-	DistributionPoint.superclass.constructor.call(this);
-	let asn1DP = null,
-		KJUR = KJUR,
-		KJUR.asn1 = KJUR.asn1;
+export class DistributionPoint extends ASN1Object {
+	/**
+	 * @param {Object=} params 
+	 */
+	constructor(params) {
+		super();
 
-	this.getEncodedHex = function () {
-		let seq = new KJUR.asn1.DERSequence();
+		/** @type {ASN1Object | null} */ this.asn1DP = null;
+
+		if (params !== undefined) {
+			if (params['dpobj'] !== undefined) {
+				this.asn1DP = params['dpobj'];
+			}
+		}
+	}
+
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
+		let seq = new DERSequence();
 		if (this.asn1DP != null) {
-			let o1 = new KJUR.asn1.DERTaggedObject({
+			let o1 = new DERTaggedObject({
 				'explicit': true,
 				'tag': 'a0',
 				'obj': this.asn1DP
@@ -2216,15 +2330,8 @@ DistributionPoint = function (params) {
 		}
 		this.hTLV = seq.getEncodedHex();
 		return this.hTLV;
-	};
-
-	if (params !== undefined) {
-		if (params['dpobj'] !== undefined) {
-			this.asn1DP = params['dpobj'];
-		}
 	}
-};
-YAHOO.lang.extend(DistributionPoint, KJUR.asn1.ASN1Object);
+}
 
 /**
  * issue a certificate in PEM format
@@ -2243,129 +2350,125 @@ YAHOO.lang.extend(DistributionPoint, KJUR.asn1.ASN1Object);
  *
  * @example
  * let certPEM = newCertPEM({
- *   serial: {int: 4},
- *   sigalg: {name: 'SHA1withECDSA'},
- *   issuer: {str: '/C=US/O=a'},
- *   notbefore: {'str': '130504235959Z'},
- *   notafter: {'str': '140504235959Z'},
- *   subject: {str: '/C=US/O=b'},
- *   sbjpubkey: pubKeyObj,
- *   ext: [
- *     {basicConstraints: {cA: true, critical: true}},
- *     {keyUsage: {bin: '11'}},
+ *   'serial': {'int': 4},
+ *   'sigalg': {'name': 'SHA1withECDSA'},
+ *   'issuer': {'str': '/C=US/O=a'},
+ *   'notbefore': {'str': '130504235959Z'},
+ *   'notafter': {'str': '140504235959Z'},
+ *   'subject': {'str': '/C=US/O=b'},
+ *   'sbjpubkey': pubKeyObj,
+ *   'ext': [
+ *     {'basicConstraints': {'cA': true, 'critical': true}},
+ *     {'keyUsage': {'bin': '11'}},
  *   ],
- *   cakey: prvKeyObj
+ *   'cakey': prvKeyObj
  * });
  * // -- or --
  * let certPEM = newCertPEM({
- *   serial: {int: 4},
- *   sigalg: {name: 'SHA1withECDSA'},
- *   issuer: {str: '/C=US/O=a'},
- *   notbefore: {'str': '130504235959Z'},
- *   notafter: {'str': '140504235959Z'},
- *   subject: {str: '/C=US/O=b'},
- *   sbjpubkey: pubKeyPEM,
- *   ext: [
- *     {basicConstraints: {cA: true, critical: true}},
- *     {keyUsage: {bin: '11'}},
+ *   'serial': {'int': 4},
+ *   'sigalg': {'name': 'SHA1withECDSA'},
+ *   'issuer': {'str': '/C=US/O=a'},
+ *   'notbefore': {'str': '130504235959Z'},
+ *   'notafter': {'str': '140504235959Z'},
+ *   'subject': {str: '/C=US/O=b'},
+ *   'sbjpubkey': pubKeyPEM,
+ *   'ext': [
+ *     {'basicConstraints': {'cA': true, 'critical': true}},
+ *     {'keyUsage': {'bin': '11'}},
  *   ],
- *   cakey: [prvkey, pass]}
+ *   'cakey': [prvkey, pass]}
  * );
  * // -- or --
  * let certPEM = newCertPEM({
- *   serial: {int: 1},
- *   sigalg: {name: 'SHA1withRSA'},
- *   issuer: {str: '/C=US/O=T1'},
- *   notbefore: {'str': '130504235959Z'},
- *   notafter: {'str': '140504235959Z'},
- *   subject: {str: '/C=US/O=T1'},
- *   sbjpubkey: pubKeyObj,
- *   sighex: '0102030405..'
+ *   'serial': {'int': 1},
+ *   'sigalg': {'name': 'SHA1withRSA'},
+ *   'issuer': {'str': '/C=US/O=T1'},
+ *   'notbefore': {'str': '130504235959Z'},
+ *   'notafter': {'str': '140504235959Z'},
+ *   'subject': {'str': '/C=US/O=T1'},
+ *   'sbjpubkey': pubKeyObj,
+ *   'sighex': '0102030405..'
  * });
  * // for the issuer and subject field, another
  * // representation is also available
  * let certPEM = newCertPEM({
- *   serial: {int: 1},
- *   sigalg: {name: 'SHA256withRSA'},
- *   issuer: {C: "US", O: "T1"},
- *   notbefore: {'str': '130504235959Z'},
- *   notafter: {'str': '140504235959Z'},
- *   subject: {C: "US", O: "T1", CN: "http://example.com/"},
- *   sbjpubkey: pubKeyObj,
- *   sighex: '0102030405..'
+ *   'serial': {'int': 1},
+ *   'sigalg': {'name': 'SHA256withRSA'},
+ *   'issuer': {'C': "US", 'O': "T1"},
+ *   'notbefore': {'str': '130504235959Z'},
+ *   'notafter': {'str': '140504235959Z'},
+ *   'subject': {'C': "US", 'O': "T1", 'CN': "http://example.com/"},
+ *   'sbjpubkey': pubKeyObj,
+ *   'sighex': '0102030405..'
  * });
  */
 export function newCertPEM(param) {
-	let KJUR.asn1.x509 = KJUR.asn1.x509,
-		_TBSCertificate = TBSCertificate,
-		_Certificate = Certificate;
-	let o = new _TBSCertificate();
+	let o = new TBSCertificate();
 
-	if (param.serial !== undefined)
-		o.setSerialNumberByParam(param.serial);
+	if (param['serial'] !== undefined)
+		o.setSerialNumberByParam(param['serial']);
 	else
 		throw "serial number undefined.";
 
-	if (typeof param.sigalg.name === 'string')
-		o.setSignatureAlgByParam(param.sigalg);
+	if (typeof param['sigalg']['name'] === 'string')
+		o.setSignatureAlgByParam(param['sigalg']);
 	else
 		throw "unproper signature algorithm name";
 
-	if (param.issuer !== undefined)
-		o.setIssuerByParam(param.issuer);
+	if (param['issuer'] !== undefined)
+		o.setIssuerByParam(param['issuer']);
 	else
 		throw "issuer name undefined.";
 
-	if (param.notbefore !== undefined)
-		o.setNotBeforeByParam(param.notbefore);
+	if (param['notbefore'] !== undefined)
+		o.setNotBeforeByParam(param['notbefore']);
 	else
 		throw "notbefore undefined.";
 
-	if (param.notafter !== undefined)
-		o.setNotAfterByParam(param.notafter);
+	if (param['notafter'] !== undefined)
+		o.setNotAfterByParam(param['notafter']);
 	else
 		throw "notafter undefined.";
 
-	if (param.subject !== undefined)
-		o.setSubjectByParam(param.subject);
+	if (param['subject'] !== undefined)
+		o.setSubjectByParam(param['subject']);
 	else
 		throw "subject name undefined.";
 
-	if (param.sbjpubkey !== undefined)
-		o.setSubjectPublicKeyByGetKey(param.sbjpubkey);
+	if (param['sbjpubkey'] !== undefined)
+		o.setSubjectPublicKeyByGetKey(param['sbjpubkey']);
 	else
 		throw "subject public key undefined.";
 
-	if (param.ext !== undefined && param.ext.length !== undefined) {
-		for (let i = 0; i < param.ext.length; i++) {
-			for (key in param.ext[i]) {
-				o.appendExtensionByName(key, param.ext[i][key]);
+	if (param['ext'] !== undefined && param['ext'].length !== undefined) {
+		for (let i = 0; i < param['ext'].length; i++) {
+			for (key in param['ext'][i]) {
+				o.appendExtensionByName(key, param['ext'][i][key]);
 			}
 		}
 	}
 
 	// set signature
-	if (param.cakey === undefined && param.sighex === undefined)
+	if (param['cakey'] === undefined && param['sighex'] === undefined)
 		throw "param cakey and sighex undefined.";
 
 	let caKey = null;
 	let cert = null;
 
-	if (param.cakey) {
-		if (param.cakey.isPrivate === true) {
-			caKey = param.cakey;
+	if (param['cakey']) {
+		if (param['cakey'].isPrivate === true) {
+			caKey = param['cakey'];
 		} else {
-			caKey = KEYUTIL.getKey.apply(null, param.cakey);
+			caKey = KEYUTIL.getKey.apply(null, param['cakey']);
 		}
-		cert = new _Certificate({ 'tbscertobj': o, 'prvkeyobj': caKey });
+		cert = new Certificate({ 'tbscertobj': o, 'prvkeyobj': caKey });
 		cert.sign();
 	}
 
-	if (param.sighex) {
-		cert = new _Certificate({ 'tbscertobj': o });
-		cert.setSignatureHex(param.sighex);
+	if (param['sighex']) {
+		cert = new Certificate({ 'tbscertobj': o });
+		cert.setSignatureHex(param['sighex']);
 	}
 
 	return cert.getPEMString();
-};
-
+}

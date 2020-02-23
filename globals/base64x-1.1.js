@@ -340,7 +340,7 @@ export function hextopem(dataHex, pemHeader) {
 /**
  * get hexacedimal string from PEM format data<br/>
  * @param {string} s PEM formatted string
- * @param {string} sHead PEM header string without BEGIN/END(OPTION)
+ * @param {string=} sHead PEM header string without BEGIN/END(OPTION)
  * @return {string} hexadecimal string data of PEM contents
  * @description
  * This static method gets a hexacedimal string of contents 
@@ -663,7 +663,6 @@ export function hextoipv6(s) {
  * IPv6 address to IPv4 or IPv6 address string.
  * If byte length is not 4 nor 16, this returns a
  * hexadecimal string without conversion.
- * @see {@link hextoipv6}
  * @example
  * hextoip("c0a80101") &rarr "192.168.1.1"
  * hextoip("871020010db8000000000000000000000004") &rarr "2001:db8::4"

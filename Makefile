@@ -40,7 +40,6 @@ define EXCLUDES
 	globals/asn1cades-1.0.js
 	globals/asn1cms-1.0.js
 	globals/asn1csr-1.0.js
-	globals/asn1hex-1.1.js
 	globals/asn1ocsp-1.0.js
 	globals/asn1tsp-1.0.js
 	globals/asn1x509-1.0.js

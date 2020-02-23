@@ -16,6 +16,7 @@
 import { DEROctetString, DERObjectIdentifier, DERSequence } from "./asn1-1.0.js"
 import { AlgorithmIdentifier } from "./asn1x509-1.0.js"
 import { hashHex } from "./crypto-1.1.js"
+import { getChildIdx, getTLV, getTLVbyList, getIdxbyList, getV } from "./asn1hex-1.1.js"
 
 /**
  * @fileOverview
@@ -584,13 +585,6 @@ KJUR.asn1.cades.CAdESUtil.addSigTS = function(dCMS, siIdx, sigTSHex) {
  * sd = info.obj;
  */
 KJUR.asn1.cades.CAdESUtil.parseSignedDataForAddingUnsigned = function(hex) {
-    let _ASN1HEX = ASN1HEX,
-	_getChildIdx = _ASN1HEX.getChildIdx,
-	_getTLV = _ASN1HEX.getTLV,
-	_getTLVbyList = _ASN1HEX.getTLVbyList,
-	_getIdxbyList = _ASN1HEX.getIdxbyList,
-	KJUR = KJUR,
-
 	_ASN1Object = KJUR.asn1.ASN1Object,
 	KJUR.asn1.cms = KJUR.asn1.cms,
 	_SignedData = KJUR.asn1.cms.SignedData,
@@ -600,26 +594,26 @@ KJUR.asn1.cades.CAdESUtil.parseSignedDataForAddingUnsigned = function(hex) {
     let r = {};
 
     // 1. not oid signed-data then error
-    if (_getTLVbyList(hex, 0, [0]) != "06092a864886f70d010702")
+    if (getTLVbyList(hex, 0, [0]) != "06092a864886f70d010702")
         throw "hex is not CMS SignedData";
 
-    let iSD = _getIdxbyList(hex, 0, [1, 0]);
-    let aSDChildIdx = _getChildIdx(hex, iSD);
+    let iSD = getIdxbyList(hex, 0, [1, 0]);
+    let aSDChildIdx = getChildIdx(hex, iSD);
     if (aSDChildIdx.length < 4)
         throw "num of SignedData elem shall be 4 at least";
 
     // 2. HEXs of SignedData children
     // 2.1. SignedData.CMSVersion
     let iVersion = aSDChildIdx.shift();
-    r.version = _getTLV(hex, iVersion);
+    r.version = getTLV(hex, iVersion);
 
     // 2.2. SignedData.DigestAlgorithms
     let iAlgs = aSDChildIdx.shift();
-    r.algs = _getTLV(hex, iAlgs);
+    r.algs = getTLV(hex, iAlgs);
 
     // 2.3. SignedData.EncapContentInfo
     let iEncapContent = aSDChildIdx.shift();
-    r.encapcontent = _getTLV(hex, iEncapContent);
+    r.encapcontent = getTLV(hex, iEncapContent);
 
     // 2.4. [0]Certs 
     r.certs = null;
@@ -628,13 +622,13 @@ KJUR.asn1.cades.CAdESUtil.parseSignedDataForAddingUnsigned = function(hex) {
 
     let iNext = aSDChildIdx.shift();
     if (hex.substr(iNext, 2) == "a0") {
-        r.certs = _getTLV(hex, iNext);
+        r.certs = getTLV(hex, iNext);
         iNext = aSDChildIdx.shift();
     }
 
     // 2.5. [1]Revs
     if (hex.substr(iNext, 2) == "a1") {
-        r.revs = _getTLV(hex, iNext);
+        r.revs = getTLV(hex, iNext);
         iNext = aSDChildIdx.shift();
     }
 
@@ -643,7 +637,7 @@ KJUR.asn1.cades.CAdESUtil.parseSignedDataForAddingUnsigned = function(hex) {
     if (hex.substr(iSignerInfos, 2) != "31")
         throw "Can't find signerInfos";
 
-    let aSIIndex = _getChildIdx(hex, iSignerInfos);
+    let aSIIndex = getChildIdx(hex, iSignerInfos);
     //alert(aSIIndex.join("-"));
 
     for (let i = 0; i < aSIIndex.length; i++) {
@@ -705,19 +699,13 @@ KJUR.asn1.cades.CAdESUtil.parseSignedDataForAddingUnsigned = function(hex) {
  * for CAdES-T and not for CAdES-C.
  */
 KJUR.asn1.cades.CAdESUtil.parseSignerInfoForAddingUnsigned = function(hex, iSI, nth) {
-    let _ASN1HEX = ASN1HEX,
-	_getChildIdx = _ASN1HEX.getChildIdx,
-	_getTLV = _ASN1HEX.getTLV,
-	_getV = _ASN1HEX.getV,
-	KJUR = KJUR,
-
 	_ASN1Object = KJUR.asn1.ASN1Object,
 	KJUR.asn1.cms = KJUR.asn1.cms,
 	_AttributeList = KJUR.asn1.cms.AttributeList,
 	_SignerInfo = KJUR.asn1.cms.SignerInfo;
 
     let r = {};
-    let aSIChildIdx = _getChildIdx(hex, iSI);
+    let aSIChildIdx = getChildIdx(hex, iSI);
     //alert(aSIChildIdx.join("="));
 
     if (aSIChildIdx.length != 6)
@@ -725,28 +713,28 @@ KJUR.asn1.cades.CAdESUtil.parseSignerInfoForAddingUnsigned = function(hex, iSI, 
 
     // 1. SignerInfo.CMSVersion
     let iVersion = aSIChildIdx.shift();
-    r.version = _getTLV(hex, iVersion);
+    r.version = getTLV(hex, iVersion);
 
     // 2. SignerIdentifier(IssuerAndSerialNumber)
     let iIdentifier = aSIChildIdx.shift();
-    r.si = _getTLV(hex, iIdentifier);
+    r.si = getTLV(hex, iIdentifier);
 
     // 3. DigestAlgorithm
     let iDigestAlg = aSIChildIdx.shift();
-    r.digalg = _getTLV(hex, iDigestAlg);
+    r.digalg = getTLV(hex, iDigestAlg);
 
     // 4. SignedAttrs
     let iSignedAttrs = aSIChildIdx.shift();
-    r.sattrs = _getTLV(hex, iSignedAttrs);
+    r.sattrs = getTLV(hex, iSignedAttrs);
 
     // 5. SigAlg
     let iSigAlg = aSIChildIdx.shift();
-    r.sigalg = _getTLV(hex, iSigAlg);
+    r.sigalg = getTLV(hex, iSigAlg);
 
     // 6. Signature
     let iSig = aSIChildIdx.shift();
-    r.sig = _getTLV(hex, iSig);
-    r.sigval = _getV(hex, iSig);
+    r.sig = getTLV(hex, iSig);
+    r.sigval = getV(hex, iSig);
 
     // 7. obj(SignerInfo)
     let tmp = null;
