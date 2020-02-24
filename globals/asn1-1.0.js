@@ -16,6 +16,7 @@
 import { BigInteger } from "./../../js-bn/modules/jsbn.js"
 import { hextopem, utf8tohex, stohex } from "./base64x-1.1.js"
 import { name2oid } from "./asn1oid.js"
+import { isDictionary, isList } from "./../../../include/type.js"
 
 /** 
  * <p>
@@ -198,22 +199,24 @@ export function newObject(param) {
 	if (":bool:int:bitstr:octstr:null:oid:enum:utf8str:numstr:prnstr:telstr:ia5str:utctime:gentime:seq:set:tag:".indexOf(":" + key + ":") == -1)
 		throw "undefined key: " + key;
 
-	if (key == "bool") return new DERBoolean(param[key]);
-	if (key == "int") return new DERInteger(param[key]);
-	if (key == "bitstr") return new DERBitString(param[key]);
-	if (key == "octstr") return new DEROctetString(param[key]);
-	if (key == "null") return new DERNull(param[key]);
-	if (key == "oid") return new DERObjectIdentifier(param[key]);
-	if (key == "enum") return new DEREnumerated(param[key]);
-	if (key == "utf8str") return new DERUTF8String(param[key]);
-	if (key == "numstr") return new DERNumericString(param[key]);
-	if (key == "prnstr") return new DERPrintableString(param[key]);
-	if (key == "telstr") return new DERTeletexString(param[key]);
-	if (key == "ia5str") return new DERIA5String(param[key]);
-	if (key == "utctime") return new DERUTCTime(param[key]);
-	if (key == "gentime") return new DERGeneralizedTime(param[key]);
+	let val = param[key];
 
-	if (key == "seq") {
+	if ((key == "bool") && (typeof val === 'boolean' || isDictionary(val))) return new DERBoolean(/** @type {Object<string,*> | boolean} */ ( val ));
+	if ((key == "int") && (typeof val === 'number' || isDictionary(val))) return new DERInteger(/** @type {Object<string,*> | number} */ ( val ));
+	if ((key == "bitstr") && (typeof val === 'string' || isDictionary(val))) return new DERBitString(/** @type {Object<string,*> | string} */ ( val ));
+	if ((key == "octstr") && (typeof val === 'string' || isDictionary(val))) return new DEROctetString(/** @type {Object<string,*> | string} */ ( val ));
+	if ((key == "null")) return new DERNull();
+	if ((key == "oid") && (typeof val === 'string' || isDictionary(val))) return new DERObjectIdentifier(/** @type {Object<string,*> | string} */ ( val ));
+	if ((key == "enum") && (typeof val === 'number' || isDictionary(val))) return new DEREnumerated(/** @type {Object<string,*> | number} */ ( val ));
+	if ((key == "utf8str") && (typeof val === 'string' || isDictionary(val))) return new DERUTF8String(/** @type {Object<string,*> | number} */ ( val ));
+	if ((key == "numstr") && (typeof val === 'string' || isDictionary(val))) return new DERNumericString(/** @type {Object<string,*> | number} */ ( val ));
+	if ((key == "prnstr") && (typeof val === 'string' || isDictionary(val))) return new DERPrintableString(/** @type {Object<string,*> | number} */ ( val ));
+	if ((key == "telstr") && (typeof val === 'string' || isDictionary(val))) return new DERTeletexString(/** @type {Object<string,*> | number} */ ( val ));
+	if ((key == "ia5str") && (typeof val === 'string' || isDictionary(val))) return new DERIA5String(/** @type {Object<string,*> | number} */ ( val ));
+	if ((key == "utctime") && (typeof val === 'string' || isDictionary(val))) return new DERUTCTime(/** @type {Object<string,*> | number} */ ( val ));
+	if ((key == "gentime") && (typeof val === 'string' || isDictionary(val))) return new DERGeneralizedTime(/** @type {Object<string,*> | number} */ ( val ));
+
+	if (key == "seq") && (isList(val)) {
 		let paramList = /** @type {Array<Object>} */ ( param[key] );
 		/** @type {Array<ASN1Object>} */ let a = [];
 		for (let i = 0; i < paramList.length; i++) {
@@ -673,7 +676,7 @@ export class DERAbstractStructured extends ASN1Object {
  */
 export class DERBoolean extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params
+	 * @param {(Object<string,*> | boolean)=} params
 	 */
 	constructor(params) {
 		super();
@@ -1016,10 +1019,7 @@ export class DEROctetString extends DERAbstractString {
  * class for ASN.1 DER Null
  */
 export class DERNull extends ASN1Object {
-	/**
-	 * @param {Object<string,*>=} params 
-	 */
-	constructor(params) {
+	constructor() {
 		super();
 
 		this.hT = "05";
