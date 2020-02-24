@@ -36,7 +36,7 @@ import { RSAKeyEx } from "./rsaex.js"
  * @param {string} s input string to encrypt
  * @param {Object} keyObj RSAKeyEx object or hexadecimal string of symmetric cipher key
  * @param {string} algName short/long algorithm name for encryption/decryption 
- * @return {string} hexadecimal encrypted string
+ * @return {string | null} hexadecimal encrypted string
  * @description
  * This static method encrypts raw string with specified key and algorithm.
  * @example 
@@ -63,7 +63,7 @@ export function encrypt(s, keyObj, algName) {
  * @param {string} hex hexadecial string of encrypted message
  * @param {Object} keyObj RSAKeyEx object or hexadecimal string of symmetric cipher key
  * @param {string} algName short/long algorithm name for encryption/decryption
- * @return {string} hexadecimal encrypted string
+ * @return {string | null} hexadecimal encrypted string
  * @description
  * This static method decrypts encrypted hexadecimal string with specified key and algorithm.
  * @example 

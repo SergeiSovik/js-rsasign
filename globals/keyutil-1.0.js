@@ -233,8 +233,7 @@ function generateIvSaltHex(numBytes) {
  * @param {string} sharedKeyAlgName algorithm name of shared key encryption
  * @param {string} sharedKeyHex hexadecimal string of shared key to encrypt
  * @param {string} ivsaltHex hexadecimal string of IV and salt
- * @param {string} base64 string of encrypted private key
- * @returns {string}
+ * @returns {string} base64 string of encrypted private key
  */
 function encryptKeyHex(privateKeyHex, sharedKeyAlgName, sharedKeyHex, ivsaltHex) {
 	let f = ALGLIST[sharedKeyAlgName].eproc;
@@ -253,7 +252,7 @@ function encryptKeyHex(privateKeyHex, sharedKeyAlgName, sharedKeyHex, ivsaltHex)
 
 /**
  * parse PEM formatted passcode protected PKCS#5 private key
- * @param {string} sEncryptedPEM PEM formatted protected passcode protected PKCS#5 private key
+ * @param {string} sPKCS5PEM PEM formatted protected passcode protected PKCS#5 private key
  * @return {PKCS5PEM} hash of key information
  * @description
  * Resulted hash has following attributes.
@@ -304,7 +303,7 @@ export function parsePKCS5PEM(sPKCS5PEM) {
  * the same function as OpenSSL EVP_BytsToKey to generate shared key and IV
  * @param {string} algName name of symmetric key algorithm (ex. 'DES-EBE3-CBC')
  * @param {string} passcode passcode to decrypt private key (ex. 'password')
- * @param {string} hexadecimal string of IV. heading 8 bytes will be used for passcode salt
+ * @param {string} ivsaltHex hexadecimal string of IV. heading 8 bytes will be used for passcode salt
  * @return {KEYANDUNUSEDIV} hash of key and unused IV (ex. {keyhex:2fe3..., ivhex:3fad..})
  */
 export function getKeyAndUnusedIvByPasscodeAndIvsalt(algName, passcode, ivsaltHex) {
@@ -360,7 +359,7 @@ export function decryptKeyB64(privateKeyB64, sharedKeyAlgName, sharedKeyHex, ivs
  * decrypt PEM formatted protected PKCS#5 private key with passcode
  * @param {string} sEncryptedPEM PEM formatted protected passcode protected PKCS#5 private key
  * @param {string} passcode passcode to decrypt private key (ex. 'password')
- * @return {string} hexadecimal string of decrypted RSA priavte key
+ * @return {string | null} hexadecimal string of decrypted RSA priavte key
  */
 export function getDecryptedKeyHex(sEncryptedPEM, passcode) {
 	// 1. parse pem
@@ -369,6 +368,7 @@ export function getDecryptedKeyHex(sEncryptedPEM, passcode) {
 	let sharedKeyAlgName = info.cipher;
 	let ivsaltHex = info.ivsalt;
 	let privateKeyB64 = info.data;
+	if ((sharedKeyAlgName === undefined) || (ivsaltHex === undefined) || (privateKeyB64 === undefined)) return null;
 	//alert("ivsaltHex = " + ivsaltHex);
 
 	// 2. generate shared key
@@ -590,15 +590,16 @@ export function getPlainPKCS8HexFromEncryptedPKCS8PEM(pkcs8PEM, passcode) {
 	// 1. derHex - PKCS#8 private key encrypted by PBKDF2
 	let derHex = pemtohex(pkcs8PEM, "ENCRYPTED PRIVATE KEY");
 	// 2. info - PKCS#5 PBES info
-	let info = this.parseHexOfEncryptedPKCS8(derHex);
+	let info = parseHexOfEncryptedPKCS8(derHex);
 	// 3. hKey - PBKDF2 key
 	let pbkdf2KeyHex = getPBKDF2KeyHexFromParam(info, passcode);
 	// 4. decrypt ciphertext by PBKDF2 key
+	/** @dict */
 	let encrypted = {};
-	encrypted.ciphertext = Hex.parse(info.ciphertext);
+	encrypted['ciphertext'] = Hex.parse(info.ciphertext);
 	let pbkdf2KeyWS = Hex.parse(pbkdf2KeyHex);
 	let des3IVWS = Hex.parse(info.encryptionSchemeIV);
-	let decWS = TripleDES.decrypt(encrypted, pbkdf2KeyWS, { iv: des3IVWS });
+	let decWS = TripleDES.decrypt(encrypted, pbkdf2KeyWS, { 'iv': des3IVWS });
 	let decHex = Hex.stringify(decWS);
 	return decHex;
 }
@@ -848,7 +849,7 @@ export function parsePublicPKCS8Hex(pkcs8PubHex) {
 
 /**
  * get private or public key object from any arguments
- * @param {string | Object} param parameter to get key object. see description in detail.
+ * @param {string | RSAKeyEx | DSA | ECDSA | Object<string,*>} param parameter to get key object. see description in detail.
  * @param {string=} passcode (OPTION) parameter to get key object. see description in detail.
  * @param {string=} hextype (OPTOIN) parameter to get key object. see description in detail.
  * @return {KeyObject} object {@link RSAKeyEx}, {@link ECDSA} or {@link ECDSA}

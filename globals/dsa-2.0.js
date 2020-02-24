@@ -50,7 +50,7 @@ export class DSA {
      * @param {BigInteger} p prime P parameter
      * @param {BigInteger} q sub prime Q parameter
      * @param {BigInteger} g base G parameter
-     * @param {BigInteger} y public key Y or null
+     * @param {BigInteger | null} y public key Y or null
      * @param {BigInteger} x private key X
      */
 	setPrivate(p, q, g, y, x) {
@@ -67,7 +67,7 @@ export class DSA {
      * @param {string} hP prime P parameter
      * @param {string} hQ sub prime Q parameter
      * @param {string} hG base G parameter
-     * @param {string} hY public key Y or null
+     * @param {string | null} hY public key Y or null
      * @param {string} hX private key X
      */
 	setPrivateHex(hP, hQ, hG, hY, hX) {

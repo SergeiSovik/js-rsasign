@@ -32,6 +32,7 @@ import { b64tohex } from "./../../js-bn/modules/base64.js"
 import { KeyObject, getKey } from "./keyutil-1.0.js"
 import { ECDSA } from "./ecdsa-modified-1.0.js"
 import { RSAKeyEx } from "./rsaex.js"
+import { isString } from "./../../../include/type.js"
 
 /**
  * Cryptographic algorithm provider library module
@@ -112,17 +113,21 @@ export const DEFAULTPROVIDER = {
 };
 
 /**
- * @type {Object<string, Hasher>}
+ * @param {string} alg 
+ * @returns {Hasher | null}
  */
-const CRYPTOJSMESSAGEDIGESTNAME = {
-	'md5': HasherMD5,
-	'sha1': HasherSHA1,
-	'sha224': HasherSHA224,
-	'sha256': HasherSHA256,
-	'sha384': HasherSHA384,
-	'sha512': HasherSHA512,
-	'ripemd160': HasherRIPEMD160
-};
+function createHasher(alg) {
+	switch (alg) {
+		case 'md5': return new HasherMD5();
+		case 'sha1': return new HasherSHA1();
+		case 'sha224': return new HasherSHA224();
+		case 'sha256': return new HasherSHA256();
+		case 'sha384': return new HasherSHA384();
+		case 'sha512': return new HasherSHA512();
+		case 'ripemd160': return new HasherRIPEMD160();
+		default: return null;
+	}
+}
 
 /**
  * get hexadecimal DigestInfo
@@ -398,11 +403,11 @@ export class MessageDigest {
 		/** @type {string | null} */ this.provName = null;
 
 		if (params !== undefined) {
-			if (params['alg'] !== undefined) {
-				this.algName = params['alg'];
-				if (params['prov'] === undefined)
-					this.provName = DEFAULTPROVIDER[this.algName];
-				this.setAlgAndProvider(this.algName, this.provName);
+			if (isString(params['alg'])) {
+				this.algName = /** @type {string} */ ( params['alg'] );
+				if (!isString(params['prov']))
+					this.provName = DEFAULTPROVIDER[/** @type {string} */ ( this.algName )];
+				this.setAlgAndProvider(/** @type {string} */ ( this.algName ), /** @type {string} */ ( this.provName ));
 			}
 		}
 	}
@@ -478,7 +483,7 @@ export class MessageDigest {
 		// for cryptojs
 		if (':md5:sha1:sha224:sha256:sha384:sha512:ripemd160:'.indexOf(alg) != -1 && prov == 'cryptojs') {
 			try {
-				this.md = new CRYPTOJSMESSAGEDIGESTNAME[alg]();
+				this.md = createHasher(alg);
 			} catch (ex) {
 				throw "setAlgAndProvider hash alg set fail alg=" + alg + "/" + ex;
 			}
@@ -605,11 +610,11 @@ export class Mac {
 			if (params['pass'] !== undefined) {
 				this.setPassword(params['pass']);
 			}
-			if (params['alg'] !== undefined) {
-				this.algName = params['alg'];
+			if (isString(params['alg'])) {
+				this.algName = /** @type {string} */ ( params['alg'] );
 				if (params['prov'] === undefined)
 					this.provName = DEFAULTPROVIDER[this.algName];
-				this.setAlgAndProvider(this.algName, this.provName);
+				this.setAlgAndProvider(this.algName, /** @type {string} */ ( this.provName ));
 			}
 		}
 	}
@@ -636,7 +641,7 @@ export class Mac {
 		// for cryptojs
 		if (':md5:sha1:sha224:sha256:sha384:sha512:ripemd160:'.indexOf(hashAlg) != -1 && prov == 'cryptojs') {
 			try {
-				let mdObj = CRYPTOJSMESSAGEDIGESTNAME[hashAlg];
+				let mdObj = createHasher(hashAlg);
 				this.mac = new HMAC(mdObj, this.pass);
 			} catch (ex) {
 				throw "setAlgAndProvider hash alg set fail hashAlg=" + hashAlg + "/" + ex;
@@ -885,12 +890,12 @@ export class Signature {
 		this.initParams = params;
 
 		if (params !== undefined) {
-			if (params['alg'] !== undefined) {
-				this.algName = params['alg'];
+			if (isString(params['alg'])) {
+				this.algName = /** @type {string} */ ( params['alg'] );
 				if (params['prov'] === undefined) {
 					this.provName = DEFAULTPROVIDER[this.algName];
 				} else {
-					this.provName = params['prov'];
+					this.provName = /** @type {string} */ ( params['prov'] );
 				}
 				this.algProvName = this.algName + ":" + this.provName;
 				this.setAlgAndProvider(this.algName, this.provName);
@@ -1053,10 +1058,10 @@ export class Signature {
      * let hSigValue = sig.sign()
      */
 	sign() {
-		if (this.md === null)
+		if ((this.md === null) || (this.mdAlgName === null))
 			throw "sign() not supported for this alg:prov=" + this.algProvName;
 
-		this.sHashHex = this.md.digest();
+		this.sHashHex = /** @type {string} */ ( this.md.digest() );
 		if (typeof this.ecprvhex != "undefined" &&
 			typeof this.eccurvename != "undefined") {
 			let ec = new ECDSA({ 'curve': this.eccurvename });
@@ -1114,17 +1119,17 @@ export class Signature {
 
     /**
      * verifies the passed-in signature.
-     * @param {string} str string to final update
+     * @param {string} hSigVal string to final update
      * @return {boolean} true if the signature was verified, otherwise false
      * @description
      * @example
      * let isValid = sig.verify('1fbcefdca4823a7(snip)')
      */
 	verify(hSigVal) {
-		if (this.md === null)
+		if ((this.md === null) || (this.mdAlgName === null))
 			throw "verify(hSigVal) not supported for this alg:prov=" + this.algProvName;
 
-		this.sHashHex = this.md.digest();
+		this.sHashHex = /** @type {string} */ ( this.md.digest() );
 		if (typeof this.ecpubhex != "undefined" &&
 			typeof this.eccurvename != "undefined") {
 			let ec = new ECDSA({ curve: this.eccurvename });
@@ -1134,14 +1139,11 @@ export class Signature {
 			return this.pubKey.verifyWithMessageHashPSS(this.sHashHex, hSigVal,
 				this.mdAlgName,
 				this.pssSaltLen);
-		} else if (this.pubKey instanceof RSAKeyEx &&
-			this.pubkeyAlgName === "rsa") {
+		} else if (this.pubKey instanceof RSAKeyEx && this.pubkeyAlgName === "rsa") {
 			return this.pubKey.verifyWithMessageHash(this.sHashHex, hSigVal);
-		} else if (ECDSA !== undefined &&
-			this.pubKey instanceof ECDSA) {
-			return this.pubKey.verifyWithMessageHash(this.sHashHex, hSigVal);
-		} else if (DSA !== undefined &&
-			this.pubKey instanceof DSA) {
+		} else if (ECDSA !== undefined && this.pubKey instanceof ECDSA) {
+			return this.pubKey.verifyWithMessageHash(this.sHashHex, hSigVal) || false;
+		} else if (DSA !== undefined && this.pubKey instanceof DSA) {
 			return this.pubKey.verifyWithMessageHash(this.sHashHex, hSigVal);
 		} else {
 			throw "Signature: unsupported public key alg: " + this.pubkeyAlgName;

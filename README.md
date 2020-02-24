@@ -6,6 +6,8 @@ This is library for a fork project of [PWA](https://github.com/SergioRando/PWA)
 
 Original library (without GCC support) can be found on the [official website](https://github.com/kjur/jsrsasign)
 
+Fixed huge amount of error/bad code
+
 # Install
 Read full installation process before executing any command
 

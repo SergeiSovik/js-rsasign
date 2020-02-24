@@ -283,7 +283,7 @@ export function getIdxbyList(h, currentIndex, nthList, checkingTag) {
  * @param {string} h hexadecimal string of ASN.1 structure
  * @param {number} currentIndex string index to start searching in hexadecimal string "h"
  * @param {Array<number>} nthList array of nth list index
- * @param {string} checkingTag (OPTIONAL) string of expected ASN.1 tag for nthList 
+ * @param {string=} checkingTag (OPTIONAL) string of expected ASN.1 tag for nthList 
  * @description
  * This static method is to get a ASN.1 value which specified "nthList" position
  * with checking expected tag "checkingTag".

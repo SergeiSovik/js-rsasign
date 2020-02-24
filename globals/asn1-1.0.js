@@ -144,7 +144,7 @@ export function getPEMStringFromHex(dataHex, pemHeader) {
 
 /**
  * generate ASN1Object specifed by JSON parameters
- * @param {Object} param JSON parameter to generate ASN1Object
+ * @param {Object<string,*> | null} param JSON parameter to generate ASN1Object
  * @return {ASN1Object} generated object
  * @description
  * generate any ASN1Object specified by JSON param
@@ -452,7 +452,7 @@ export class ASN1Object {
  */
 export class DERAbstractString extends ASN1Object {
 	/**
-	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
 	 */
 	constructor(params) {
 		super();
@@ -633,7 +633,7 @@ export class DERAbstractTime extends ASN1Object {
  */
 export class DERAbstractStructured extends ASN1Object {
 	/**
-	 * @param {Object=} params
+	 * @param {Object<string,*>=} params
 	 */
 	constructor(params) {
 		super();
@@ -673,7 +673,7 @@ export class DERAbstractStructured extends ASN1Object {
  */
 export class DERBoolean extends ASN1Object {
 	/**
-	 * @param {Object=} params
+	 * @param {Object<string,*>=} params
 	 */
 	constructor(params) {
 		super();
@@ -740,7 +740,7 @@ export class DERBoolean extends ASN1Object {
  */
 export class DERInteger extends ASN1Object {
 	/**
-	 * @param {(Object | number)=} params
+	 * @param {(Object<string,*> | number)=} params
 	 */
 	constructor(params) {
 		super();
@@ -840,7 +840,7 @@ export class DERInteger extends ASN1Object {
  */
 export class DERBitString extends ASN1Object {
 	/**
-	 * @param {(Object | string)=} params
+	 * @param {(Object<string,*> | string)=} params
 	 */
 	constructor(params) {
 		if (params !== undefined && typeof params['obj'] !== "undefined") {
@@ -998,7 +998,7 @@ export class DERBitString extends ASN1Object {
  */
 export class DEROctetString extends DERAbstractString {
 	/**
-	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
 	 */
 	constructor(params) {
 		if (params !== undefined && typeof params['obj'] !== "undefined") {
@@ -1017,7 +1017,7 @@ export class DEROctetString extends DERAbstractString {
  */
 export class DERNull extends ASN1Object {
 	/**
-	 * @param {*=} params 
+	 * @param {Object<string,*>=} params 
 	 */
 	constructor(params) {
 		super();
@@ -1041,7 +1041,7 @@ export class DERNull extends ASN1Object {
  */
 export class DERObjectIdentifier extends ASN1Object {
 	/**
-	 * @param {(Object | string)=} params dictionary of parameters (ex. {'oid': '2.5.4.5'})
+	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'oid': '2.5.4.5'})
 	 */
 	constructor(params) {
 		super();
@@ -1144,7 +1144,7 @@ export class DERObjectIdentifier extends ASN1Object {
  */
 export class DEREnumerated extends ASN1Object {
 	/**
-	 * @param {(* | number)=} params 
+	 * @param {(Object<string,*> | number)=} params 
 	 */
 	constructor(params) {
 		super();
@@ -1205,7 +1205,7 @@ export class DEREnumerated extends ASN1Object {
  */
 export class DERUTF8String extends DERAbstractString {
 	/**
-	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
 	 */
 	constructor(params) {
 		super(params);
@@ -1220,7 +1220,7 @@ export class DERUTF8String extends DERAbstractString {
  */
 export class DERNumericString extends DERAbstractString {
 	/**
-	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
 	 */
 	constructor(params) {
 		super(params);
@@ -1235,7 +1235,7 @@ export class DERNumericString extends DERAbstractString {
  */
 export class DERPrintableString extends DERAbstractString {
 	/**
-	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
 	 */
 	constructor(params) {
 		super(params);
@@ -1250,7 +1250,7 @@ export class DERPrintableString extends DERAbstractString {
  */
 export class DERTeletexString extends DERAbstractString {
 	/**
-	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
 	 */
 	constructor(params) {
 		super(params);
@@ -1265,7 +1265,7 @@ export class DERTeletexString extends DERAbstractString {
  */
 export class DERIA5String extends DERAbstractString {
 	/**
-	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
 	 */
 	constructor(params) {
 		super(params);
@@ -1297,7 +1297,7 @@ export class DERIA5String extends DERAbstractString {
  */
 export class DERUTCTime extends DERAbstractTime {
 	/**
-	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': '130430235959Z'})
+	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': '130430235959Z'})
 	 */
 	constructor(params) {
 		super();
@@ -1362,7 +1362,7 @@ export class DERUTCTime extends DERAbstractTime {
  */
 export class DERGeneralizedTime extends DERAbstractTime {
 	/**
-	 * @param {(Object | string)=} params dictionary of parameters (ex. {'str': '20130430235959Z'})
+	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': '20130430235959Z'})
 	 */
 	constructor(params) {
 		super();
@@ -1429,7 +1429,7 @@ export class DERGeneralizedTime extends DERAbstractTime {
  */
 export class DERSequence extends DERAbstractStructured {
 	/**
-	 * @param {Object=} params
+	 * @param {Object<string,*>=} params
 	 */
 	constructor(params) {
 		super(params);
@@ -1464,7 +1464,7 @@ export class DERSequence extends DERAbstractStructured {
  */
 export class DERSet extends DERAbstractStructured {
 	/**
-	 * @param {Object=} params
+	 * @param {Object<string,*>=} params
 	 */
 	constructor(params) {
 		super(params);
@@ -1515,7 +1515,7 @@ export class DERSet extends DERAbstractStructured {
  */
 export class DERTaggedObject extends ASN1Object {
 	/**
-	 * @param {Object} params 
+	 * @param {Object<string,*>} params 
 	 */
 	constructor(params) {
 		super();

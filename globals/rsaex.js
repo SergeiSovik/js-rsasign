@@ -42,6 +42,7 @@ import { pemtohex } from "./base64x-1.1.js"
 import { X509 } from "./x509-1.1.js"
 import { BigInteger } from "./../../js-bn/modules/jsbn.js"
 import { SecureRandom } from "./../../js-bn/modules/rng.js"
+import { isString } from "./../../../include/type.js"
 
 /**
  * PKCS#1 (OAEP) mask generation function
@@ -357,8 +358,8 @@ export class RSAKeyEx extends RSAKey {
 		if (N instanceof BigInteger) {
 			this.n = N;
 			this.e = E | 0;
-		} else if ((typeof N === 'string') && (typeof E === 'string')) {
-			super.setPublic(N, E);
+		} else if (isString(N) && isString(E)) {
+			super.setPublic(/** @type {string} */ (N), /** @type {string} */ (E));
 		} else
 			throw "Invalid params";
 	}
@@ -391,8 +392,8 @@ export class RSAKeyEx extends RSAKey {
 			this.n = N;
 			this.e = E | 0;
 			this.d = D;
-		} else if ((typeof N === 'string') && (typeof E === 'string') && (typeof D === 'string')) {
-			super.setPrivate(N, E, D);
+		} else if (isString(N) && isString(E) && isString(D)) {
+			super.setPrivate(/** @type {string} */ (N), /** @type {string} */ (E), /** @type {string} */ (D));
 		} else
 			throw "Invalid params";
 	}
@@ -435,8 +436,8 @@ export class RSAKeyEx extends RSAKey {
 	 * Return the PKCS#1 OAEP RSA decryption of "ctext".
 	 * "ctext" is an even-length hex string and the output is a plain string.
 	 * @param {string} ctext 
-	 * @param {*} hash 
-	 * @param {*} hashLen 
+	 * @param {string | function(string):string} hash 
+	 * @param {number=} hashLen 
 	 */
 	decryptOAEP(ctext, hash, hashLen) {
 		let c = parseBigInt(ctext, 16);
@@ -704,7 +705,7 @@ export class RSAKeyEx extends RSAKey {
 		hSig = hSig.replace(RE_HEXDECONLY, '');
 		hSig = hSig.replace(/[ \n]+/g, "");
 		let biSig = parseBigInt(hSig, 16);
-		if (biSig.bitLength() > this.n.bitLength()) return 0;
+		if (biSig.bitLength() > this.n.bitLength()) return false;
 		let biDecryptedSig = this.doPublic(biSig);
 		let hDigestInfo = biDecryptedSig.toString(16).replace(/^1f+00/, '');
 		let digestInfoAry = rsasign_getAlgNameAndHashFromHexDisgestInfo(hDigestInfo);
@@ -727,7 +728,7 @@ export class RSAKeyEx extends RSAKey {
 		hSig = hSig.replace(RE_HEXDECONLY, '');
 		hSig = hSig.replace(/[ \n]+/g, "");
 		let biSig = parseBigInt(hSig, 16);
-		if (biSig.bitLength() > this.n.bitLength()) return 0;
+		if (biSig.bitLength() > this.n.bitLength()) return false;
 		let biDecryptedSig = this.doPublic(biSig);
 		let hDigestInfo = biDecryptedSig.toString(16).replace(/^1f+00/, '');
 		let digestInfoAry = rsasign_getAlgNameAndHashFromHexDisgestInfo(hDigestInfo);

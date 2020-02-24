@@ -91,7 +91,7 @@ import { Signature } from "./crypto-1.1.js"
  */
 export class Certificate extends ASN1Object {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {'tbscertobj': obj, 'prvkeyobj': key})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'tbscertobj': obj, 'prvkeyobj': key})
 	 */
 	constructor(params) {
 		super();
@@ -160,7 +160,7 @@ export class Certificate extends ASN1Object {
 	 * @returns {string}
 	 */
 	getEncodedHex() {
-		if (this.isModified == false && this.hTLV != null) return this.hTLV;
+		if (this.isModified == false && this.hTLV != null) return /** @type {string} */ ( this.hTLV );
 		throw "not signed yet";
 	}
 
@@ -200,7 +200,7 @@ export class Certificate extends ASN1Object {
  */
 export class TBSCertificate extends ASN1Object {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {})
 	 */
 	constructor(params) {
 		super();
@@ -220,7 +220,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set serial number field by parameter
-     * @param {Object | number} intParam DERInteger param
+     * @param {Object<string,*> | number} intParam DERInteger param
      * @description
      * @example
      * tbsc.setSerialNumberByParam({'int': 3});
@@ -231,7 +231,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set signature algorithm field by parameter
-     * @param {Object} algIdParam AlgorithmIdentifier parameter
+     * @param {Object<string,*>} algIdParam AlgorithmIdentifier parameter
      * @description
      * @example
      * tbsc.setSignatureAlgByParam({'name': 'SHA1withRSA'});
@@ -242,7 +242,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set issuer name field by parameter
-     * @param {Object} x500NameParam X500Name parameter
+     * @param {Object<string,*>} x500NameParam X500Name parameter
      * @description
      * @example
      * tbsc.setIssuerParam({'str': '/C=US/CN=b'});
@@ -253,7 +253,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set notBefore field by parameter
-     * @param {Object} timeParam Time parameter
+     * @param {Object<string,*>} timeParam Time parameter
      * @description
      * @example
      * tbsc.setNotBeforeByParam({'str': '130508235959Z'});
@@ -264,7 +264,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set notAfter field by parameter
-     * @param {Object} timeParam Time parameter
+     * @param {Object<string,*>} timeParam Time parameter
      * @description
      * @example
      * tbsc.setNotAfterByParam({'str': '130508235959Z'});
@@ -275,7 +275,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set subject name field by parameter
-     * @param {Object} x500NameParam X500Name parameter
+     * @param {Object<string,*>} x500NameParam X500Name parameter
      * @description
      * @example
      * tbsc.setSubjectParam({'str': '/C=US/CN=b'});
@@ -286,7 +286,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set subject public key info field by key object
-     * @param {Object} param {@link SubjectPublicKeyInfo} class constructor parameter
+     * @param {KeyObject} param {@link SubjectPublicKeyInfo} class constructor parameter
      * @description
      * @example
      * tbsc.setSubjectPublicKey(keyobj);
@@ -297,7 +297,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set subject public key info by RSA/ECDSA/DSA key parameter
-     * @param {Object} keyParam public key parameter which passed to {@link getKey} argument
+     * @param {string | RSAKeyEx | DSA | ECDSA | Object<string,*>} keyParam public key parameter which passed to {@link getKey} argument
      * @description
      * @example
      * tbsc.setSubjectPublicKeyByGetKeyParam(certPEMString); // or
@@ -323,8 +323,8 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * append X.509v3 extension to this object by name and parameters
-     * @param {name} name name of X.509v3 Extension object
-     * @param {Object} extParams parameters as argument of Extension constructor.
+     * @param {string} name name of X.509v3 Extension object
+     * @param {Object<string,*>} extParams parameters as argument of Extension constructor.
      * @description
      * This method adds a X.509v3 extension specified by name 
      * and extParams to internal extension array of X.509v3 extension objects.
@@ -343,10 +343,10 @@ export class TBSCertificate extends ASN1Object {
      * let o = new TBSCertificate();
      * o.appendExtensionByName('BasicConstraints', {'cA':true, 'critical': true});
      * o.appendExtensionByName('KeyUsage', {'bin':'11'});
-     * o.appendExtensionByName('CRLDistributionPoints', {uri: 'http://aaa.com/a.crl'});
-     * o.appendExtensionByName('ExtKeyUsage', {array: [{name: 'clientAuth'}]});
-     * o.appendExtensionByName('AuthorityKeyIdentifier', {kid: '1234ab..'});
-     * o.appendExtensionByName('AuthorityInfoAccess', {array: [{accessMethod:{oid:...},accessLocation:{uri:...}}]});
+     * o.appendExtensionByName('CRLDistributionPoints', {'uri': 'http://aaa.com/a.crl'});
+     * o.appendExtensionByName('ExtKeyUsage', {'array': [{'name': 'clientAuth'}]});
+     * o.appendExtensionByName('AuthorityKeyIdentifier', {'kid': '1234ab..'});
+     * o.appendExtensionByName('AuthorityInfoAccess', {'array': [{'accessMethod':{'oid':...},'accessLocation':{'uri':...}}]});
      */
 	appendExtensionByName(name, extParams) {
 		X500Extension.appendByNameToArray(name,
@@ -387,7 +387,7 @@ export class TBSCertificate extends ASN1Object {
 		let o = new DERSequence({ "array": this.asn1Array });
 		this.hTLV = o.getEncodedHex();
 		this.isModified = false;
-		return this.hTLV;
+		return /** @type {string} */ ( this.hTLV );
 	}
 }
 
@@ -403,12 +403,13 @@ export class TBSCertificate extends ASN1Object {
  */
 export class X500Extension extends ASN1Object {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {'critical': true})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'critical': true})
 	 */
 	constructor(params) {
 		super();
 
 		/** @type {ASN1Object | null} */ this.asn1ExtnValue = null;
+		/** @type {string} */ this.oid;
 
 		this.critical = false;
 		if (params !== undefined) {
@@ -438,7 +439,7 @@ export class X500Extension extends ASN1Object {
 	/**
 	 * append X.509v3 extension to any specified array<br/>
 	 * @param {string} name X.509v3 extension name
-	 * @param {Object} extParams associative array of extension parameters
+	 * @param {Object<string,*>} extParams associative array of extension parameters
 	 * @param {Array<ASN1Object>} a array to add specified extension
 	 * @description
 	 * This static function add a X.509v3 extension specified by name and extParams to
@@ -514,7 +515,7 @@ export class X500Extension extends ASN1Object {
  */
 export class KeyUsage extends X500Extension {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {'bin': '11', 'critical': true})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'bin': '11', 'critical': true})
 	 */
 	constructor(params) {
 		super(params);
@@ -557,7 +558,7 @@ export class KeyUsage extends X500Extension {
  */
 export class BasicConstraints extends X500Extension {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {'cA': true, 'critical': true})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'cA': true, 'critical': true})
 	 */
 	constructor(params) {
 		super(params);
@@ -624,7 +625,7 @@ export class BasicConstraints extends X500Extension {
  */
 export class CRLDistributionPoints extends X500Extension {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {'uri': 'http://a.com/', 'critical': true})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'uri': 'http://a.com/', 'critical': true})
 	 */
 	constructor(params) {
 		super(params);
@@ -675,7 +676,7 @@ export class CRLDistributionPoints extends X500Extension {
  */
 export class ExtKeyUsage extends X500Extension {
 	/**
-	 * @param {Object=} params dictionary of parameters
+	 * @param {Object<string,*>=} params dictionary of parameters
 	 */
 	constructor(params) {
 		super(params);
@@ -730,7 +731,7 @@ export class ExtKeyUsage extends X500Extension {
  */
 export class AuthorityKeyIdentifier extends X500Extension {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {'uri': 'http://a.com/', 'critical': true})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'uri': 'http://a.com/', 'critical': true})
 	 */
 	constructor(params) {
 		super(params);
@@ -843,7 +844,7 @@ export class AuthorityKeyIdentifier extends X500Extension {
  */
 export class AuthorityInfoAccess extends X500Extension {
 	/**
-	 * @param {Object=} params dictionary of parameters
+	 * @param {Object<string,*>=} params dictionary of parameters
 	 */
 	constructor(params) {
 		super(params);
@@ -908,7 +909,7 @@ export class AuthorityInfoAccess extends X500Extension {
  */
 export class SubjectAltName extends X500Extension {
 	/**
-	 * @param {Object=} params dictionary of parameters
+	 * @param {Object<string,*>=} params dictionary of parameters
 	 */
 	constructor(params) {
 		super(params);
@@ -965,7 +966,7 @@ export class SubjectAltName extends X500Extension {
  */
 export class IssuerAltName extends X500Extension {
 	/**
-	 * @param {Object=} params dictionary of parameters
+	 * @param {Object<string,*>=} params dictionary of parameters
 	 */
 	constructor(params) {
 		super(params);
@@ -1021,7 +1022,7 @@ export class IssuerAltName extends X500Extension {
  */
 export class CRL extends ASN1Object {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {'tbsobj': obj, 'rsaprvkey': key})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'tbsobj': obj, 'rsaprvkey': key})
 	 */
 	constructor(params) {
 		super();
@@ -1073,7 +1074,7 @@ export class CRL extends ASN1Object {
 	 * @returns {string}
 	 */
 	getEncodedHex() {
-		if (this.isModified == false && this.hTLV != null) return this.hTLV;
+		if (this.isModified == false && this.hTLV != null) return /** @type {string} */ ( this.hTLV );
 		throw "not signed yet";
 	}
 
@@ -1125,13 +1126,13 @@ export class CRL extends ASN1Object {
  */
 export class TBSCertList extends ASN1Object {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {})
 	 */
 	constructor(params) {
 		super();
 
 		/** @type {Array<ASN1Object>} */ this.asn1Array;
-		/** @type {DERTaggetObject | null} */ this.asn1Version = null;
+		/** @type {DERTaggedObject | null} */ this.asn1Version = null;
 		/** @type {AlgorithmIdentifier | null} */ this.asn1SignatureAlg = null;
 		/** @type {X500Name | null} */ this.asn1Issuer = null;
 		/** @type {Time | null} */ this.asn1ThisUpdate = null;
@@ -1141,7 +1142,7 @@ export class TBSCertList extends ASN1Object {
 
     /**
      * set signature algorithm field by parameter
-     * @param {Object} algIdParam AlgorithmIdentifier parameter
+     * @param {Object<string,*>} algIdParam AlgorithmIdentifier parameter
      * @description
      * @example
      * tbsc.setSignatureAlgByParam({'name': 'SHA1withRSA'});
@@ -1152,7 +1153,7 @@ export class TBSCertList extends ASN1Object {
 
     /**
      * set issuer name field by parameter
-     * @param {Object} x500NameParam X500Name parameter
+     * @param {Object<string,*>} x500NameParam X500Name parameter
      * @description
      * @example
      * tbsc.setIssuerParam({'str': '/C=US/CN=b'});
@@ -1163,7 +1164,7 @@ export class TBSCertList extends ASN1Object {
 
     /**
      * set thisUpdate field by parameter
-     * @param {Object} timeParam Time parameter
+     * @param {Object<string,*>} timeParam Time parameter
      * @description
      * @example
      * tbsc.setThisUpdateByParam({'str': '130508235959Z'});
@@ -1174,7 +1175,7 @@ export class TBSCertList extends ASN1Object {
 
     /**
      * set nextUpdate field by parameter
-     * @param {Object} timeParam Time parameter
+     * @param {Object<string,*>} timeParam Time parameter
      * @description
      * @example
      * tbsc.setNextUpdateByParam({'str': '130508235959Z'});
@@ -1185,8 +1186,8 @@ export class TBSCertList extends ASN1Object {
 
     /**
      * add revoked certificate by parameter
-     * @param {Object} snParam DERInteger parameter for certificate serial number
-     * @param {Object} timeParam Time parameter for revocation date
+     * @param {Object<string,*>} snParam DERInteger parameter for certificate serial number
+     * @param {Object<string,*>} timeParam Time parameter for revocation date
      * @description
      * @example
      * tbsc.addRevokedCert({'int': 3}, {'str': '130508235959Z'});
@@ -1222,7 +1223,7 @@ export class TBSCertList extends ASN1Object {
 		let o = new DERSequence({ "array": this.asn1Array });
 		this.hTLV = o.getEncodedHex();
 		this.isModified = false;
-		return this.hTLV;
+		return /** @type {string} */ ( this.hTLV );
 	}
 }
 
@@ -1240,13 +1241,14 @@ export class TBSCertList extends ASN1Object {
  */
 export class CRLEntry extends ASN1Object {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {})
 	 */
 	constructor(params) {
-		super(params);
+		super();
 
 		/** @type {DERInteger | null} */ this.sn = null;
 		/** @type {Time | null} */ this.time = null;
+		/** @type {string | null} */ this.TLV = null;
 
 		if (params !== undefined) {
 			if (params['time'] !== undefined) {
@@ -1260,7 +1262,7 @@ export class CRLEntry extends ASN1Object {
 
     /**
      * set DERInteger parameter for serial number of revoked certificate
-     * @param {Object} intParam DERInteger parameter for certificate serial number
+     * @param {Object<string,*>} intParam DERInteger parameter for certificate serial number
      * @description
      * @example
      * entry.setCertSerial({'int': 3});
@@ -1271,7 +1273,7 @@ export class CRLEntry extends ASN1Object {
 
     /**
      * set Time parameter for revocation date
-     * @param {Object} timeParam Time parameter for revocation date
+     * @param {Object<string,*>} timeParam Time parameter for revocation date
      * @description
      * @example
      * entry.setRevocationDate({'str': '130508235959Z'});
@@ -1322,7 +1324,7 @@ export class CRLEntry extends ASN1Object {
  */
 export class X500Name extends ASN1Object {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {'str': '/C=US/O=a'})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'str': '/C=US/O=a'})
 	 */
 	constructor(params) {
 		super();
@@ -1402,11 +1404,11 @@ export class X500Name extends ASN1Object {
 
     /**
      * set DN by associative array<br/>
-     * @param {Object} dnObj associative array of DN (ex. {C: "US", O: "aaa"})
+     * @param {Object<string,*>} dnObj associative array of DN (ex. {'C': "US", 'O': "aaa"})
      * @description
      * @example
      * name = new X500Name();
-     * name.setByObject({C: "US", O: "aaa", CN="http://example.com/"1});
+     * name.setByObject({'C': "US", 'O': "aaa", CN="http://example.com/"1});
      */
 	setByObject(dnObj) {
 		// Get all the dnObject attributes and stuff them in the ASN.1 array.
@@ -1426,10 +1428,10 @@ export class X500Name extends ASN1Object {
 	 * @returns {string}
 	 */
 	getEncodedHex() {
-		if (typeof this.hTLV == "string") return this.hTLV;
+		if (typeof this.hTLV == "string") return /** @type {string} */ ( this.hTLV );
 		let o = new DERSequence({ "array": this.asn1Array });
 		this.hTLV = o.getEncodedHex();
-		return this.hTLV;
+		return /** @type {string} */ ( this.hTLV );
 	}
 
 	/**
@@ -1518,12 +1520,13 @@ export class X500Name extends ASN1Object {
  */
 export class RDN extends ASN1Object {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {'str': 'C=US'})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'str': 'C=US'})
 	 */
 	constructor(params) {
 		super();
 
 		/** @type {Array<AttributeTypeAndValue>} */ this.asn1Array = new Array();
+		/** @type {string | null} */ this.hTLV = null;
 
 		if (params !== undefined) {
 			if (params['str'] !== undefined) {
@@ -1535,7 +1538,6 @@ export class RDN extends ASN1Object {
     /**
      * add one AttributeTypeAndValue by string<br/>
      * @param {string} s string of AttributeTypeAndValue
-     * @return {Object} unspecified
      * @description
      * This method add one AttributeTypeAndValue to RDN object.
      * @example
@@ -1550,7 +1552,6 @@ export class RDN extends ASN1Object {
     /**
      * add one AttributeTypeAndValue by multi-valued string<br/>
      * @param {string} s string of multi-valued RDN
-     * @return {Object} unspecified
      * @description
      * This method add multi-valued RDN to RDN object.
      * @example
@@ -1572,8 +1573,8 @@ export class RDN extends ASN1Object {
 	 */
 	getEncodedHex() {
 		let o = new DERSet({ "array": this.asn1Array });
-		this.TLV = o.getEncodedHex();
-		return this.TLV;
+		this.hTLV = o.getEncodedHex();
+		return /** @type {string} */ ( this.hTLV );
 	}
 
 	/**
@@ -1650,13 +1651,14 @@ const defaultDSType = "utf8";
  */
 export class AttributeTypeAndValue extends ASN1Object {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {'str': 'C=US'})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'str': 'C=US'})
 	 */
 	constructor(params) {
 		super();
 
 		/** @type {DERObjectIdentifier | null} */ this.typeObj = null;
 		/** @type {DERAbstractString | null} */ this.valueObj = null;
+		/** @type {string | null} */ this.hTLV = null;
 
 		if (params !== undefined) {
 			if (params['str'] !== undefined) {
@@ -1707,8 +1709,8 @@ export class AttributeTypeAndValue extends ASN1Object {
 	 */
 	getEncodedHex() {
 		let o = new DERSequence({ "array": [this.typeObj, this.valueObj] });
-		this.TLV = o.getEncodedHex();
-		return this.TLV;
+		this.hTLV = o.getEncodedHex();
+		return /** @type {string} */ ( this.hTLV );
 	}
 }
 
@@ -1740,6 +1742,7 @@ export class SubjectPublicKeyInfo extends ASN1Object {
 
 		/** @type {AlgorithmIdentifier | null} */ this.asn1AlgId = null;
 		/** @type {DERBitString | null} */ this.asn1SubjPKey = null;
+		/** @type {string | null} */ this.hTLV = null;
 
 		if (params !== undefined) {
 			this.setPubKey(params);
@@ -1765,7 +1768,7 @@ export class SubjectPublicKeyInfo extends ASN1Object {
 	getEncodedHex() {
 		let o = this.getASN1Object();
 		this.hTLV = o.getEncodedHex();
-		return this.hTLV;
+		return /** @type {string} */ ( this.hTLV );
 	}
 
     /**
@@ -1802,7 +1805,7 @@ export class SubjectPublicKeyInfo extends ASN1Object {
 
 		try {
 			if (key instanceof DSA) {
-				let asn1Params = new newObject({
+				let asn1Params = newObject({
 					'seq': [{ 'int': { 'bigint': key.p } },
 					{ 'int': { 'bigint': key.q } },
 					{ 'int': { 'bigint': key.g } }]
@@ -1831,13 +1834,14 @@ export class SubjectPublicKeyInfo extends ASN1Object {
  */
 export class Time extends ASN1Object {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {'str': '130508235959Z'})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'str': '130508235959Z'})
 	 */
 	constructor(params) {
 		super();
 
 		/** @type {string | null} */ this.type = null;
-		/** @type {Object | null} */ this.timeParams = null;
+		/** @type {Object<string,*> | null} */ this.timeParams = null;
+		/** @type {string | null} */ this.hTLV = null;
 
 		this.type = "utc";
 		if (params !== undefined) {
@@ -1854,7 +1858,7 @@ export class Time extends ASN1Object {
 	}
 
 	/**
-	 * @param {Object} timeParams 
+	 * @param {Object<string,*>} timeParams 
 	 */
 	setTimeParams(timeParams) {
 		this.timeParams = timeParams;
@@ -1880,8 +1884,8 @@ export class Time extends ASN1Object {
 				o = new DERGeneralizedTime();
 			}
 		}
-		this.TLV = o.getEncodedHex();
-		return this.TLV;
+		this.hTLV = o.getEncodedHex();
+		return /** @type {string} */ ( this.hTLV );
 	}
 }
 
@@ -1911,7 +1915,7 @@ export class Time extends ASN1Object {
  */
 export class AlgorithmIdentifier extends ASN1Object {
 	/**
-	 * @param {Object=} params dictionary of parameters (ex. {'name': 'SHA1withRSA'})
+	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'name': 'SHA1withRSA'})
 	 */
 	constructor(params) {
 		super();
@@ -1962,7 +1966,7 @@ export class AlgorithmIdentifier extends ASN1Object {
 
 		let o = new DERSequence({ 'array': a });
 		this.hTLV = o.getEncodedHex();
-		return this.hTLV;
+		return /** @type {string} */ ( this.hTLV );
 	}
 }
 
@@ -2016,7 +2020,7 @@ const pTag = { 'rfc822': '81', 'dns': '82', 'dn': 'a4', 'uri': '86', 'ip': '87' 
  */
 export class GeneralName extends ASN1Object {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object<string,*>=} params 
 	 */
 	constructor(params) {
 		super();
@@ -2032,7 +2036,7 @@ export class GeneralName extends ASN1Object {
 	}
 
 	/**
-	 * @param {Object} params 
+	 * @param {Object<string,*>} params 
 	 */
 	setByParam(params) {
 		/** @type {ASN1Object | null} */ let v = null;
@@ -2070,10 +2074,10 @@ export class GeneralName extends ASN1Object {
 			this.type = 'dn';
 			this.explicit = true;
 			let certStr = params['certissuer'];
-			let certHex = null;
+			/** @type {string | null} */ let certHex = null;
 
 			if (certStr.match(/^[0-9A-Fa-f]+$/)) {
-				certHex == certStr;
+				certHex = certStr;
 			}
 
 			if (certStr.indexOf("-----BEGIN ") != -1) {
@@ -2092,9 +2096,9 @@ export class GeneralName extends ASN1Object {
 			this.type = 'dn';
 			this.explicit = true;
 			let certStr = params['certsubj'];
-			let certHex = null;
+			/** @type {string | null} */ let certHex = null;
 			if (certStr.match(/^[0-9A-Fa-f]+$/)) {
-				certHex == certStr;
+				certHex = certStr;
 			}
 			if (certStr.indexOf("-----BEGIN ") != -1) {
 				certHex = pemtohex(certStr);
@@ -2155,7 +2159,7 @@ export class GeneralName extends ASN1Object {
  */
 export class GeneralNames extends ASN1Object {
 	/**
-	 * @param {Array<Object>=} paramsArray 
+	 * @param {Array<Object<string,*>>=} paramsArray 
 	 */
 	constructor(paramsArray) {
 		super();
@@ -2169,7 +2173,7 @@ export class GeneralNames extends ASN1Object {
 
     /**
      * set a array of {@link GeneralName} parameters<br/>
-     * @param {Array} paramsArray Array of {@link GeneralNames}
+     * @param {Array<Object<string,*>>} paramsArray Array of {@link GeneralNames}
      * @description
      * <br/>
      * <h4>EXAMPLES</h4>
@@ -2221,7 +2225,7 @@ export class GeneralNames extends ASN1Object {
  */
 export class DistributionPointName extends ASN1Object {
 	/**
-	 * @param {Object=} gnOrRdn 
+	 * @param {Object<string,*>=} gnOrRdn 
 	 */
 	constructor(gnOrRdn) {
 		super();
@@ -2255,7 +2259,7 @@ export class DistributionPointName extends ASN1Object {
 			'obj': this.asn1V
 		});
 		this.hTLV = this.asn1Obj.getEncodedHex();
-		return this.hTLV;
+		return /** @type {string} */ ( this.hTLV );
 	}
 }
 
@@ -2286,7 +2290,7 @@ export class DistributionPointName extends ASN1Object {
  */
 export class DistributionPoint extends ASN1Object {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object<string,*>=} params 
 	 */
 	constructor(params) {
 		super();
@@ -2315,7 +2319,7 @@ export class DistributionPoint extends ASN1Object {
 			seq.appendASN1Object(o1);
 		}
 		this.hTLV = seq.getEncodedHex();
-		return this.hTLV;
+		return /** @type {string} */ ( this.hTLV );
 	}
 }
 
