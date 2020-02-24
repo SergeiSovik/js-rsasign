@@ -16,7 +16,7 @@
 import { BigInteger } from "./../../js-bn/modules/jsbn.js"
 import { hextopem, utf8tohex, stohex } from "./base64x-1.1.js"
 import { name2oid } from "./asn1oid.js"
-import { isDictionary, isList } from "./../../../include/type.js"
+import { isString, isDictionary, isListOfDictionaries } from "./../../../include/type.js"
 
 /** 
  * <p>
@@ -208,16 +208,16 @@ export function newObject(param) {
 	if ((key == "null")) return new DERNull();
 	if ((key == "oid") && (typeof val === 'string' || isDictionary(val))) return new DERObjectIdentifier(/** @type {Object<string,*> | string} */ ( val ));
 	if ((key == "enum") && (typeof val === 'number' || isDictionary(val))) return new DEREnumerated(/** @type {Object<string,*> | number} */ ( val ));
-	if ((key == "utf8str") && (typeof val === 'string' || isDictionary(val))) return new DERUTF8String(/** @type {Object<string,*> | number} */ ( val ));
-	if ((key == "numstr") && (typeof val === 'string' || isDictionary(val))) return new DERNumericString(/** @type {Object<string,*> | number} */ ( val ));
-	if ((key == "prnstr") && (typeof val === 'string' || isDictionary(val))) return new DERPrintableString(/** @type {Object<string,*> | number} */ ( val ));
-	if ((key == "telstr") && (typeof val === 'string' || isDictionary(val))) return new DERTeletexString(/** @type {Object<string,*> | number} */ ( val ));
-	if ((key == "ia5str") && (typeof val === 'string' || isDictionary(val))) return new DERIA5String(/** @type {Object<string,*> | number} */ ( val ));
-	if ((key == "utctime") && (typeof val === 'string' || isDictionary(val))) return new DERUTCTime(/** @type {Object<string,*> | number} */ ( val ));
-	if ((key == "gentime") && (typeof val === 'string' || isDictionary(val))) return new DERGeneralizedTime(/** @type {Object<string,*> | number} */ ( val ));
+	if ((key == "utf8str") && (typeof val === 'string' || isDictionary(val))) return new DERUTF8String(/** @type {Object<string,*> | string} */ ( val ));
+	if ((key == "numstr") && (typeof val === 'string' || isDictionary(val))) return new DERNumericString(/** @type {Object<string,*> | string} */ ( val ));
+	if ((key == "prnstr") && (typeof val === 'string' || isDictionary(val))) return new DERPrintableString(/** @type {Object<string,*> | string} */ ( val ));
+	if ((key == "telstr") && (typeof val === 'string' || isDictionary(val))) return new DERTeletexString(/** @type {Object<string,*> | string} */ ( val ));
+	if ((key == "ia5str") && (typeof val === 'string' || isDictionary(val))) return new DERIA5String(/** @type {Object<string,*> | string} */ ( val ));
+	if ((key == "utctime") && (typeof val === 'string' || isDictionary(val))) return new DERUTCTime(/** @type {Object<string,*> | string} */ ( val ));
+	if ((key == "gentime") && (typeof val === 'string' || isDictionary(val))) return new DERGeneralizedTime(/** @type {Object<string,*> | string} */ ( val ));
 
-	if (key == "seq") && (isList(val)) {
-		let paramList = /** @type {Array<Object>} */ ( param[key] );
+	if ((key == "seq") && isListOfDictionaries(val)) {
+		let paramList = /** @type {Array<Object<string,*>>} */ ( param[key] );
 		/** @type {Array<ASN1Object>} */ let a = [];
 		for (let i = 0; i < paramList.length; i++) {
 			let asn1Obj = newObject(paramList[i]);
@@ -226,8 +226,8 @@ export function newObject(param) {
 		return new DERSequence({ 'array': a });
 	}
 
-	if (key == "set") {
-		let paramList = /** @type {Array<Object>} */ ( param[key] );
+	if ((key == "set") && isListOfDictionaries(val)) {
+		let paramList = /** @type {Array<Object<string,*>>} */ ( param[key] );
 		/** @type {Array<ASN1Object>} */ let a = [];
 		for (let i = 0; i < paramList.length; i++) {
 			let asn1Obj = newObject(paramList[i]);
@@ -238,23 +238,25 @@ export function newObject(param) {
 
 	if (key == "tag") {
 		let tagParam = param[key];
-		if (Object.prototype.toString.call(tagParam) === '[object Array]' &&
-			tagParam.length == 3) {
-			let obj = newObject(/** @type {Object} */ ( tagParam[2] ));
-			return new DERTaggedObject({
-				'tag': tagParam[0],
-				'explicit': tagParam[1],
-				'obj': obj
-			});
+		if (Object.prototype.toString.call(tagParam) === '[object Array]' && tagParam.length == 3) {
+			let aTagParam = /** @type {Array} */ ( tagParam );
+			if (isDictionary(aTagParam[2])) {
+				let obj = newObject(/** @type {Object<string,*>} */ ( aTagParam[2] ));
+				return new DERTaggedObject({
+					'tag': aTagParam[0],
+					'explicit': aTagParam[1],
+					'obj': obj
+				});
+			}
 		} else {
-			/** @dict */ let newParam = {};
+			/** @type {Object<string,*>} */ let newParam = {};
 			if (tagParam['explicit'] !== undefined)
 				newParam['explicit'] = tagParam['explicit'];
 			if (tagParam['tag'] !== undefined)
 				newParam['tag'] = tagParam['tag'];
-			if (tagParam['obj'] === undefined)
+			if (!isDictionary(tagParam['obj']))
 				throw "obj shall be specified for 'tag'.";
-			newParam['obj'] = newObject(/** @type {Object} */ ( tagParam['obj'] ));
+			newParam['obj'] = newObject(/** @type {Object<string,*>} */ ( tagParam['obj'] ));
 			return new DERTaggedObject(newParam);
 		}
 	}
@@ -264,7 +266,7 @@ export function newObject(param) {
 
 /**
  * get encoded hexadecimal string of ASN1Object specifed by JSON parameters
- * @param {Object} param JSON parameter to generate ASN1Object
+ * @param {Object<string,*>} param JSON parameter to generate ASN1Object
  * @return {string} hexadecimal string of ASN1Object
  * @description
  * As for ASN.1 object representation of JSON object,
@@ -1520,14 +1522,14 @@ export class DERTaggedObject extends ASN1Object {
 	constructor(params) {
 		super();
 
-		this.hT = "a0";
+		/** @type {string} */ this.hT = "a0";
 		/** @type {string | null} */ this.hV = '';
 		/** @type {boolean} */ this.isExplicit = true;
 		/** @type {ASN1Object | null} */ this.asn1Object = null;
 
 		if (typeof params != "undefined") {
-			if (typeof params['tag'] != "undefined") {
-				this.hT = String(params['tag']);
+			if (isString(params['tag'])) {
+				this.hT = /** @type {string} */ ( params['tag'] );
 			}
 			if (typeof params['explicit'] != "undefined") {
 				this.isExplicit = params['explicit'] ? true : false;

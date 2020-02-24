@@ -308,7 +308,7 @@ KJUR.jws.JWS.sign = function(alg, spHeader, spPayload, key, pass) {
  * verify JWS signature by specified key or certificate<br/>
  * @static
  * @param {string} sJWS string of JWS signature to verify
- * @param {Object} key string of public key, certificate or key object to verify
+ * @param {Object<string,*>} key string of public key, certificate or key object to verify
  * @param {string} acceptAlgs array of algorithm name strings (OPTION)
  * @return {boolean} true if the signature is valid otherwise false including no signature case or without head and payload
  * @description
@@ -545,7 +545,7 @@ KJUR.jws.JWS.parse = function(sJWS) {
 /**
  * @static
  * @param {string} sJWT string of JSON Web Token(JWT) to verify
- * @param {Object} key string of public key, certificate or key object to verify
+ * @param {Object<string,*>} key string of public key, certificate or key object to verify
  * @param {Array} acceptField associative array of acceptable fields (OPTION)
  * @return {boolean} true if the JWT token is valid otherwise false
  *
@@ -806,7 +806,7 @@ KJUR.jws.JWS.isSafeJSONString = function(s, h, p) {
  * this returns null, otherwise returns JSON object.
  * @static
  * @param {string} s JSON string
- * @return {Object} JSON object or null
+ * @return {Object<string,*> | null} JSON object or null
  */
 KJUR.jws.JWS.readSafeJSONString = function(s) {
     let o = null;
@@ -838,7 +838,7 @@ KJUR.jws.JWS.getEncodedSignatureValueFromJWS = function(sJWS) {
 /**
  * get RFC 7638 JWK thumbprint from JWK object
  * @static
- * @param {Object} o JWK object to be calculated thumbprint
+ * @param {Object<string,*>} o JWK object to be calculated thumbprint
  * @return {string} Base64 URL encoded JWK thumbprint value
  * @description
  * This method calculates JWK thmubprint for specified JWK object

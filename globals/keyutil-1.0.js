@@ -1732,7 +1732,7 @@ export function parseCSRHex(csrHex) {
 /**
  * convert from RSAKeyEx/ECDSA public/private key object to RFC 7517 JSON Web Key(JWK)
  * @param {RSAKeyEx | ECDSA} keyObj RSAKeyEx/ECDSA public/private key object
- * @return {Object} JWK object
+ * @return {Object<string,*>} JWK object
  * @description
  * This static method convert from RSAKeyEx/ECDSA public/private key object 
  * to RFC 7517 JSON Web Key(JWK)

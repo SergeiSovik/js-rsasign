@@ -84,7 +84,7 @@ if (typeof KJUR.asn1.cms == "undefined" || !KJUR.asn1.cms) KJUR.asn1.cms = {};
 
 /**
  * Attribute class for base of CMS attribute
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * <pre>
  * Attributes ::= SET OF Attribute
@@ -126,7 +126,7 @@ YAHOO.lang.extend(KJUR.asn1.cms.Attribute, KJUR.asn1.ASN1Object);
 
 /**
  * class for CMS ContentType attribute
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * <pre>
  * Attribute ::= SEQUENCE {
@@ -157,7 +157,7 @@ YAHOO.lang.extend(KJUR.asn1.cms.ContentType, KJUR.asn1.cms.Attribute);
 
 /**
  * class for CMS MessageDigest attribute
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * <pre>
  * Attribute ::= SEQUENCE {
@@ -198,7 +198,7 @@ YAHOO.lang.extend(KJUR.asn1.cms.MessageDigest, KJUR.asn1.cms.Attribute);
 
 /**
  * class for CMS SigningTime attribute
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * <pre>
  * Attribute ::= SEQUENCE {
@@ -237,7 +237,7 @@ YAHOO.lang.extend(KJUR.asn1.cms.SigningTime, KJUR.asn1.cms.Attribute);
 
 /**
  * class for CMS SigningCertificate attribute
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * <pre>
  * Attribute ::= SEQUENCE {
@@ -299,7 +299,7 @@ YAHOO.lang.extend(KJUR.asn1.cms.SigningCertificate, KJUR.asn1.cms.Attribute);
 
 /**
  * class for CMS SigningCertificateV2 attribute
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * <pre>
  * oid-signingCertificateV2 = 1.2.840.113549.1.9.16.2.47 
@@ -379,7 +379,7 @@ YAHOO.lang.extend(KJUR.asn1.cms.SigningCertificateV2, KJUR.asn1.cms.Attribute);
 
 /**
  * class for IssuerAndSerialNumber ASN.1 structure for CMS
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * <pre>
  * IssuerAndSerialNumber ::= SEQUENCE {
@@ -454,7 +454,7 @@ YAHOO.lang.extend(KJUR.asn1.cms.IssuerAndSerialNumber, KJUR.asn1.ASN1Object);
 
 /**
  * class for Attributes ASN.1 structure for CMS
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * <pre>
  * Attributes ::= SET OF Attribute
@@ -514,7 +514,7 @@ YAHOO.lang.extend(KJUR.asn1.cms.AttributeList, KJUR.asn1.ASN1Object);
 
 /**
  * class for SignerInfo ASN.1 structure of CMS SignedData
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * <pre>
  * SignerInfo ::= SEQUENCE {
@@ -669,7 +669,7 @@ YAHOO.lang.extend(KJUR.asn1.cms.SignerInfo, KJUR.asn1.ASN1Object);
 
 /**
  * class for EncapsulatedContentInfo ASN.1 structure for CMS
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * <pre>
  * EncapsulatedContentInfo ::= SEQUENCE {
@@ -751,7 +751,7 @@ YAHOO.lang.extend(KJUR.asn1.cms.EncapsulatedContentInfo, KJUR.asn1.ASN1Object);
 // - obj
 /**
  * class for ContentInfo ASN.1 structure for CMS
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * <pre>
  * ContentInfo ::= SEQUENCE {
@@ -804,7 +804,7 @@ YAHOO.lang.extend(KJUR.asn1.cms.ContentInfo, KJUR.asn1.ASN1Object);
 
 /**
  * class for SignerInfo ASN.1 structure of CMS SignedData
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  *
  * @description
  * <pre>
@@ -927,7 +927,7 @@ KJUR.asn1.cms.CMSUtil = new function() {
 
 /**
  * generate SignedData object specified by JSON parameters
- * @param {Object} param JSON parameter to generate CMS SignedData
+ * @param {Object<string,*>} param JSON parameter to generate CMS SignedData
  * @return {KJUR.asn1.cms.SignedData} object just generated
  * @description
  * This method provides more easy way to genereate
@@ -1010,8 +1010,8 @@ KJUR.asn1.cms.CMSUtil.newSignedData = function(param) {
 /**
  * verify SignedData specified by JSON parameters
  *
- * @param {Object} param JSON parameter to verify CMS SignedData
- * @return {Object} JSON data as the result of validation
+ * @param {Object<string,*>} param JSON parameter to verify CMS SignedData
+ * @return {Object<string,*>} JSON data as the result of validation
  * @description
  * This method provides validation for CMS SignedData.
  * Following parameters can be applied:
@@ -1150,8 +1150,8 @@ KJUR.asn1.cms.CMSUtil.verifySignedData = function(param) {
      * _findCert
      * 
      * @param hCMS {string} hexadecimal string of CMS signed data
-     * @param result {Object} JSON object of validation result
-     * @param si {Object} JSON object of signerInfo in the result above
+     * @param result {Object<string,*>} JSON object of validation result
+     * @param si {Object<string,*>} JSON object of signerInfo in the result above
      * @param idx {number} index of signerInfo???
      */
     let _findCert = function(hCMS, result, si, idx) {

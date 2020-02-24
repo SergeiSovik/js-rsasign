@@ -395,7 +395,7 @@ export const HASHLENGTH = {
  */
 export class MessageDigest {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object<string,*>=} params 
 	 */
 	constructor(params) {
 		/** @type {Hasher | null} */ this.md = null;
@@ -597,7 +597,7 @@ export class MessageDigest {
  */
 export class Mac {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object<string,*>=} params 
 	 */
 	constructor(params) {
 		/** @type {HMAC | null} */ this.mac = null;
@@ -867,7 +867,7 @@ export class Mac {
  */
 export class Signature {
 	/**
- 	 * @param {Object=} params parameters for constructor
+ 	 * @param {Object<string,*>=} params parameters for constructor
 	 */
 	constructor(params) {
 		this.prvKey = null; // RSAKeyEx/{ECDSA,DSA} object for signing

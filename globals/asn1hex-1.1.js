@@ -394,7 +394,7 @@ function skipLongHex(hex, limitNumOctet) {
 /**
  * get string of simple ASN.1 dump from hexadecimal ASN.1 data<br/>
  * @param {string | ASN1Object} hexOrObj hexadecmal string of ASN.1 data or ASN1Object object
- * @param {Object=} flags associative array of flags for dump (OPTION)
+ * @param {Object<string,*>=} flags associative array of flags for dump (OPTION)
  * @param {number=} idx string index for starting dump (OPTION)
  * @param {string=} indent indent string (OPTION)
  * @return {string} string of simple ASN.1 dump
@@ -467,7 +467,7 @@ export function dump(hexOrObj, flags, idx, indent) {
 	if (flags === undefined) flags = { "ommit_long_octet": 32 };
 	if (idx === undefined) idx = 0;
 	if (indent === undefined) indent = "";
-	let skipLongHexOctets = flags.ommit_long_octet;
+	let skipLongHexOctets = flags['ommit_long_octet'];
 
 	if (hex.substr(idx, 2) == "01") {
 		let v = getV(hex, idx);
@@ -535,13 +535,13 @@ export function dump(hexOrObj, flags, idx, indent) {
 		let s = indent + "SEQUENCE\n";
 		let aIdx = getChildIdx(hex, idx);
 
-		/** @type {Object} */ let flagsTemp = flags;
+		/** @type {Object<string,*>} */ let flagsTemp = flags;
 
 		if ((aIdx.length == 2 || aIdx.length == 3) &&
 			hex.substr(aIdx[0], 2) == "06" &&
 			hex.substr(aIdx[aIdx.length - 1], 2) == "04") { // supposed X.509v3 extension
 			let oidName = oidname(getV(hex, aIdx[0]));
-			let flagsClone = /** @type {Object} */ ( JSON.parse(JSON.stringify(flags)) );
+			let flagsClone = /** @type {Object<string,*>} */ ( JSON.parse(JSON.stringify(flags)) );
 			flagsClone.x509ExtName = oidName;
 			flagsTemp = flagsClone;
 		}
@@ -574,7 +574,7 @@ export function dump(hexOrObj, flags, idx, indent) {
 			if (v.substr(0, 8) == "68747470") { // http
 				v = hextoutf8(v);
 			}
-			if (flags.x509ExtName === "subjectAltName" &&
+			if (flags['x509ExtName'] === "subjectAltName" &&
 				tagNumber == 2) {
 				v = hextoutf8(v);
 			}

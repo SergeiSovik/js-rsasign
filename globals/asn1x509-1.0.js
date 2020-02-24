@@ -103,11 +103,12 @@ export class Certificate extends ASN1Object {
 		/** @type {KeyObject | null} */ this.prvKey = null;
 
 		if (params !== undefined) {
-			if (params['tbscertobj'] !== undefined) {
-				this.asn1TBSCert = params['tbscertobj'];
+			if (params['tbscertobj'] instanceof TBSCertificate) {
+				this.asn1TBSCert = /** @type {TBSCertificate} */ ( params['tbscertobj'] );
 			}
-			if (params['prvkeyobj'] !== undefined) {
-				this.prvKey = params['prvkeyobj'];
+			let key = params['prvkeyobj'];
+			if ((key !== undefined) && (key instanceof RSAKeyEx || key instanceof DSA || key instanceof ECDSA)) {
+				this.prvKey = /** @type {KeyObject} */ ( params['prvkeyobj'] );
 			}
 		}
 	}
@@ -566,8 +567,8 @@ export class BasicConstraints extends X500Extension {
 		/** @type {DERSequence | null} */ this.asn1ExtnValue;
 
 		this.oid = "2.5.29.19";
-		this.cA = false;
-		this.pathLen = -1;
+		/** @type {boolean} */ this.cA = false;
+		/** @type {number} */ this.pathLen = -1;
 
 		if (params !== undefined) {
 			if (params['cA'] !== undefined) {
@@ -723,10 +724,10 @@ export class ExtKeyUsage extends X500Extension {
  * </pre>
  * @example
  * e1 = new AuthorityKeyIdentifier({
- *   critical: true,
- *   kid:    {hex: '89ab'},
- *   issuer: {str: '/C=US/CN=a'},
- *   sn:     {hex: '1234'}
+ *   'critical': true,
+ *   'kid':    {'hex': '89ab'},
+ *   'issuer': {'str': '/C=US/CN=a'},
+ *   'sn':     {'hex': '1234'}
  * });
  */
 export class AuthorityKeyIdentifier extends X500Extension {
@@ -787,7 +788,7 @@ export class AuthorityKeyIdentifier extends X500Extension {
 
     /**
      * set keyIdentifier value by DERInteger parameter
-     * @param {Object} param array of {@link DERInteger} parameter
+     * @param {Object<string,*>} param array of {@link DERInteger} parameter
      * @description
      * NOTE: Automatic keyIdentifier value calculation by an issuer
      * public key will be supported in future version.
@@ -798,7 +799,7 @@ export class AuthorityKeyIdentifier extends X500Extension {
 
     /**
      * set authorityCertIssuer value by X500Name parameter
-     * @param {Object} param array of {@link X500Name} parameter
+     * @param {Object<string,*>} param array of {@link X500Name} parameter
      * @description
      * NOTE: Automatic authorityCertIssuer name setting by an issuer
      * certificate will be supported in future version.
@@ -809,7 +810,7 @@ export class AuthorityKeyIdentifier extends X500Extension {
 
     /**
      * set authorityCertSerialNumber value by DERInteger parameter
-     * @param {Object} param array of {@link DERInteger} parameter
+     * @param {Object<string,*>} param array of {@link DERInteger} parameter
      * @description
      * NOTE: Automatic authorityCertSerialNumber setting by an issuer
      * certificate will be supported in future version.
@@ -2326,7 +2327,7 @@ export class DistributionPoint extends ASN1Object {
 /**
  * issue a certificate in PEM format
  * @name newCertPEM
- * @param {Object} param parameter to issue a certificate
+ * @param {Object<string,*>} param parameter to issue a certificate
  * @description
  * This method can issue a certificate by a simple
  * JSON object.

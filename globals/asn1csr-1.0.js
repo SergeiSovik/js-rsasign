@@ -54,7 +54,7 @@ if (typeof KJUR.asn1.csr == "undefined" || !KJUR.asn1.csr) KJUR.asn1.csr = {};
 
 /**
  * ASN.1 CertificationRequest structure class
- * @param {Object} params dictionary of parameters (ex. {})
+ * @param {Object<string,*>} params dictionary of parameters (ex. {})
  * @description
  * <br/>
  * @example
@@ -154,7 +154,7 @@ YAHOO.lang.extend(KJUR.asn1.csr.CertificationRequest, KJUR.asn1.ASN1Object);
 
 /**
  * ASN.1 CertificationRequestInfo structure class
- * @param {Object} params dictionary of parameters (ex. {})
+ * @param {Object<string,*>} params dictionary of parameters (ex. {})
  * @description
  * <pre>
  * // -- DEFINITION OF ASN.1 SYNTAX --
@@ -208,7 +208,7 @@ KJUR.asn1.csr.CertificationRequestInfo = function(params) {
 
     /**
      * set subject public key info by RSA/ECDSA/DSA key parameter
-     * @param {Object} keyParam public key parameter which passed to {@link getKey} argument
+     * @param {string | RSAKeyEx | DSA | ECDSA | Object<string,*>} keyParam public key parameter which passed to {@link getKey} argument
      * @description
      * @example
      * csri.setSubjectPublicKeyByGetKeyParam(certPEMString); // or 
@@ -296,7 +296,7 @@ KJUR.asn1.csr.CSRUtil = new function() {
 
 /**
  * generate a PEM format of CSR/PKCS#10 certificate signing request
- * @param {Object} param parameter to generate CSR
+ * @param {Object<string,*>} param parameter to generate CSR
  * @description
  * This method can generate a CSR certificate signing
  * request by a simple JSON object which has following parameters:
@@ -373,7 +373,7 @@ KJUR.asn1.csr.CSRUtil.newCSRPEM = function(param) {
 /**
  * get field values from CSR/PKCS#10 PEM string<br/>
  * @param {string} sPEM PEM string of CSR/PKCS#10
- * @returns {Object} JSON object with parsed parameters such as name or public key
+ * @returns {Object<string,*>} JSON object with parsed parameters such as name or public key
  * @description
  * This method parses PEM CSR/PKCS#1 string and retrieves
  * subject name and public key. Following parameters are available in the

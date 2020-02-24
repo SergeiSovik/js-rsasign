@@ -63,7 +63,7 @@ KJUR.asn1.ocsp.DEFAULT_HASH = "sha1";
 
 /**
  * ASN.1 CertID class for OCSP<br/>
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * CertID ASN.1 class is defined in 
  * <a href="https://tools.ietf.org/html/rfc6960#section-4.1.1">RFC 6960 4.1.1</a>. 
@@ -190,7 +190,7 @@ YAHOO.lang.extend(KJUR.asn1.ocsp.CertID, KJUR.asn1.ASN1Object);
 
 /**
  * ASN.1 Request class for OCSP<br/>
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * Request ASN.1 class is defined in 
  * <a href="https://tools.ietf.org/html/rfc6960#section-4.1.1">RFC 6960 4.1.1</a>. 
@@ -245,7 +245,7 @@ YAHOO.lang.extend(KJUR.asn1.ocsp.Request, KJUR.asn1.ASN1Object);
 
 /**
  * ASN.1 TBSRequest class for OCSP<br/>
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * TBSRequest ASN.1 class is defined in 
  * <a href="https://tools.ietf.org/html/rfc6960#section-4.1.1">RFC 6960 4.1.1</a>. 
@@ -332,7 +332,7 @@ YAHOO.lang.extend(KJUR.asn1.ocsp.TBSRequest, KJUR.asn1.ASN1Object);
 
 /**
  * ASN.1 OCSPRequest class for OCSP<br/>
- * @param {Object} params dictionary of parameters
+ * @param {Object<string,*>} params dictionary of parameters
  * @description
  * OCSPRequest ASN.1 class is defined in 
  * <a href="https://tools.ietf.org/html/rfc6960#section-4.1.1">RFC 6960 4.1.1</a>. 
@@ -425,7 +425,7 @@ KJUR.asn1.ocsp.OCSPUtil.export function getRequestHex(issuerCert, subjectCert, a
 /**
  * parse OCSPResponse<br/>
  * @param {string} h hexadecimal string of DER OCSPResponse
- * @return {Object} JSON object of parsed OCSPResponse
+ * @return {Object<string,*>} JSON object of parsed OCSPResponse
  * @description
  * This static method parse a hexadecimal string of DER OCSPResponse and
  * returns JSON object of its parsed result.
