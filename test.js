@@ -20,6 +20,6 @@ import { Example as ModuleExample } from "./modules/module.js"
 import { Example as ExternalExample } from "./../../../src/external/example.js"
 import { Example as Example } from "./../js-example/modules/module.js"
 
-platform.console.log('js-template', ModuleExample);
-platform.console.log('js-template', ExternalExample);
-platform.console.log('js-template', Example);
+platform.console.log('js-template/test', ModuleExample);
+platform.console.log('js-template/test', ExternalExample);
+platform.console.log('js-template/test', Example);
