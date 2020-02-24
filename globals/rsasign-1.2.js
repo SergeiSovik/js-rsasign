@@ -1,5 +1,5 @@
 /*
- * rsa-sign.js - adding signing functions to RSAKey class.
+ * rsa-sign.js - adding signing functions to RSAKeyEx class.
  *
  * Original work Copyright (c) 2010-2017 Kenji Urushima (kenji.urushima@gmail.com)
  * Modified work Copyright (c) 2020 Sergio Rando <sergio.rando@yahoo.com>
@@ -52,7 +52,7 @@ function _zeroPaddingOfSignature(hex, bitLength) {
  * @param {string} hashAlg hash algorithm name for signing.<br/>
  * @return returns hexadecimal string of signature value.
  */
-RSAKey.prototype.sign = function(s, hashAlg) {
+RSAKeyEx.prototype.sign = function(s, hashAlg) {
     let hashFunc = function(s) { return hashString(s, hashAlg); };
     let sHashHex = hashFunc(s);
 
@@ -65,7 +65,7 @@ RSAKey.prototype.sign = function(s, hashAlg) {
  * @param {string} hashAlg hash algorithm name for signing.<br/>
  * @return returns hexadecimal string of signature value.
  */
-RSAKey.prototype.signWithMessageHash = function(sHashHex, hashAlg) {
+RSAKeyEx.prototype.signWithMessageHash = function(sHashHex, hashAlg) {
     let hPM = getPaddedDigestInfoHex(sHashHex, hashAlg, this.n.bitLength());
     let biPaddedMessage = parseBigInt(hPM, 16);
     let biSign = this.doPrivate(biPaddedMessage);
@@ -103,7 +103,7 @@ function pss_mgf1_str(seed, len, hash) {
  *        DEFAULT is -1. (NOTE: OpenSSL's default is -2.)
  * @return returns hexadecimal string of signature value.
  */
-RSAKey.prototype.signPSS = function(s, hashAlg, sLen) {
+RSAKeyEx.prototype.signPSS = function(s, hashAlg, sLen) {
     let hashFunc = function(sHex) { return hashHex(sHex, hashAlg); } 
     let hHash = hashFunc(rstrtohex(s));
 
@@ -125,7 +125,7 @@ RSAKey.prototype.signPSS = function(s, hashAlg, sLen) {
  *        DEFAULT is -1. (NOTE: OpenSSL's default is -2.)
  * @return returns hexadecimal string of signature value.
  */
-RSAKey.prototype.signWithMessageHashPSS = function(hHash, hashAlg, sLen) {
+RSAKeyEx.prototype.signWithMessageHashPSS = function(hHash, hashAlg, sLen) {
     let mHash = hextorstr(hHash);
     let hLen = mHash.length;
     let emBits = this.n.bitLength() - 1;
@@ -186,7 +186,7 @@ RSAKey.prototype.signWithMessageHashPSS = function(hHash, hashAlg, sLen) {
 // ========================================================================
 
 function _rsasign_getDecryptSignatureBI(biSig, hN, hE) {
-    let rsa = new RSAKey();
+    let rsa = new RSAKeyEx();
     rsa.setPublic(hN, hE);
     let biDecryptedSig = rsa.doPublic(biSig);
     return biDecryptedSig;
@@ -217,7 +217,7 @@ function _rsasign_getAlgNameAndHashFromHexDisgestInfo(hDigestInfo) {
  *                 non-hexadecimal charactors including new lines will be ignored.
  * @return returns 1 if valid, otherwise 0
  */
-RSAKey.prototype.verify = function(sMsg, hSig) {
+RSAKeyEx.prototype.verify = function(sMsg, hSig) {
     hSig = hSig.replace(_RE_HEXDECONLY, '');
     hSig = hSig.replace(/[ \n]+/g, "");
     let biSig = parseBigInt(hSig, 16);
@@ -241,7 +241,7 @@ RSAKey.prototype.verify = function(sMsg, hSig) {
  *                 non-hexadecimal charactors including new lines will be ignored.
  * @return returns 1 if valid, otherwise 0
  */
-RSAKey.prototype.verifyWithMessageHash = function(sHashHex, hSig) {
+RSAKeyEx.prototype.verifyWithMessageHash = function(sHashHex, hSig) {
     hSig = hSig.replace(_RE_HEXDECONLY, '');
     hSig = hSig.replace(/[ \n]+/g, "");
     let biSig = parseBigInt(hSig, 16);
@@ -271,7 +271,7 @@ RSAKey.prototype.verifyWithMessageHash = function(sHashHex, hSig) {
  *        DEFAULT is -1. (NOTE: OpenSSL's default is -2.)
  * @return returns true if valid, otherwise false
  */
-RSAKey.prototype.verifyPSS = function(sMsg, hSig, hashAlg, sLen) {
+RSAKeyEx.prototype.verifyPSS = function(sMsg, hSig, hashAlg, sLen) {
     let hashFunc = function(sHex) { return hashHex(sHex, hashAlg); };
     let hHash = hashFunc(rstrtohex(sMsg));
 
@@ -294,7 +294,7 @@ RSAKey.prototype.verifyPSS = function(sMsg, hSig, hashAlg, sLen) {
  *        DEFAULT is -1 (NOTE: OpenSSL's default is -2.)
  * @return returns true if valid, otherwise false
  */
-RSAKey.prototype.verifyWithMessageHashPSS = function(hHash, hSig, hashAlg, sLen) {
+RSAKeyEx.prototype.verifyWithMessageHashPSS = function(hHash, hSig, hashAlg, sLen) {
     let biSig = new BigInteger(hSig, 16);
 
     if (biSig.bitLength() > this.n.bitLength()) {
@@ -370,9 +370,9 @@ RSAKey.prototype.verifyWithMessageHashPSS = function(hHash, hSig, hashAlg, sLen)
 				     String.fromCharCode.apply(String, DB.slice(-sLen)))));
 }
 
-RSAKey.SALT_LEN_HLEN = -1;
-RSAKey.SALT_LEN_MAX = -2;
-RSAKey.SALT_LEN_RECOVER = -2;
+RSAKeyEx.SALT_LEN_HLEN = -1;
+RSAKeyEx.SALT_LEN_MAX = -2;
+RSAKeyEx.SALT_LEN_RECOVER = -2;
 
 /** * @description Tom Wu's RSA Key class and extension
  */

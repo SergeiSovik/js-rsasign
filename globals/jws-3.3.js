@@ -14,6 +14,7 @@
 "use strict";
 
 import { hashHex } from "./crypto-1.1.js"
+import { ECDSA } from "./ecdsa-modified-1.0.js"
 
 /**
  * @fileOverview
@@ -226,7 +227,7 @@ KJUR.jws.JWS.sign = function(alg, spHeader, spPayload, key, pass) {
 	_readSafeJSONString = KJUR.jws.JWS.readSafeJSONString,
 	_isSafeJSONString = KJUR.jws.JWS.isSafeJSONString,
 	KJUR.crypto = KJUR.crypto,
-	_ECDSA = KJUR.crypto.ECDSA,
+	ECDSA = ECDSA,
 	_Mac = KJUR.crypto.Mac,
 	_Signature = KJUR.crypto.Signature,
 	_JSON = JSON;
@@ -295,7 +296,7 @@ KJUR.jws.JWS.sign = function(alg, spHeader, spPayload, key, pass) {
 	sig.init(key, pass);
 	sig.updateString(uSignatureInput);
 	hASN1Sig = sig.sign();
-	hSig = KJUR.crypto.ECDSA.asn1SigToConcatSig(hASN1Sig);
+	hSig = ECDSA.asn1SigToConcatSig(hASN1Sig);
     } else if (sigAlg != "none") {
 	let sig = new _Signature({'alg': sigAlg});
 	sig.init(key, pass);
@@ -329,11 +330,11 @@ KJUR.jws.JWS.sign = function(alg, spHeader, spPayload, key, pass) {
  * 'key' shall be hexadecimal string for Hmac{256,384,512} shared secret key.
  * Otherwise it raise an error.</li>
  * <li>In case 'alg' is 'RS*' or 'PS*' in the JWS header,
- * 'key' shall be a RSAKey object or a PEM string of
+ * 'key' shall be a RSAKeyEx object or a PEM string of
  * X.509 RSA public key certificate or PKCS#8 RSA public key.
  * Otherwise it raise an error.</li>
  * <li>In case 'alg' is 'ES*' in the JWS header,
- * 'key' shall be a KJUR.crypto.ECDSA object or a PEM string of
+ * 'key' shall be a ECDSA object or a PEM string of
  * X.509 ECC public key certificate or PKCS#8 ECC public key.
  * Otherwise it raise an error.</li>
  * <li>In case 'alg' is 'none' in the JWS header,
@@ -365,7 +366,7 @@ KJUR.jws.JWS.sign = function(alg, spHeader, spPayload, key, pass) {
  * isValid = KJUR.jws.JWS.verify('eyJh...', '6f62ad', ['HS256']); // implicit hex
  * isValid = KJUR.jws.JWS.verify('eyJh...', '6f62ada', ['HS256']); // implicit raw string
  *
- * // 3) verify a ES256 JWS signature by a KJUR.crypto.ECDSA key object.
+ * // 3) verify a ES256 JWS signature by a ECDSA key object.
  * let pubkey = KEYUTIL.getKey('-----BEGIN CERT...');
  * let isValid = KJUR.jws.JWS.verify('eyJh...', pubkey);
  */
@@ -375,12 +376,12 @@ KJUR.jws.JWS.verify = function(sJWS, key, acceptAlgs) {
 	KJUR.jws.JWS = KJUR.jws.JWS,
 	_readSafeJSONString = KJUR.jws.JWS.readSafeJSONString,
 	KJUR.crypto = KJUR.crypto,
-	_ECDSA = KJUR.crypto.ECDSA,
+	ECDSA = ECDSA,
 	_Mac = KJUR.crypto.Mac,
 	_Signature = KJUR.crypto.Signature,
-	_RSAKey;
+	RSAKeyEx;
     
-    if (typeof RSAKey !== undefined) _RSAKey = RSAKey;
+    if (typeof RSAKeyEx !== undefined) RSAKeyEx = RSAKeyEx;
 
     let a = sJWS.split(".");
     if (a.length !== 3) return false;
@@ -425,16 +426,16 @@ KJUR.jws.JWS.verify = function(sJWS, key, acceptAlgs) {
 	key = KEYUTIL.getKey(key);
     }
 
-    // 3.3. check whether key is RSAKey obj if alg is RS* or PS*.
+    // 3.3. check whether key is RSAKeyEx obj if alg is RS* or PS*.
     if (algType == "RS" || algType == "PS") {
-	if (!(key instanceof _RSAKey)) {
-	    throw "key shall be a RSAKey obj for RS* and PS* algs";
+	if (!(key instanceof RSAKeyEx)) {
+	    throw "key shall be a RSAKeyEx obj for RS* and PS* algs";
 	}
     }
 
     // 3.4. check whether key is ECDSA obj if alg is ES*.
     if (algType == "ES") {
-	if (!(key instanceof _ECDSA)) {
+	if (!(key instanceof ECDSA)) {
 	    throw "key shall be a ECDSA obj for ES* algs";
 	}
     }
@@ -467,7 +468,7 @@ KJUR.jws.JWS.verify = function(sJWS, key, acceptAlgs) {
     } else if (sigAlg.indexOf("withECDSA") != -1) {
 	let hASN1Sig = null;
         try {
-	    hASN1Sig = _ECDSA.concatSigToASN1Sig(hSig);
+	    hASN1Sig = ECDSA.concatSigToASN1Sig(hSig);
 	} catch (ex) {
 	    return false;
 	}

@@ -28,9 +28,9 @@ import { getChildIdx, getV, getVbyList, isASN1HEX, getTLVbyList } from "./asn1he
  * @param {string} sPEMPrivateKey PEM PKCS#1/5 s private key string
  * @return {Array} array of field positions
  * @example
- * RSAKey.getPosArrayOfChildrenFromHex("3082...") &rarr; [8, 32, ...]
+ * RSAKeyEx.getPosArrayOfChildrenFromHex("3082...") &rarr; [8, 32, ...]
  */
-RSAKey.export function getPosArrayOfChildrenFromHex(hPrivateKey) {
+RSAKeyEx.export function getPosArrayOfChildrenFromHex(hPrivateKey) {
 	return getChildIdx(hPrivateKey, 0);
 };
 
@@ -39,10 +39,10 @@ RSAKey.export function getPosArrayOfChildrenFromHex(hPrivateKey) {
  * @param {string} sPEMPrivateKey PEM PKCS#1/5 s private key string
  * @return {Array} array of field hex value
  * @example
- * RSAKey.getHexValueArrayOfChildrenFromHex("3082...") &rarr; ["00", "3b42...", ...]
+ * RSAKeyEx.getHexValueArrayOfChildrenFromHex("3082...") &rarr; ["00", "3b42...", ...]
  */
-RSAKey.export function getHexValueArrayOfChildrenFromHex(hPrivateKey) {
-	let a = RSAKey.getPosArrayOfChildrenFromHex(hPrivateKey);
+RSAKeyEx.export function getHexValueArrayOfChildrenFromHex(hPrivateKey) {
+	let a = RSAKeyEx.getPosArrayOfChildrenFromHex(hPrivateKey);
 	let h_v = getV(hPrivateKey, a[0]);
 	let h_n = getV(hPrivateKey, a[1]);
 	let h_e = getV(hPrivateKey, a[2]);
@@ -61,9 +61,9 @@ RSAKey.export function getHexValueArrayOfChildrenFromHex(hPrivateKey) {
  * read PKCS#1 private key from a string<br/>
  * @param {string} keyPEM string of PKCS#1 private key.
  */
-RSAKey.prototype.export function readPrivateKeyFromPEMString(keyPEM) {
+RSAKeyEx.prototype.export function readPrivateKeyFromPEMString(keyPEM) {
 	let keyHex = pemtohex(keyPEM);
-	let a = RSAKey.getHexValueArrayOfChildrenFromHex(keyHex);
+	let a = RSAKeyEx.getHexValueArrayOfChildrenFromHex(keyHex);
 	this.setPrivateEx(a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]);
 };
 
@@ -71,8 +71,8 @@ RSAKey.prototype.export function readPrivateKeyFromPEMString(keyPEM) {
  * read an ASN.1 hexadecimal string of PKCS#1/5 plain RSA private key<br/>
  * @param {string} h hexadecimal string of PKCS#1/5 plain RSA private key
  */
-RSAKey.prototype.export function readPKCS5PrvKeyHex(h) {
-	let a = RSAKey.getHexValueArrayOfChildrenFromHex(h);
+RSAKeyEx.prototype.export function readPKCS5PrvKeyHex(h) {
+	let a = RSAKeyEx.getHexValueArrayOfChildrenFromHex(h);
 	this.setPrivateEx(a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]);
 };
 
@@ -80,7 +80,7 @@ RSAKey.prototype.export function readPKCS5PrvKeyHex(h) {
  * read an ASN.1 hexadecimal string of PKCS#8 plain RSA private key<br/>
  * @param {string} h hexadecimal string of PKCS#8 plain RSA private key
  */
-RSAKey.prototype.export function readPKCS8PrvKeyHex(h) {
+RSAKeyEx.prototype.export function readPKCS8PrvKeyHex(h) {
 	let hN, hE, hD, hP, hQ, hDP, hDQ, hCO;
 
 	if (isASN1HEX(h) === false)
@@ -106,7 +106,7 @@ RSAKey.prototype.export function readPKCS8PrvKeyHex(h) {
  * read an ASN.1 hexadecimal string of PKCS#5 RSA public key<br/>
  * @param {string} h hexadecimal string of PKCS#5 public key
  */
-RSAKey.prototype.export function readPKCS5PubKeyHex(h) {
+RSAKeyEx.prototype.export function readPKCS5PubKeyHex(h) {
 	if (isASN1HEX(h) === false)
 		throw "keyHex is not ASN.1 hex string";
 	let aIdx = getChildIdx(h, 0);
@@ -123,7 +123,7 @@ RSAKey.prototype.export function readPKCS5PubKeyHex(h) {
  * read an ASN.1 hexadecimal string of PKCS#8 RSA public key<br/>
  * @param {string} h hexadecimal string of PKCS#8 public key
  */
-RSAKey.prototype.export function readPKCS8PubKeyHex(h) {
+RSAKeyEx.prototype.export function readPKCS8PubKeyHex(h) {
 	if (isASN1HEX(h) === false)
 		throw "not ASN.1 hex string";
 
@@ -140,7 +140,7 @@ RSAKey.prototype.export function readPKCS8PubKeyHex(h) {
  * @param {string} h hexadecimal string of X.509 RSA public key certificate
  * @param {number} nthPKI nth index of publicKeyInfo. (DEFAULT: 6 for X509v3)
  */
-RSAKey.prototype.export function readCertPubKeyHex(h, nthPKI) {
+RSAKeyEx.prototype.export function readCertPubKeyHex(h, nthPKI) {
 	let x, hPub;
 	x = new X509();
 	x.readCertHex(h);

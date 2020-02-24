@@ -17,6 +17,8 @@ import { ASN1Object, DERNull, DERBoolean, DERInteger, DERAbstractString, DERBitS
 import { name2obj, atype2obj } from "./asn1oid.js"
 import { KEYUSAGE_NAME, X509 } from "./x509-1.1.js"
 import { hextob64nl, pemtohex } from "./base64x-1.1.js"
+import { DSA } from "./dsa-2.0.js"
+import { ECDSA } from "./ecdsa-modified-1.0.js"
 
 /**
  * ASN.1 module for X.509 certificate
@@ -70,7 +72,7 @@ import { hextob64nl, pemtohex } from "./base64x-1.1.js"
  * following properties:
  * <ul>
  * <li>tbscertobj - specify {@link TBSCertificate} object</li>
- * <li>prvkeyobj - specify {@link RSAKey}, {@link KJUR.crypto.ECDSA} or {@link KJUR.crypto.DSA} object for CA private key to sign the certificate</li>
+ * <li>prvkeyobj - specify {@link RSAKeyEx}, {@link ECDSA} or {@link DSA} object for CA private key to sign the certificate</li>
  * </ul>
  * NOTE1: 'params' can be omitted.<br/>
  * NOTE2: DSA/ECDSA is also supported for CA signging key from asn1x509 1.0.6.
@@ -1010,12 +1012,12 @@ export class IssuerAltName extends X500Extension {
  * following properties:
  * <ul>
  * <li>tbsobj - specify {@link TBSCertList} object to be signed</li>
- * <li>rsaprvkey - specify {@link RSAKey} object CA private key</li>
+ * <li>rsaprvkey - specify {@link RSAKeyEx} object CA private key</li>
  * </ul>
  * NOTE: 'params' can be omitted.
  * <h4>EXAMPLE</h4>
  * @example
- * let prvKey = new RSAKey(); // CA's private key
+ * let prvKey = new RSAKeyEx(); // CA's private key
  * prvKey.readPrivateKeyFromASN1HexString("3080...");
  * let crl = new KJUR.asn1x509.CRL({'tbsobj': tbs, 'prvkeyobj': prvKey});
  * crl.sign(); // issue CRL by CA's private key
@@ -1732,15 +1734,15 @@ export class AttributeTypeAndValue extends ASN1Object {
  * As for argument 'params' for constructor, you can specify one of
  * following properties:
  * <ul>
- * <li>{@link RSAKey} object</li>
- * <li>{@link KJUR.crypto.ECDSA} object</li>
- * <li>{@link KJUR.crypto.DSA} object</li>
+ * <li>{@link RSAKeyEx} object</li>
+ * <li>{@link ECDSA} object</li>
+ * <li>{@link DSA} object</li>
  * </ul>
  * NOTE1: 'params' can be omitted.<br/>
  * NOTE2: DSA/ECDSA key object is also supported since asn1x509 1.0.6.<br/>
  * <h4>EXAMPLE</h4>
  * @example
- * spki = new SubjectPublicKeyInfo(RSAKey_object);
+ * spki = new SubjectPublicKeyInfo(RSAKeyEx_object);
  * spki = new SubjectPublicKeyInfo(KJURcryptoECDSA_object);
  * spki = new SubjectPublicKeyInfo(KJURcryptoDSA_object);
  */
@@ -1782,7 +1784,7 @@ export class SubjectPublicKeyInfo extends ASN1Object {
 	}
 
     /**
-     * @param {Object} {@link RSAKey}, {@link KJUR.crypto.ECDSA} or {@link KJUR.crypto.DSA} object
+     * @param {Object} {@link RSAKeyEx}, {@link ECDSA} or {@link DSA} object
      * @description
      * @example
      * spki = new SubjectPublicKeyInfo();
@@ -1791,7 +1793,7 @@ export class SubjectPublicKeyInfo extends ASN1Object {
      */
 	setPubKey(key) {
 		try {
-			if (key instanceof RSAKey) {
+			if (key instanceof RSAKeyEx) {
 				let asn1RsaPub = newObject({
 					'seq': [{ 'int': { 'bigint': key.n } }, { 'int': { 'int': key.e } }]
 				});
@@ -1802,7 +1804,7 @@ export class SubjectPublicKeyInfo extends ASN1Object {
 		} catch (ex) { };
 
 		try {
-			if (key instanceof KJUR.crypto.ECDSA) {
+			if (key instanceof ECDSA) {
 				let asn1Params = new DERObjectIdentifier({ 'name': key.curveName });
 				this.asn1AlgId =
 					new AlgorithmIdentifier({
@@ -1814,7 +1816,7 @@ export class SubjectPublicKeyInfo extends ASN1Object {
 		} catch (ex) { };
 
 		try {
-			if (key instanceof KJUR.crypto.DSA) {
+			if (key instanceof DSA) {
 				let asn1Params = new newObject({
 					'seq': [{ 'int': { 'bigint': key.p } },
 					{ 'int': { 'bigint': key.q } },

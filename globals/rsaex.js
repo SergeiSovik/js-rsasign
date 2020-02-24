@@ -58,7 +58,7 @@ export function oaep_pad(s, n, hash, hashLen) {
 	if (typeof hash === "string") {
 		algName = MessageDigest.getCanonicalAlgName(hash);
 		hashLen = MessageDigest.getHashLength(algName);
-		export function fnHash(s) {
+		fnHash = function(s) {
 			return hextorstr(hashHex(rstrtohex(s), algName));
 		};
 	}
@@ -140,7 +140,7 @@ export function oaep_unpad(d, n, hash, hashLen) {
 	if (typeof hash === "string") {
 		algName = MessageDigest.getCanonicalAlgName(hash);
 		hashLen = MessageDigest.getHashLength(algName);
-		export function fnHash(s) {
+		fnHash = function(s) {
 			return hextorstr(hashHex(rstrtohex(s), algName));
 		};
 	}

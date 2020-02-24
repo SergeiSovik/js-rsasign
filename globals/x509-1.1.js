@@ -288,8 +288,8 @@ export class X509 {
 	}
 
     /**
-     * get a RSAKey/ECDSA/DSA public key object of subjectPublicKeyInfo field.<br/>
-     * @return {Object} RSAKey/ECDSA/DSA public key object of subjectPublicKeyInfo field
+     * get a RSAKeyEx/ECDSA/DSA public key object of subjectPublicKeyInfo field.<br/>
+     * @return {Object} RSAKeyEx/ECDSA/DSA public key object of subjectPublicKeyInfo field
      * @example
      * x = new X509();
      * x.readCertPEM(sCertPEM);
@@ -1047,7 +1047,7 @@ export function hex2attrTypeValue(hex, idx) {
 /**
  * get RSA/DSA/ECDSA public key object from X.509 certificate hexadecimal string<br/>
  * @param {string} h hexadecimal string of X.509 certificate for RSA/ECDSA/DSA public key
- * @return returns RSAKey/KJUR.crypto.{ECDSA,DSA} object of public key
+ * @return returns RSAKeyEx/KJUR.crypto.{ECDSA,DSA} object of public key
  */
 export function getPublicKeyFromCertHex(h) {
 	let x = new X509();
@@ -1058,7 +1058,7 @@ export function getPublicKeyFromCertHex(h) {
 /**
  * get RSA/DSA/ECDSA public key object from PEM certificate string
  * @param {string} sCertPEM PEM formatted RSA/ECDSA/DSA X.509 certificate
- * @return returns RSAKey/KJUR.crypto.{ECDSA,DSA} object of public key
+ * @return returns RSAKeyEx/KJUR.crypto.{ECDSA,DSA} object of public key
  * @description
  * NOTE: DSA is also supported since x509 1.1.2.
  */

@@ -43,20 +43,13 @@ define EXCLUDES
 	globals/asn1ocsp-1.0.js
 	globals/asn1tsp-1.0.js
 	globals/asn1x509-1.0.js
-	globals/crypto-1.1.js
-	globals/dsa-2.0.js
 	globals/ecdsa-modified-1.0.js
-	globals/ecparam-1.0.js
 	globals/jws-3.3.js
 	globals/jwsjs-2.0.js
-	globals/keyutil-1.0.js
 	globals/nodeutil-1.0.js
 	globals/rsapem-1.1.js
 	globals/rsasign-1.2.js
 	globals/x509-1.1.js
-	globals/ec-patch.js
-	globals/ecdsa-modified-1.0.js
-	globals/rsaex.js
 endef
 
 # Detect Current Dir Name (js-example)

@@ -11,20 +11,35 @@
 "use strict";
 
 import { getVbyList, isASN1HEX, getChildIdx, getV } from "./asn1hex-1.1.js"
+import { BigInteger } from "./../../js-bn/modules/jsbn.js"
+import { ECPointFp } from "./../../js-bn/modules/ec.js"
+import { SecureRandom } from "./../../js-bn/modules/rng.js"
+import { ECParams, getByName } from "./ecparam-1.0.js"
+import { DERInteger, DERSequence } from "./asn1-1.0.js"
+import { isArray } from "./../../../include/type.js"
+
+/** @typedef {{
+	x: string,
+	y: string
+}} XYHex */ var XYHex;
+
+/** @typedef {{
+	ecprvhex: hPrv,
+	ecpubhex: hPub
+}} KeyPairHex */ export var KeyPairHex;
+
+/** @typedef {{
+	r: string,
+	s: string
+}} SigHex */ var SigHex;
+
+/** @typedef {{
+ r: BigInteger,
+ s: BigInteger
+}} Sig */ var Sig;
 
 /**
- * @fileOverview
- * @name ecdsa-modified-1.0.js
- * @author Stefan Thomas (github.com/justmoon) and Kenji Urushima (kenji.urushima@gmail.com)
- * @version jsrsasign 7.2.0 ecdsa-modified 1.1.1 (2017-May-12)
- * @license <a href="https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/LICENSE">MIT License</a>
- */
-
-if (typeof KJUR == "undefined" || !KJUR) KJUR = {};
-if (typeof KJUR.crypto == "undefined" || !KJUR.crypto) KJUR.crypto = {};
-
-/**
- * class for EC key generation,  ECDSA signing and verifcation
+ * class for EC key generation, ECDSA signing and verifcation
  * @description
  * <p>
  * CAUTION: Most of the case, you don't need to use this class except
@@ -41,21 +56,42 @@ if (typeof KJUR.crypto == "undefined" || !KJUR.crypto) KJUR.crypto = {};
  * </ul>
  * </p>
  */
-KJUR.crypto.export function ECDSA(params) {
-	let curveName = "secp256r1";	// curve name default
-	let ecparams = null;
-	let prvKeyHex = null;
-	let pubKeyHex = null;
+export class ECDSA {
+	constructor(params) {
+		/** @type {string} */ this.curveName = "secp256r1";	// curve name default
+		/** @type {ECParams | null} */ this.ecparams = null;
+		/** @type {string | null} */ this.prvKeyHex = null;
+		/** @type {string | null} */ this.pubKeyHex = null;
 
-	let rng = new SecureRandom();
+		this.rng = new SecureRandom();
 
-	let P_OVER_FOUR = null;
+		/** @type {BigInteger | null} */ this.P_OVER_FOUR = null;
 
-	this.type = "EC";
-	this.isPrivate = false;
-	this.isPublic = false;
+		this.type = "EC";
+		this.isPrivate = false;
+		this.isPublic = false;
 
-	function implShamirsTrick(P, k, Q, l) {
+		if (params !== undefined) {
+			if (params['curve'] !== undefined) {
+				this.curveName = String(params['curve']);
+			}
+		}
+		this.setNamedCurve(this.curveName);
+		if (params !== undefined) {
+			if (params['prv'] !== undefined) this.setPrivateKeyHex(params['prv']);
+			if (params['pub'] !== undefined) this.setPublicKeyHex(params['pub']);
+		}
+	}
+
+	/**
+	 * @private
+	 * @param {ECPointFp} P 
+	 * @param {BigInteger} k 
+	 * @param {ECPointFp} Q 
+	 * @param {BigInteger} l 
+	 * @returns {ECPointFp}
+	 */
+	implShamirsTrick(P, k, Q, l) {
 		let m = Math.max(k.bitLength(), l.bitLength());
 		let Z = P.add2D(Q);
 		let R = P.curve.getInfinity();
@@ -63,7 +99,7 @@ KJUR.crypto.export function ECDSA(params) {
 		for (let i = m - 1; i >= 0; --i) {
 			R = R.twice2D();
 
-			R.z = BigInteger.ONE;
+			R.z = BigInteger.ONE();
 
 			if (k.testBit(i)) {
 				if (l.testBit(i)) {
@@ -79,43 +115,51 @@ KJUR.crypto.export function ECDSA(params) {
 		}
 
 		return R;
-	};
+	}
 
-	//===========================
-	// PUBLIC METHODS
-	//===========================
+	/**
+	 * @param {BigInteger} limit 
+	 */
 	getBigRandom(limit) {
 		return new BigInteger(limit.bitLength(), rng)
-			.mod(limit.subtract(BigInteger.ONE))
-			.add(BigInteger.ONE)
-			;
-	};
+			.mod(limit.subtract(BigInteger.ONE()))
+			.add(BigInteger.ONE());
+	}
 
-	this.export function setNamedCurve(curveName) {
-		this.ecparams = KJUR.crypto.ECParameterDB.getByName(curveName);
+	/**
+	 * @param {string} curveName 
+	 */
+	setNamedCurve(curveName) {
+		this.ecparams = getByName(curveName);
 		this.prvKeyHex = null;
 		this.pubKeyHex = null;
 		this.curveName = curveName;
-	};
+	}
 
-	this.export function setPrivateKeyHex(prvKeyHex) {
+	/**
+	 * @param {string} prvKeyHex 
+	 */
+	setPrivateKeyHex(prvKeyHex) {
 		this.isPrivate = true;
 		this.prvKeyHex = prvKeyHex;
-	};
+	}
 
-	this.export function setPublicKeyHex(pubKeyHex) {
+	/**
+	 * @param {string} pubKeyHex 
+	 */
+	setPublicKeyHex(pubKeyHex) {
 		this.isPublic = true;
 		this.pubKeyHex = pubKeyHex;
-	};
+	}
 
     /**
      * get X and Y hexadecimal string value of public key
-     * @return {Array} associative array of x and y value of public key
+     * @return {XYHex} associative array of x and y value of public key
      * @example
-     * ec = new KJUR.crypto.ECDSA({'curve': 'secp256r1', 'pub': pubHex});
+     * ec = new ECDSA({'curve': 'secp256r1', 'pub': pubHex});
      * ec.getPublicKeyXYHex() &rarr; { x: '01bacf...', y: 'c3bc22...' }
      */
-	this.export function getPublicKeyXYHex() {
+	getPublicKeyXYHex() {
 		let h = this.pubKeyHex;
 		if (h.substr(0, 2) !== "04")
 			throw "this method supports uncompressed format(04) only";
@@ -124,20 +168,20 @@ KJUR.crypto.export function ECDSA(params) {
 		if (h.length !== 2 + charlen * 2)
 			throw "malformed public key hex length";
 
-		let result = {};
-		result.x = h.substr(2, charlen);
-		result.y = h.substr(2 + charlen);
-		return result;
-	};
+		return {
+			x: h.substr(2, charlen),
+			y: h.substr(2 + charlen)
+		}
+	}
 
     /**
      * get NIST curve short name such as "P-256" or "P-384"
      * @return {string} short NIST P curve name such as "P-256" or "P-384" if it's NIST P curve otherwise null;
      * @example
-     * ec = new KJUR.crypto.ECDSA({'curve': 'secp256r1', 'pub': pubHex});
+     * ec = new ECDSA({'curve': 'secp256r1', 'pub': pubHex});
      * ec.getShortPCurveName() &rarr; "P-256";
      */
-	this.export function getShortNISTPCurveName() {
+	getShortNISTPCurveName() {
 		let s = this.curveName;
 		if (s === "secp256r1" || s === "NIST P-256" ||
 			s === "P-256" || s === "prime256v1")
@@ -145,25 +189,25 @@ KJUR.crypto.export function ECDSA(params) {
 		if (s === "secp384r1" || s === "NIST P-384" || s === "P-384")
 			return "P-384";
 		return null;
-	};
+	}
 
     /**
      * generate a EC key pair
-     * @return {Array} associative array of hexadecimal string of private and public key
+     * @return {KeyPairHex} associative array of hexadecimal string of private and public key
      * @example
-     * let ec = new KJUR.crypto.ECDSA({'curve': 'secp256r1'});
+     * let ec = new ECDSA({'curve': 'secp256r1'});
      * let keypair = ec.generateKeyPairHex();
      * let pubhex = keypair.ecpubhex; // hexadecimal string of EC public key
      * let prvhex = keypair.ecprvhex; // hexadecimal string of EC private key (=d)
      */
-	this.export function generateKeyPairHex() {
-		let biN = this.ecparams['n'];
+	generateKeyPairHex() {
+		let biN = this.ecparams.n;
 		let biPrv = this.getBigRandom(biN);
-		let epPub = this.ecparams['G'].multiply(biPrv);
+		let epPub = this.ecparams.G.multiply(biPrv);
 		let biX = epPub.getX().toBigInteger();
 		let biY = epPub.getY().toBigInteger();
 
-		let charlen = this.ecparams['keylen'] / 4;
+		let charlen = this.ecparams.keylen / 4;
 		let hPrv = ("0000000000" + biPrv.toString(16)).slice(- charlen);
 		let hX = ("0000000000" + biX.toString(16)).slice(- charlen);
 		let hY = ("0000000000" + biY.toString(16)).slice(- charlen);
@@ -171,12 +215,15 @@ KJUR.crypto.export function ECDSA(params) {
 
 		this.setPrivateKeyHex(hPrv);
 		this.setPublicKeyHex(hPub);
-		return { 'ecprvhex': hPrv, 'ecpubhex': hPub };
-	};
+		return { ecprvhex: hPrv, ecpubhex: hPub };
+	}
 
-	this.export function signWithMessageHash(hashHex) {
+	/**
+	 * @param {string} hashHex 
+	 */
+	signWithMessageHash(hashHex) {
 		return this.signHex(hashHex, this.prvKeyHex);
-	};
+	}
 
     /**
      * signing to message hash
@@ -184,45 +231,58 @@ KJUR.crypto.export function ECDSA(params) {
      * @param {string} privHex hexadecimal string of EC private key
      * @return {string} hexadecimal string of ECDSA signature
      * @example
-     * let ec = new KJUR.crypto.ECDSA({'curve': 'secp256r1'});
+     * let ec = new ECDSA({'curve': 'secp256r1'});
      * let sigValue = ec.signHex(hash, prvKey);
      */
 	signHex(hashHex, privHex) {
 		let d = new BigInteger(privHex, 16);
-		let n = this.ecparams['n'];
+		let n = this.ecparams.n;
 		let e = new BigInteger(hashHex, 16);
 
+		/** @type {BigInteger} */ let r;
+		/** @type {BigInteger} */ let k;
 		do {
-			let k = this.getBigRandom(n);
-			let G = this.ecparams['G'];
+			k = this.getBigRandom(n);
+			let G = this.ecparams.G;
 			let Q = G.multiply(k);
-			let r = Q.getX().toBigInteger().mod(n);
-		} while (r.compareTo(BigInteger.ZERO) <= 0);
+			r = Q.getX().toBigInteger().mod(n);
+		} while (r.compareTo(BigInteger.ZERO()) <= 0);
 
 		let s = k.modInverse(n).multiply(e.add(d.multiply(r))).mod(n);
 
-		return KJUR.crypto.ECDSA.biRSSigToASN1Sig(r, s);
-	};
+		return ECDSA.biRSSigToASN1Sig(r, s);
+	}
 
+	/**
+	 * @param {Array<number>} hash 
+	 * @param {BigInteger} priv 
+	 */
 	sign(hash, priv) {
 		let d = priv;
-		let n = this.ecparams['n'];
-		let e = BigInteger.fromByteArrayUnsigned(hash);
+		let n = this.ecparams.n;
+		let e = new BigInteger(hash, 256); //BigInteger.fromByteArrayUnsigned(hash);
 
+		/** @type {BigInteger} */ let k;
+		/** @type {BigInteger} */ let r;
 		do {
-			let k = this.getBigRandom(n);
-			let G = this.ecparams['G'];
+			k = this.getBigRandom(n);
+			let G = this.ecparams.G;
 			let Q = G.multiply(k);
-			let r = Q.getX().toBigInteger().mod(n);
+			r = Q.getX().toBigInteger().mod(n);
 		} while (r.compareTo(BigInteger.ZERO) <= 0);
 
 		let s = k.modInverse(n).multiply(e.add(d.multiply(r))).mod(n);
 		return this.serializeSig(r, s);
-	};
+	}
 
-	this.export function verifyWithMessageHash(hashHex, sigHex) {
+	/**
+	 * @param {string} hashHex 
+	 * @param {string} sigHex 
+	 * @returns {boolean}
+	 */
+	verifyWithMessageHash(hashHex, sigHex) {
 		return this.verifyHex(hashHex, sigHex, this.pubKeyHex);
-	};
+	}
 
     /**
      * verifying signature with message hash and public key
@@ -231,26 +291,30 @@ KJUR.crypto.export function ECDSA(params) {
      * @param {string} pubkeyHex hexadecimal string of public key
      * @return {boolean} true if the signature is valid, otherwise false
      * @example
-     * let ec = new KJUR.crypto.ECDSA({'curve': 'secp256r1'});
+     * let ec = new ECDSA({'curve': 'secp256r1'});
      * let result = ec.verifyHex(msgHashHex, sigHex, pubkeyHex);
      */
-	this.export function verifyHex(hashHex, sigHex, pubkeyHex) {
+	verifyHex(hashHex, sigHex, pubkeyHex) {
 		let r, s;
 
-		let obj = KJUR.crypto.ECDSA.parseSigHex(sigHex);
+		let obj = ECDSA.parseSigHex(sigHex);
 		r = obj.r;
 		s = obj.s;
 
-		let Q;
-		Q = ECPointFp.decodeFromHex(this.ecparams['curve'], pubkeyHex);
+		let Q = ECPointFp.decodeFromHex(this.ecparams['curve'], pubkeyHex);
 		let e = new BigInteger(hashHex, 16);
 
 		return this.verifyRaw(e, r, s, Q);
-	};
+	}
 
+	/**
+	 * @param {Array<number>} hash 
+	 * @param {Sig | Array<number>} sig 
+	 * @param {ECPointFp | Array<number>} pubkey 
+	 */
 	verify(hash, sig, pubkey) {
 		let r, s;
-		if (Bitcoin.Util.isArray(sig)) {
+		if (isArray(sig)) {
 			let obj = this.parseSig(sig);
 			r = obj.r;
 			s = obj.s;
@@ -274,6 +338,13 @@ KJUR.crypto.export function ECDSA(params) {
 		return this.verifyRaw(e, r, s, Q);
 	};
 
+	/**
+	 * @param {BigInteger} e 
+	 * @param {BigInteger} r 
+	 * @param {BigInteger} s 
+	 * @param {ECPointFp} Q 
+	 * @returns {boolean}
+	 */
 	verifyRaw(e, r, s, Q) {
 		let n = this.ecparams['n'];
 		let G = this.ecparams['G'];
@@ -334,6 +405,9 @@ KJUR.crypto.export function ECDSA(params) {
      *   r: BigInteger,
      *   s: BigInteger
      * }
+	 * 
+	 * @param {Array<number>} sig
+	 * @returns {Sig}
      */
 	parseSig(sig) {
 		let cursor;
@@ -355,11 +429,11 @@ KJUR.crypto.export function ECDSA(params) {
 		//if (cursor != sig.length)
 		//  throw new Error("Extra bytes in signature");
 
-		let r = BigInteger.fromByteArrayUnsigned(rBa);
-		let s = BigInteger.fromByteArrayUnsigned(sBa);
+		let r = new BigInteger(rBa, 256); //BigInteger.fromByteArrayUnsigned(rBa);
+		let s = new BigInteger(sBa, 256); //BigInteger.fromByteArrayUnsigned(sBa);
 
 		return { r: r, s: s };
-	};
+	}
 
 	parseSigCompact(sig) {
 		if (sig.length !== 65) {
@@ -384,8 +458,8 @@ KJUR.crypto.export function ECDSA(params) {
      * read an ASN.1 hexadecimal string of PKCS#1/5 plain ECC private key<br/>
      * @param {string} h hexadecimal string of PKCS#1/5 ECC private key
      */
-	this.export function readPKCS5PrvKeyHex(h) {
-		let _getName = KJUR.crypto.ECDSA.getName;
+	readPKCS5PrvKeyHex(h) {
+		let _getName = ECDSA.getName;
 
 		if (isASN1HEX(h) === false)
 			throw "not ASN.1 hex string";
@@ -414,8 +488,8 @@ KJUR.crypto.export function ECDSA(params) {
      * read an ASN.1 hexadecimal string of PKCS#8 plain ECC private key<br/>
      * @param {string} h hexadecimal string of PKCS#8 ECC private key
      */
-	this.export function readPKCS8PrvKeyHex(h) {
-		let _getName = KJUR.crypto.ECDSA.getName;
+	readPKCS8PrvKeyHex(h) {
+		let _getName = ECDSA.getName;
 
 		if (isASN1HEX(h) === false)
 			throw "not ASN.1 hex string";
@@ -445,8 +519,8 @@ KJUR.crypto.export function ECDSA(params) {
      * read an ASN.1 hexadecimal string of PKCS#8 ECC public key<br/>
      * @param {string} h hexadecimal string of PKCS#8 ECC public key
      */
-	this.export function readPKCS8PubKeyHex(h) {
-		let _getName = KJUR.crypto.ECDSA.getName;
+	readPKCS8PubKeyHex(h) {
+		let _getName = ECDSA.getName;
 
 		if (isASN1HEX(h) === false)
 			throw "not ASN.1 hex string";
@@ -472,9 +546,9 @@ KJUR.crypto.export function ECDSA(params) {
      * @param {string} h hexadecimal string of X.509 ECC public key certificate
      * @param {number} nthPKI nth index of publicKeyInfo. (DEFAULT: 6 for X509v3)
      */
-	this.export function readCertPubKeyHex(h, nthPKI) {
+	readCertPubKeyHex(h, nthPKI) {
 		if (nthPKI !== 5) nthPKI = 6;
-		let _getName = KJUR.crypto.ECDSA.getName;
+		let _getName = ECDSA.getName;
 
 		if (isASN1HEX(h) === false)
 			throw "not ASN.1 hex string";
@@ -589,176 +663,155 @@ KJUR.crypto.export function ECDSA(params) {
     }
     */
 
-	if (params !== undefined) {
-		if (params['curve'] !== undefined) {
-			this.curveName = params['curve'];
-		}
+	/**
+	 * parse ASN.1 DER encoded ECDSA signature
+	 * @param {string} sigHex hexadecimal string of ECDSA signature value
+	 * @return {Sig} associative array of signature field r and s of BigInteger
+	 * @example
+	 * let ec = new ECDSA({'curve': 'secp256r1'});
+	 * let sig = ec.parseSigHex('30...');
+	 * let biR = sig.r; // BigInteger object for 'r' field of signature.
+	 * let biS = sig.s; // BigInteger object for 's' field of signature.
+	 */
+	static parseSigHex(sigHex) {
+		let p = ECDSA.parseSigHexInHexRS(sigHex);
+		let biR = new BigInteger(p.r, 16);
+		let biS = new BigInteger(p.s, 16);
+
+		return { r: biR, s: biS };
 	}
-	if (this.curveName === undefined) this.curveName = curveName;
-	this.setNamedCurve(this.curveName);
-	if (params !== undefined) {
-		if (params['prv'] !== undefined) this.setPrivateKeyHex(params['prv']);
-		if (params['pub'] !== undefined) this.setPublicKeyHex(params['pub']);
+
+	/**
+	 * parse ASN.1 DER encoded ECDSA signature
+	 * @param {string} sigHex hexadecimal string of ECDSA signature value
+	 * @return {SigHex} associative array of signature field r and s in hexadecimal
+	 * @example
+	 * let ec = new ECDSA({'curve': 'secp256r1'});
+	 * let sig = ec.parseSigHexInHexRS('30...');
+	 * let hR = sig.r; // hexadecimal string for 'r' field of signature.
+	 * let hS = sig.s; // hexadecimal string for 's' field of signature.
+	 */
+	static parseSigHexInHexRS(sigHex) {
+		// 1. ASN.1 Sequence Check
+		if (sigHex.substr(0, 2) != "30")
+			throw "signature is not a ASN.1 sequence";
+
+		// 2. Items of ASN.1 Sequence Check
+		let a = getChildIdx(sigHex, 0);
+		if (a.length != 2)
+			throw "number of signature ASN.1 sequence elements seem wrong";
+
+		// 3. Integer check
+		let iTLV1 = a[0];
+		let iTLV2 = a[1];
+		if (sigHex.substr(iTLV1, 2) != "02")
+			throw "1st item of sequene of signature is not ASN.1 integer";
+		if (sigHex.substr(iTLV2, 2) != "02")
+			throw "2nd item of sequene of signature is not ASN.1 integer";
+
+		// 4. getting value
+		let hR = getV(sigHex, iTLV1);
+		let hS = getV(sigHex, iTLV2);
+
+		return { r: hR, s: hS };
 	}
-};
 
-/**
- * parse ASN.1 DER encoded ECDSA signature
- * @name parseSigHex
- * @static
- * @param {string} sigHex hexadecimal string of ECDSA signature value
- * @return {Array} associative array of signature field r and s of BigInteger
- * @example
- * let ec = new KJUR.crypto.ECDSA({'curve': 'secp256r1'});
- * let sig = ec.parseSigHex('30...');
- * let biR = sig.r; // BigInteger object for 'r' field of signature.
- * let biS = sig.s; // BigInteger object for 's' field of signature.
- */
-KJUR.crypto.ECDSA.export function parseSigHex(sigHex) {
-	let p = KJUR.crypto.ECDSA.parseSigHexInHexRS(sigHex);
-	let biR = new BigInteger(p.r, 16);
-	let biS = new BigInteger(p.s, 16);
+	/**
+	 * convert hexadecimal ASN.1 encoded signature to concatinated signature
+	 * @param {string} asn1SigHex hexadecimal string of ASN.1 encoded ECDSA signature value
+	 * @return {string} r-s concatinated format of ECDSA signature value
+	 */
+	static asn1SigToConcatSig(asn1SigHex) {
+		let pSig = ECDSA.parseSigHexInHexRS(asn1SigHex);
+		let hR = pSig.r;
+		let hS = pSig.s;
 
-	return { 'r': biR, 's': biS };
-};
+		// R and S length is assumed multiple of 128bit(32chars in hex).
+		// If leading is "00" and modulo of length is 2(chars) then
+		// leading "00" is for two's complement and will be removed.
+		if (hR.substr(0, 2) == "00" && (hR.length % 32) == 2)
+			hR = hR.substr(2);
 
-/**
- * parse ASN.1 DER encoded ECDSA signature
- * @static
- * @param {string} sigHex hexadecimal string of ECDSA signature value
- * @return {Array} associative array of signature field r and s in hexadecimal
- * @example
- * let ec = new KJUR.crypto.ECDSA({'curve': 'secp256r1'});
- * let sig = ec.parseSigHexInHexRS('30...');
- * let hR = sig.r; // hexadecimal string for 'r' field of signature.
- * let hS = sig.s; // hexadecimal string for 's' field of signature.
- */
-KJUR.crypto.ECDSA.export function parseSigHexInHexRS(sigHex) {
-	// 1. ASN.1 Sequence Check
-	if (sigHex.substr(0, 2) != "30")
-		throw "signature is not a ASN.1 sequence";
+		if (hS.substr(0, 2) == "00" && (hS.length % 32) == 2)
+			hS = hS.substr(2);
 
-	// 2. Items of ASN.1 Sequence Check
-	let a = getChildIdx(sigHex, 0);
-	if (a.length != 2)
-		throw "number of signature ASN.1 sequence elements seem wrong";
+		// R and S length is assumed multiple of 128bit(32chars in hex).
+		// If missing two chars then it will be padded by "00".
+		if ((hR.length % 32) == 30) hR = "00" + hR;
+		if ((hS.length % 32) == 30) hS = "00" + hS;
 
-	// 3. Integer check
-	let iTLV1 = a[0];
-	let iTLV2 = a[1];
-	if (sigHex.substr(iTLV1, 2) != "02")
-		throw "1st item of sequene of signature is not ASN.1 integer";
-	if (sigHex.substr(iTLV2, 2) != "02")
-		throw "2nd item of sequene of signature is not ASN.1 integer";
+		// If R and S length is not still multiple of 128bit(32 chars),
+		// then error
+		if (hR.length % 32 != 0)
+			throw "unknown ECDSA sig r length error";
+		if (hS.length % 32 != 0)
+			throw "unknown ECDSA sig s length error";
 
-	// 4. getting value
-	let hR = getV(sigHex, iTLV1);
-	let hS = getV(sigHex, iTLV2);
+		return hR + hS;
+	}
 
-	return { 'r': hR, 's': hS };
-};
+	/**
+	 * convert hexadecimal concatinated signature to ASN.1 encoded signature
+	 * @param {string} concatSig r-s concatinated format of ECDSA signature value
+	 * @return {string} hexadecimal string of ASN.1 encoded ECDSA signature value
+	 */
+	static concatSigToASN1Sig(concatSig) {
+		if ((((concatSig.length / 2) * 8) % (16 * 8)) != 0)
+			throw "unknown ECDSA concatinated r-s sig  length error";
 
-/**
- * convert hexadecimal ASN.1 encoded signature to concatinated signature
- * @static
- * @param {string} asn1Hex hexadecimal string of ASN.1 encoded ECDSA signature value
- * @return {string} r-s concatinated format of ECDSA signature value
- */
-KJUR.crypto.ECDSA.export function asn1SigToConcatSig(asn1Sig) {
-	let pSig = KJUR.crypto.ECDSA.parseSigHexInHexRS(asn1Sig);
-	let hR = pSig.r;
-	let hS = pSig.s;
+		let hR = concatSig.substr(0, concatSig.length / 2);
+		let hS = concatSig.substr(concatSig.length / 2);
+		return ECDSA.hexRSSigToASN1Sig(hR, hS);
+	}
 
-	// R and S length is assumed multiple of 128bit(32chars in hex).
-	// If leading is "00" and modulo of length is 2(chars) then
-	// leading "00" is for two's complement and will be removed.
-	if (hR.substr(0, 2) == "00" && (hR.length % 32) == 2)
-		hR = hR.substr(2);
+	/**
+	 * convert hexadecimal R and S value of signature to ASN.1 encoded signature
+	 * @param {string} hR hexadecimal string of R field of ECDSA signature value
+	 * @param {string} hS hexadecimal string of S field of ECDSA signature value
+	 * @return {string} hexadecimal string of ASN.1 encoded ECDSA signature value
+	 */
+	static hexRSSigToASN1Sig(hR, hS) {
+		let biR = new BigInteger(hR, 16);
+		let biS = new BigInteger(hS, 16);
+		return ECDSA.biRSSigToASN1Sig(biR, biS);
+	}
 
-	if (hS.substr(0, 2) == "00" && (hS.length % 32) == 2)
-		hS = hS.substr(2);
+	/**
+	 * convert R and S BigInteger object of signature to ASN.1 encoded signature
+	 * @param {BigInteger} biR BigInteger object of R field of ECDSA signature value
+	 * @param {BigInteger} biS BIgInteger object of S field of ECDSA signature value
+	 * @return {string} hexadecimal string of ASN.1 encoded ECDSA signature value
+	 */
+	static biRSSigToASN1Sig(biR, biS) {
+		let derR = new DERInteger({ 'bigint': biR });
+		let derS = new DERInteger({ 'bigint': biS });
+		let derSeq = new DERSequence({ 'array': [derR, derS] });
+		return derSeq.getEncodedHex();
+	}
 
-	// R and S length is assumed multiple of 128bit(32chars in hex).
-	// If missing two chars then it will be padded by "00".
-	if ((hR.length % 32) == 30) hR = "00" + hR;
-	if ((hS.length % 32) == 30) hS = "00" + hS;
-
-	// If R and S length is not still multiple of 128bit(32 chars),
-	// then error
-	if (hR.length % 32 != 0)
-		throw "unknown ECDSA sig r length error";
-	if (hS.length % 32 != 0)
-		throw "unknown ECDSA sig s length error";
-
-	return hR + hS;
-};
-
-/**
- * convert hexadecimal concatinated signature to ASN.1 encoded signature
- * @static
- * @param {string} concatSig r-s concatinated format of ECDSA signature value
- * @return {string} hexadecimal string of ASN.1 encoded ECDSA signature value
- */
-KJUR.crypto.ECDSA.export function concatSigToASN1Sig(concatSig) {
-	if ((((concatSig.length / 2) * 8) % (16 * 8)) != 0)
-		throw "unknown ECDSA concatinated r-s sig  length error";
-
-	let hR = concatSig.substr(0, concatSig.length / 2);
-	let hS = concatSig.substr(concatSig.length / 2);
-	return KJUR.crypto.ECDSA.hexRSSigToASN1Sig(hR, hS);
-};
-
-/**
- * convert hexadecimal R and S value of signature to ASN.1 encoded signature
- * @static
- * @param {string} hR hexadecimal string of R field of ECDSA signature value
- * @param {string} hS hexadecimal string of S field of ECDSA signature value
- * @return {string} hexadecimal string of ASN.1 encoded ECDSA signature value
- */
-KJUR.crypto.ECDSA.export function hexRSSigToASN1Sig(hR, hS) {
-	let biR = new BigInteger(hR, 16);
-	let biS = new BigInteger(hS, 16);
-	return KJUR.crypto.ECDSA.biRSSigToASN1Sig(biR, biS);
-};
-
-/**
- * convert R and S BigInteger object of signature to ASN.1 encoded signature
- * @static
- * @param {BigInteger} biR BigInteger object of R field of ECDSA signature value
- * @param {BigInteger} biS BIgInteger object of S field of ECDSA signature value
- * @return {string} hexadecimal string of ASN.1 encoded ECDSA signature value
- */
-KJUR.crypto.ECDSA.export function biRSSigToASN1Sig(biR, biS) {
-	let KJUR.asn1 = KJUR.asn1;
-	let derR = new KJUR.asn1.DERInteger({ 'bigint': biR });
-	let derS = new KJUR.asn1.DERInteger({ 'bigint': biS });
-	let derSeq = new KJUR.asn1.DERSequence({ 'array': [derR, derS] });
-	return derSeq.getEncodedHex();
-};
-
-/**
- * static method to get normalized EC curve name from curve name or hexadecimal OID value
- * @static
- * @param {string} s curve name (ex. P-256) or hexadecimal OID value (ex. 2a86...)
- * @return {string} normalized EC curve name (ex. secp256r1) 
- * @description
- * This static method returns normalized EC curve name 
- * which is supported in jsrsasign
- * from curve name or hexadecimal OID value.
- * When curve is not supported in jsrsasign, this method returns null.
- * Normalized name will be "secp*" in jsrsasign.
- * @example
- * KJUR.crypto.ECDSA.getName("2b8104000a") &rarr; "secp256k1"
- * KJUR.crypto.ECDSA.getName("NIST P-256") &rarr; "secp256r1"
- * KJUR.crypto.ECDSA.getName("P-521") &rarr; undefined // not supported
- */
-KJUR.crypto.ECDSA.export function getName(s) {
-	if (s === "2a8648ce3d030107") return "secp256r1"; // 1.2.840.10045.3.1.7
-	if (s === "2b8104000a") return "secp256k1"; // 1.3.132.0.10
-	if (s === "2b81040022") return "secp384r1"; // 1.3.132.0.34
-	if ("|secp256r1|NIST P-256|P-256|prime256v1|".indexOf(s) !== -1) return "secp256r1";
-	if ("|secp256k1|".indexOf(s) !== -1) return "secp256k1";
-	if ("|secp384r1|NIST P-384|P-384|".indexOf(s) !== -1) return "secp384r1";
-	return null;
-};
+	/**
+	 * static method to get normalized EC curve name from curve name or hexadecimal OID value
+	 * @param {string} s curve name (ex. P-256) or hexadecimal OID value (ex. 2a86...)
+	 * @return {string} normalized EC curve name (ex. secp256r1) 
+	 * @description
+	 * This static method returns normalized EC curve name 
+	 * which is supported in jsrsasign
+	 * from curve name or hexadecimal OID value.
+	 * When curve is not supported in jsrsasign, this method returns null.
+	 * Normalized name will be "secp*" in jsrsasign.
+	 * @example
+	 * ECDSA.getName("2b8104000a") &rarr; "secp256k1"
+	 * ECDSA.getName("NIST P-256") &rarr; "secp256r1"
+	 * ECDSA.getName("P-521") &rarr; undefined // not supported
+	 */
+	static getName(s) {
+		if (s === "2a8648ce3d030107") return "secp256r1"; // 1.2.840.10045.3.1.7
+		if (s === "2b8104000a") return "secp256k1"; // 1.3.132.0.10
+		if (s === "2b81040022") return "secp384r1"; // 1.3.132.0.34
+		if ("|secp256r1|NIST P-256|P-256|prime256v1|".indexOf(s) !== -1) return "secp256r1";
+		if ("|secp256k1|".indexOf(s) !== -1) return "secp256k1";
+		if ("|secp384r1|NIST P-384|P-384|".indexOf(s) !== -1) return "secp384r1";
+		return null;
+	}
+}
 

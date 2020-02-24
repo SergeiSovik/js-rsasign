@@ -383,7 +383,7 @@ KJUR.asn1.csr.CSRUtil.newCSRPEM = function(param) {
  * <ul>
  * <li>subject.name - subject name string (ex. /C=US/O=Test)</li>
  * <li>subject.hex - hexadecimal string of X.500 Name of subject</li>
- * <li>pubkey.obj - subject public key object such as RSAKey, KJUR.crypto.{ECDSA,DSA}</li>
+ * <li>pubkey.obj - subject public key object such as RSAKeyEx, KJUR.crypto.{ECDSA,DSA}</li>
  * <li>pubkey.hex - hexadecimal string of subject public key</li>
  * </ul>
  *

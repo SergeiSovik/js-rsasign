@@ -13,6 +13,21 @@
 
 import { DERObjectIdentifier } from "./asn1-1.0.js"
 
+export const oidhex2name = {
+	'2a864886f70d010101': 'rsaEncryption',
+	'2a8648ce3d0201': 'ecPublicKey',
+	'2a8648ce380401': 'dsa',
+	'2a8648ce3d030107': 'secp256r1',
+	'2b8104001f': 'secp192k1',
+	'2b81040021': 'secp224r1',
+	'2b8104000a': 'secp256k1',
+	'2b81040023': 'secp521r1',
+	'2b81040022': 'secp384r1',
+	'2a8648ce380403': 'SHA1withDSA', // 1.2.840.10040.4.3
+	'608648016503040301': 'SHA224withDSA', // 2.16.840.1.101.3.4.3.1
+	'608648016503040302': 'SHA256withDSA', // 2.16.840.1.101.3.4.3.2
+};
+
 /**
  * Short attribute type name and oid (ex. 'C' and '2.5.4.6')
  * @type {Object<string, string>}

@@ -25,6 +25,12 @@ import { Hex } from "./../../js-crypto/modules/enc-hex.js"
 import { rng_get_bytes } from "./../../js-bn/modules/rng.js"
 import { HMAC } from "./../../js-crypto/modules/hmac.js"
 import { WordArray } from "./../../js-crypto/modules/wordarray.js"
+import { BigInteger } from "./../../js-bn/modules/jsbn.js"
+import { DSA } from "./dsa-2.0.js"
+import { BAtohex, rstrtohex, utf8tohex, b64utohex } from "./base64x-1.1.js"
+import { b64tohex } from "./../../js-bn/modules/base64.js"
+import { getKey } from "./keyutil-1.0.js"
+import { ECDSA } from "./ecdsa-modified-1.0.js"
 
 /**
  * Cryptographic algorithm provider library module
@@ -161,7 +167,7 @@ export function getPaddedDigestInfoHex(hHash, alg, keySize) {
  * @return {string} hexadecimal string of hash value
  */
 export function hashString(s, alg) {
-	let md = new KJUR.crypto.MessageDigest({ 'alg': alg });
+	let md = new MessageDigest({ 'alg': alg });
 	return md.digestString(s);
 }
 
@@ -172,7 +178,7 @@ export function hashString(s, alg) {
  * @return {string} hexadecimal string of hash value
  */
 export function hashHex(sHex, alg) {
-	let md = new KJUR.crypto.MessageDigest({ 'alg': alg });
+	let md = new MessageDigest({ 'alg': alg });
 	return md.digestHex(sHex);
 }
 
@@ -182,7 +188,7 @@ export function hashHex(sHex, alg) {
  * @return {string} hexadecimal string of hash value
  */
 export function sha1(s) {
-	let md = new KJUR.crypto.MessageDigest({ 'alg': 'sha1', 'prov': 'cryptojs' });
+	let md = new MessageDigest({ 'alg': 'sha1', 'prov': 'cryptojs' });
 	return md.digestString(s);
 }
 
@@ -192,12 +198,12 @@ export function sha1(s) {
  * @return {string} hexadecimal string of hash value
  */
 export function sha256(s) {
-	let md = new KJUR.crypto.MessageDigest({ 'alg': 'sha256', 'prov': 'cryptojs' });
+	let md = new MessageDigest({ 'alg': 'sha256', 'prov': 'cryptojs' });
 	return md.digestString(s);
 }
 
 export function sha256Hex(s) {
-	let md = new KJUR.crypto.MessageDigest({ 'alg': 'sha256', 'prov': 'cryptojs' });
+	let md = new MessageDigest({ 'alg': 'sha256', 'prov': 'cryptojs' });
 	return md.digestHex(s);
 }
 
@@ -207,12 +213,12 @@ export function sha256Hex(s) {
  * @return {string} hexadecimal string of hash value
  */
 export function sha512(s) {
-	let md = new KJUR.crypto.MessageDigest({ 'alg': 'sha512', 'prov': 'cryptojs' });
+	let md = new MessageDigest({ 'alg': 'sha512', 'prov': 'cryptojs' });
 	return md.digestString(s);
 }
 
 export function sha512Hex(s) {
-	let md = new KJUR.crypto.MessageDigest({ 'alg': 'sha512', 'prov': 'cryptojs' });
+	let md = new MessageDigest({ 'alg': 'sha512', 'prov': 'cryptojs' });
 	return md.digestHex(s);
 }
 
@@ -224,7 +230,7 @@ export function sha512Hex(s) {
  * md5('aaa') &rarr; 47bce5c74f589f4867dbd57e9ca9f808
  */
 export function md5(s) {
-	let md = new KJUR.crypto.MessageDigest({ 'alg': 'md5', 'prov': 'cryptojs' });
+	let md = new MessageDigest({ 'alg': 'md5', 'prov': 'cryptojs' });
 	return md.digestString(s);
 }
 
@@ -236,7 +242,7 @@ export function md5(s) {
  * ripemd160("aaa") &rarr; 08889bd7b151aa174c21f33f59147fa65381edea
  */
 export function ripemd160(s) {
-	let md = new KJUR.crypto.MessageDigest({ 'alg': 'ripemd160', 'prov': 'cryptojs' });
+	let md = new MessageDigest({ 'alg': 'ripemd160', 'prov': 'cryptojs' });
 	return md.digestString(s);
 }
 
@@ -383,7 +389,7 @@ export const HASHLENGTH = {
  */
 export class MessageDigest {
 	/**
-	 * @param {Object<string, string>=} params 
+	 * @param {Object=} params 
 	 */
 	constructor(params) {
 		/** @type {Hasher | null} */ this.md = null;
@@ -431,11 +437,10 @@ export class MessageDigest {
 	 * MessageDigest.getHashLength("sha1") &rarr 20
 	 */
 	static getHashLength(alg) {
-		let MD = KJUR.crypto.MessageDigest
-		let alg2 = MD.getCanonicalAlgName(alg);
-		if (MD.HASHLENGTH[alg2] === undefined)
+		let alg2 = MessageDigest.getCanonicalAlgName(alg);
+		if (HASHLENGTH[alg2] === undefined)
 			throw "not supported algorithm: " + alg;
-		return MD.HASHLENGTH[alg2];
+		return HASHLENGTH[alg2];
 	}
 
 	/**
@@ -585,6 +590,9 @@ export class MessageDigest {
  * let mac = new KJUR.crypto.Mac({alg: "HmacSHA256", "pass": {"b64u": "Mi02_-...a"}});
  */
 export class Mac {
+	/**
+	 * @param {Object=} params 
+	 */
 	constructor(params) {
 		/** @type {HMAC | null} */ this.mac = null;
 		/** @type {WordArray | null} */ this.pass = null;
@@ -853,11 +861,11 @@ export class Mac {
  */
 export class Signature {
 	/**
- 	 * @param {Object<string, string>} params parameters for constructor
+ 	 * @param {Object=} params parameters for constructor
 	 */
 	constructor(params) {
-		this.prvKey = null; // RSAKey/KJUR.crypto.{ECDSA,DSA} object for signing
-		this.pubKey = null; // RSAKey/KJUR.crypto.{ECDSA,DSA} object for verifying
+		this.prvKey = null; // RSAKeyEx/KJUR.crypto.{ECDSA,DSA} object for signing
+		this.pubKey = null; // RSAKeyEx/KJUR.crypto.{ECDSA,DSA} object for verifying
 
 		/** @type {MessageDigest | null} */ this.md = null; // KJUR.crypto.MessageDigest object
 		this.sig = null;
@@ -897,7 +905,7 @@ export class Signature {
 					throw "both prvkeypem and prvkeypas parameters not supported";
 				} else {
 					try {
-						let prvKey = KEYUTIL.getKey(params['prvkeypem']);
+						let prvKey = getKey(params['prvkeypem']);
 						this.init(prvKey);
 					} catch (ex) {
 						throw "fatal error to load pem private key: " + ex;
@@ -955,7 +963,7 @@ export class Signature {
 
     /**
      * Initialize this object for signing or verifying depends on key
-     * @param {Object} key specifying public or private key as plain/encrypted PKCS#5/8 PEM file, certificate PEM or {@link RSAKey}, {@link KJUR.crypto.DSA} or {@link KJUR.crypto.ECDSA} object
+     * @param {Object} key specifying public or private key as plain/encrypted PKCS#5/8 PEM file, certificate PEM or {@link RSAKeyEx}, {@link DSA} or {@link ECDSA} object
      * @param {string} pass (OPTION) passcode for encrypted private key
      * @description
      * This method is very useful initialize method for Signature class since
@@ -968,18 +976,18 @@ export class Signature {
      * <li>PEM formatted PKCS#5 encrypted RSA/DSA private key concluding "BEGIN RSA/DSA PRIVATE KEY" and ",ENCRYPTED"</li>
      * <li>PEM formatted PKCS#8 plain RSA/ECDSA private key concluding "BEGIN PRIVATE KEY"</li>
      * <li>PEM formatted PKCS#5 plain RSA/DSA private key concluding "BEGIN RSA/DSA PRIVATE KEY" without ",ENCRYPTED"</li>
-     * <li>RSAKey object of private key</li>
-     * <li>KJUR.crypto.ECDSA object of private key</li>
-     * <li>KJUR.crypto.DSA object of private key</li>
+     * <li>RSAKeyEx object of private key</li>
+     * <li>ECDSA object of private key</li>
+     * <li>DSA object of private key</li>
      * </ul>
      * <h5>verification</h5>
      * <ul>
      * <li>PEM formatted PKCS#8 RSA/EC/DSA public key concluding "BEGIN PUBLIC KEY"</li>
      * <li>PEM formatted X.509 certificate with RSA/EC/DSA public key concluding
      *     "BEGIN CERTIFICATE", "BEGIN X509 CERTIFICATE" or "BEGIN TRUSTED CERTIFICATE".</li>
-     * <li>RSAKey object of public key</li>
-     * <li>KJUR.crypto.ECDSA object of public key</li>
-     * <li>KJUR.crypto.DSA object of public key</li>
+     * <li>RSAKeyEx object of public key</li>
+     * <li>ECDSA object of public key</li>
+     * <li>DSA object of public key</li>
      * </ul>
      * @example
      * sig.init(sCertPEM)
@@ -991,9 +999,9 @@ export class Signature {
 		let keyObj = null;
 		try {
 			if (pass === undefined) {
-				keyObj = KEYUTIL.getKey(key);
+				keyObj = getKey(key);
 			} else {
-				keyObj = KEYUTIL.getKey(key, pass);
+				keyObj = getKey(key, pass);
 			}
 		} catch (ex) {
 			throw "init failed:" + ex;
@@ -1052,20 +1060,20 @@ export class Signature {
 		this.sHashHex = this.md.digest();
 		if (typeof this.ecprvhex != "undefined" &&
 			typeof this.eccurvename != "undefined") {
-			let ec = new KJUR.crypto.ECDSA({ 'curve': this.eccurvename });
+			let ec = new ECDSA({ 'curve': this.eccurvename });
 			this.hSign = ec.signHex(this.sHashHex, this.ecprvhex);
-		} else if (this.prvKey instanceof RSAKey &&
+		} else if (this.prvKey instanceof RSAKeyEx &&
 			this.pubkeyAlgName === "rsaandmgf1") {
 			this.hSign = this.prvKey.signWithMessageHashPSS(this.sHashHex,
 				this.mdAlgName,
 				this.pssSaltLen);
-		} else if (this.prvKey instanceof RSAKey &&
+		} else if (this.prvKey instanceof RSAKeyEx &&
 			this.pubkeyAlgName === "rsa") {
 			this.hSign = this.prvKey.signWithMessageHash(this.sHashHex,
 				this.mdAlgName);
-		} else if (this.prvKey instanceof KJUR.crypto.ECDSA) {
+		} else if (this.prvKey instanceof ECDSA) {
 			this.hSign = this.prvKey.signWithMessageHash(this.sHashHex);
-		} else if (this.prvKey instanceof KJUR.crypto.DSA) {
+		} else if (this.prvKey instanceof DSA) {
 			this.hSign = this.prvKey.signWithMessageHash(this.sHashHex);
 		} else {
 			throw "Signature: unsupported private key alg: " + this.pubkeyAlgName;
@@ -1120,154 +1128,24 @@ export class Signature {
 		this.sHashHex = this.md.digest();
 		if (typeof this.ecpubhex != "undefined" &&
 			typeof this.eccurvename != "undefined") {
-			let ec = new KJUR.crypto.ECDSA({ curve: this.eccurvename });
+			let ec = new ECDSA({ curve: this.eccurvename });
 			return ec.verifyHex(this.sHashHex, hSigVal, this.ecpubhex);
-		} else if (this.pubKey instanceof RSAKey &&
+		} else if (this.pubKey instanceof RSAKeyEx &&
 			this.pubkeyAlgName === "rsaandmgf1") {
 			return this.pubKey.verifyWithMessageHashPSS(this.sHashHex, hSigVal,
 				this.mdAlgName,
 				this.pssSaltLen);
-		} else if (this.pubKey instanceof RSAKey &&
+		} else if (this.pubKey instanceof RSAKeyEx &&
 			this.pubkeyAlgName === "rsa") {
 			return this.pubKey.verifyWithMessageHash(this.sHashHex, hSigVal);
-		} else if (KJUR.crypto.ECDSA !== undefined &&
-			this.pubKey instanceof KJUR.crypto.ECDSA) {
+		} else if (ECDSA !== undefined &&
+			this.pubKey instanceof ECDSA) {
 			return this.pubKey.verifyWithMessageHash(this.sHashHex, hSigVal);
-		} else if (KJUR.crypto.DSA !== undefined &&
-			this.pubKey instanceof KJUR.crypto.DSA) {
+		} else if (DSA !== undefined &&
+			this.pubKey instanceof DSA) {
 			return this.pubKey.verifyWithMessageHash(this.sHashHex, hSigVal);
 		} else {
 			throw "Signature: unsupported public key alg: " + this.pubkeyAlgName;
 		}
 	}
 }
-
-// ====== Cipher class ============================================================
-/**
- * Cipher class to encrypt and decrypt data<br/> * @param {Array} params parameters for constructor
- * @description
- * Here is supported canonicalized cipher algorithm names and its standard names:
- * <ul>
- * <li>RSA - RSA/ECB/PKCS1Padding (default for RSAKey)</li>
- * <li>RSAOAEP - RSA/ECB/OAEPWithSHA-1AndMGF1Padding</li>
- * <li>RSAOAEP224 - RSA/ECB/OAEPWithSHA-224AndMGF1Padding(*)</li>
- * <li>RSAOAEP256 - RSA/ECB/OAEPWithSHA-256AndMGF1Padding</li>
- * <li>RSAOAEP384 - RSA/ECB/OAEPWithSHA-384AndMGF1Padding(*)</li>
- * <li>RSAOAEP512 - RSA/ECB/OAEPWithSHA-512AndMGF1Padding(*)</li>
- * </ul>
- * NOTE: (*) is not supported in Java JCE.<br/>
- * Currently this class supports only RSA encryption and decryption. 
- * However it is planning to implement also symmetric ciphers near in the future.
- * @example
- */
-KJUR.crypto.export function Cipher(params) {
-};
-
-/**
- * encrypt raw string by specified key and algorithm<br/>
- * @param {string} s input string to encrypt
- * @param {Object} keyObj RSAKey object or hexadecimal string of symmetric cipher key
- * @param {string} algName short/long algorithm name for encryption/decryption 
- * @return {string} hexadecimal encrypted string
- * @description
- * This static method encrypts raw string with specified key and algorithm.
- * @example 
- * KJUR.crypto.Cipher.encrypt("aaa", pubRSAKeyObj) &rarr; "1abc2d..."
- * KJUR.crypto.Cipher.encrypt("aaa", pubRSAKeyObj, "RSAOAEP") &rarr; "23ab02..."
- */
-KJUR.crypto.Cipher.export function encrypt(s, keyObj, algName) {
-	if (keyObj instanceof RSAKey && keyObj.isPublic) {
-		let algName2 = KJUR.crypto.Cipher.getAlgByKeyAndName(keyObj, algName);
-		if (algName2 === "RSA") return keyObj.encrypt(s);
-		if (algName2 === "RSAOAEP") return keyObj.encryptOAEP(s, "sha1");
-
-		let a = algName2.match(/^RSAOAEP(\d+)$/);
-		if (a !== null) return keyObj.encryptOAEP(s, "sha" + a[1]);
-
-		throw "Cipher.encrypt: unsupported algorithm for RSAKey: " + algName;
-	} else {
-		throw "Cipher.encrypt: unsupported key or algorithm";
-	}
-};
-
-/**
- * decrypt encrypted hexadecimal string with specified key and algorithm<br/>
- * @param {string} hex hexadecial string of encrypted message
- * @param {Object} keyObj RSAKey object or hexadecimal string of symmetric cipher key
- * @param {string} algName short/long algorithm name for encryption/decryption
- * @return {string} hexadecimal encrypted string
- * @description
- * This static method decrypts encrypted hexadecimal string with specified key and algorithm.
- * @example 
- * KJUR.crypto.Cipher.decrypt("aaa", prvRSAKeyObj) &rarr; "1abc2d..."
- * KJUR.crypto.Cipher.decrypt("aaa", prvRSAKeyObj, "RSAOAEP) &rarr; "23ab02..."
- */
-KJUR.crypto.Cipher.export function decrypt(hex, keyObj, algName) {
-	if (keyObj instanceof RSAKey && keyObj.isPrivate) {
-		let algName2 = KJUR.crypto.Cipher.getAlgByKeyAndName(keyObj, algName);
-		if (algName2 === "RSA") return keyObj.decrypt(hex);
-		if (algName2 === "RSAOAEP") return keyObj.decryptOAEP(hex, "sha1");
-
-		let a = algName2.match(/^RSAOAEP(\d+)$/);
-		if (a !== null) return keyObj.decryptOAEP(hex, "sha" + a[1]);
-
-		throw "Cipher.decrypt: unsupported algorithm for RSAKey: " + algName;
-	} else {
-		throw "Cipher.decrypt: unsupported key or algorithm";
-	}
-};
-
-/**
- * get canonicalized encrypt/decrypt algorithm name by key and short/long algorithm name<br/>
- * @param {Object} keyObj RSAKey object or hexadecimal string of symmetric cipher key
- * @param {string} algName short/long algorithm name for encryption/decryption
- * @return {string} canonicalized algorithm name for encryption/decryption
- * @description
- * Here is supported canonicalized cipher algorithm names and its standard names:
- * <ul>
- * <li>RSA - RSA/ECB/PKCS1Padding (default for RSAKey)</li>
- * <li>RSAOAEP - RSA/ECB/OAEPWithSHA-1AndMGF1Padding</li>
- * <li>RSAOAEP224 - RSA/ECB/OAEPWithSHA-224AndMGF1Padding(*)</li>
- * <li>RSAOAEP256 - RSA/ECB/OAEPWithSHA-256AndMGF1Padding</li>
- * <li>RSAOAEP384 - RSA/ECB/OAEPWithSHA-384AndMGF1Padding(*)</li>
- * <li>RSAOAEP512 - RSA/ECB/OAEPWithSHA-512AndMGF1Padding(*)</li>
- * </ul>
- * NOTE: (*) is not supported in Java JCE.
- * @example 
- * KJUR.crypto.Cipher.getAlgByKeyAndName(objRSAKey) &rarr; "RSA"
- * KJUR.crypto.Cipher.getAlgByKeyAndName(objRSAKey, "RSAOAEP") &rarr; "RSAOAEP"
- */
-KJUR.crypto.Cipher.export function getAlgByKeyAndName(keyObj, algName) {
-	if (keyObj instanceof RSAKey) {
-		if (":RSA:RSAOAEP:RSAOAEP224:RSAOAEP256:RSAOAEP384:RSAOAEP512:".indexOf(algName) != -1)
-			return algName;
-		if (algName === null || algName === undefined) return "RSA";
-		throw "getAlgByKeyAndName: not supported algorithm name for RSAKey: " + algName;
-	}
-	throw "getAlgByKeyAndName: not supported algorithm name: " + algName;
-}
-
-// ====== Other Utility class =====================================================
-
-/**
- * static object for cryptographic function utilities
- * @property {Array} oidhex2name key value of hexadecimal OID and its name
- *           (ex. '2a8648ce3d030107' and 'secp256r1')
- * @description
- */
-KJUR.crypto.OID = new function () {
-	this.oidhex2name = {
-		'2a864886f70d010101': 'rsaEncryption',
-		'2a8648ce3d0201': 'ecPublicKey',
-		'2a8648ce380401': 'dsa',
-		'2a8648ce3d030107': 'secp256r1',
-		'2b8104001f': 'secp192k1',
-		'2b81040021': 'secp224r1',
-		'2b8104000a': 'secp256k1',
-		'2b81040023': 'secp521r1',
-		'2b81040022': 'secp384r1',
-		'2a8648ce380403': 'SHA1withDSA', // 1.2.840.10040.4.3
-		'608648016503040301': 'SHA224withDSA', // 2.16.840.1.101.3.4.3.1
-		'608648016503040302': 'SHA256withDSA', // 2.16.840.1.101.3.4.3.2
-	};
-};
