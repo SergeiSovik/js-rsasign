@@ -45,8 +45,8 @@ import { ECCurveFp, ECPointFp } from "./../../js-bn/modules/ec.js"
 	G: ECPointFp,
 	n: BigInteger,
 	h: BigInteger,
-	oid: string,
-	info: string
+	oid: (string | undefined),
+	info: (string | undefined)
 }} ECParams */ export var ECParams;
 
 /** @type {Object<string, ECParams>} */ let db = {};
@@ -63,7 +63,7 @@ function hex2bi(hex) {
 /**
  * get curve inforamtion associative array for curve name or alias
  * @param {string} nameOrAlias curve name or alias name
- * @return {Array} associative array of curve parameters
+ * @return {ECParams} associative array of curve parameters
  * @example
  * let param = getByName('prime256v1');
  * let keylen = param['keylen'];
@@ -92,8 +92,8 @@ export function getByName(nameOrAlias) {
  * @param {string} gxHex hexadecimal value of Gx
  * @param {string} gyHex hexadecimal value of Gy
  * @param {Array<string>} aliasList array of string for curve names aliases
- * @param {string} oid Object Identifier for the curve
- * @param {string} info information string for the curve
+ * @param {string=} oid Object Identifier for the curve
+ * @param {string=} info information string for the curve
  */
 function regist(name, keylen, pHex, aHex, bHex, nHex, hHex, gxHex, gyHex, aliasList, oid, info) {
 	let p = hex2bi(pHex);

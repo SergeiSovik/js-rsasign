@@ -45,7 +45,7 @@ import { SecureRandom } from "./../../js-bn/modules/rng.js"
 
 /**
  * PKCS#1 (OAEP) mask generation function
- * @param {string} seed 
+ * @param {Array<number>} seed 
  * @param {number} len 
  * @param {function(string):string} hash
  * @returns {string}
@@ -82,18 +82,18 @@ function oaep_mgf1_arr(seed, len, hash) {
  * oaep_pad("aaa", 128, "sha1");
  */
 export function oaep_pad(s, n, hash, hashLen) {
-	let algName = null;
-
 	/** @type {function(string):string} */ let fnHash;
 
 	if (!hash) hash = "sha1";
 
 	if (typeof hash === "string") {
-		algName = MessageDigest.getCanonicalAlgName(hash);
+		let algName = MessageDigest.getCanonicalAlgName(hash);
 		hashLen = MessageDigest.getHashLength(algName);
 		fnHash = function (s) {
 			return hextorstr(hashHex(rstrtohex(s), algName));
 		};
+	} else {
+		fnHash = hash;
 	}
 
 	if (s.length + 2 * hashLen + 2 > n) {
@@ -150,7 +150,7 @@ function oaep_mgf1_str(seed, len, hash) {
 
 /**
  * Undo PKCS#1 (OAEP) padding and, if valid, return the plaintext
- * @param {BigInteger} d BigInteger object of OAEP padded message
+ * @param {BigInteger} bnd BigInteger object of OAEP padded message
  * @param {number} n byte length of RSA key (i.e. 128 when RSA 1024bit)
  * @param {(string | function(string):string)=} hash JavaScript function to calculate raw hash value from raw string or algorithm name (ex. "SHA1") 
  * @param {number=} hashLen byte length of resulted hash value (i.e. 20 for SHA1)
@@ -163,32 +163,33 @@ function oaep_mgf1_str(seed, len, hash) {
  * bi1 = oaep_pad("aaa", 128);
  * oaep_unpad(bi1, 128) &rarr; "aaa" // SHA-1 by default
  */
-export function oaep_unpad(d, n, hash, hashLen) {
-	let algName = null;
-
+export function oaep_unpad(bnd, n, hash, hashLen) {
 	/** @type {function(string):string} */ let fnHash;
 
 	if (!hash) hash = "sha1";
 
 	if (typeof hash === "string") {
-		algName = MessageDigest.getCanonicalAlgName(hash);
+		let algName = MessageDigest.getCanonicalAlgName(hash);
 		hashLen = MessageDigest.getHashLength(algName);
 		fnHash = function (s) {
 			return hextorstr(hashHex(rstrtohex(s), algName));
 		};
+	} else {
+		fnHash = hash;
+		hashLen |= 0;
 	}
 
-	d = d.toByteArray();
+	let ad = bnd.toByteArray();
 
-	for (let i = 0; i < d.length; i += 1) {
-		d[i] &= 0xff;
+	for (let i = 0; i < ad.length; i += 1) {
+		ad[i] &= 0xff;
 	}
 
-	while (d.length < n) {
-		d.unshift(0);
+	while (ad.length < n) {
+		ad.unshift(0);
 	}
 
-	d = String.fromCharCode.apply(String, d);
+	/** @type {string} */ let d = String.fromCharCode.apply(String, ad);
 
 	if (d.length < 2 * hashLen + 2) {
 		throw "Cipher too short";
@@ -198,7 +199,7 @@ export function oaep_unpad(d, n, hash, hashLen) {
 	let maskedDB = d.substr(hashLen + 1);
 
 	let seedMask = oaep_mgf1_str(maskedDB, hashLen, fnHash);
-	let seed = [];
+	/** @type {Array<number>} */ let seed = [];
 
 	for (let i = 0; i < maskedSeed.length; i += 1) {
 		seed[i] = maskedSeed.charCodeAt(i) ^ seedMask.charCodeAt(i);
@@ -207,13 +208,13 @@ export function oaep_unpad(d, n, hash, hashLen) {
 	let dbMask = oaep_mgf1_str(String.fromCharCode.apply(String, seed),
 		d.length - hashLen, fnHash);
 
-	let DB = [];
+	/** @type {Array<number>} */ let aDB = [];
 
 	for (let i = 0; i < maskedDB.length; i += 1) {
-		DB[i] = maskedDB.charCodeAt(i) ^ dbMask.charCodeAt(i);
+		aDB[i] = maskedDB.charCodeAt(i) ^ dbMask.charCodeAt(i);
 	}
 
-	DB = String.fromCharCode.apply(String, DB);
+	/** @type {string} */ let DB = String.fromCharCode.apply(String, aDB);
 
 	if (DB.substr(0, hashLen) !== fnHash('')) {
 		throw "Hash mismatch";
@@ -231,8 +232,7 @@ export function oaep_unpad(d, n, hash, hashLen) {
 	return DB.substr(first_one + 1);
 }
 
-let RE_HEXDECONLY = new RegExp("");
-RE_HEXDECONLY.compile("[^0-9a-f]", "gi");
+let RE_HEXDECONLY = /[^0-9a-f]/gi
 
 // ========================================================================
 // Signature Generation
@@ -357,8 +357,10 @@ export class RSAKeyEx extends RSAKey {
 		if (N instanceof BigInteger) {
 			this.n = N;
 			this.e = E | 0;
-		} else
+		} else if ((typeof N === 'string') && (typeof E === 'string')) {
 			super.setPublic(N, E);
+		} else
+			throw "Invalid params";
 	}
 
 	/**
@@ -389,9 +391,10 @@ export class RSAKeyEx extends RSAKey {
 			this.n = N;
 			this.e = E | 0;
 			this.d = D;
-		}
-		else
+		} else if ((typeof N === 'string') && (typeof E === 'string') && (typeof D === 'string')) {
 			super.setPrivate(N, E, D);
+		} else
+			throw "Invalid params";
 	}
 
 	/**

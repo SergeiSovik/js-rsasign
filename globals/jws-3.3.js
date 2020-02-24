@@ -13,7 +13,7 @@
 
 "use strict";
 
-import { hashHex } from "./crypto-1.1.js"
+import { hashHex, Mac, Signature } from "./crypto-1.1.js"
 import { ECDSA } from "./ecdsa-modified-1.0.js"
 import { getKey } from "./keyutil-1.0.js"
 
@@ -198,8 +198,8 @@ KJUR.jws.JWS = function() {
  * <dt>NOTE3:
  * From jsrsasign 4.10.0 jws 3.3.0, Way to provide password
  * for HS* algorithm is changed. The 'key' attribute value is
- * passed to {@link KJUR.crypto.Mac.setPassword} so please see
- * {@link KJUR.crypto.Mac.setPassword} for detail.
+ * passed to {@link Mac.setPassword} so please see
+ * {@link Mac.setPassword} for detail.
  * As for backword compatibility, if key is a string, has even length and
  * 0..9, A-F or a-f characters, key string is treated as a hexadecimal
  * otherwise it is treated as a raw string.
@@ -226,12 +226,7 @@ KJUR.jws.JWS.sign = function(alg, spHeader, spPayload, key, pass) {
 	KJUR.jws = KJUR.jws,
 	KJUR.jws.JWS = KJUR.jws.JWS,
 	_readSafeJSONString = KJUR.jws.JWS.readSafeJSONString,
-	_isSafeJSONString = KJUR.jws.JWS.isSafeJSONString,
-	KJUR.crypto = KJUR.crypto,
-	ECDSA = ECDSA,
-	_Mac = KJUR.crypto.Mac,
-	_Signature = KJUR.crypto.Signature,
-	_JSON = JSON;
+	_isSafeJSONString = KJUR.jws.JWS.isSafeJSONString;
 
     let sHeader, pHeader, sPayload;
 
@@ -241,7 +236,7 @@ KJUR.jws.JWS.sign = function(alg, spHeader, spPayload, key, pass) {
 
     if (typeof spHeader == 'object') {
 	pHeader = spHeader;
-	sHeader = _JSON.stringify(pHeader);
+	sHeader = JSON.stringify(pHeader);
     }
 
     if (typeof spHeader == 'string') {
@@ -253,7 +248,7 @@ KJUR.jws.JWS.sign = function(alg, spHeader, spPayload, key, pass) {
     }
 
     sPayload = spPayload;
-    if (typeof spPayload == 'object') sPayload = _JSON.stringify(spPayload);
+    if (typeof spPayload == 'object') sPayload = JSON.stringify(spPayload);
 
     // 2. use alg if defined in sHeader
     if ((alg == '' || alg == null) &&
@@ -265,7 +260,7 @@ KJUR.jws.JWS.sign = function(alg, spHeader, spPayload, key, pass) {
     if ((alg != '' && alg != null) &&
 	pHeader['alg'] === undefined) {
 	pHeader['alg'] = alg;
-	sHeader = _JSON.stringify(pHeader);
+	sHeader = JSON.stringify(pHeader);
     }
 
     // 4. check explicit algorithm doesn't match with JWS header.
@@ -289,17 +284,17 @@ KJUR.jws.JWS.sign = function(alg, spHeader, spPayload, key, pass) {
 	if (key === undefined)
 	    throw "mac key shall be specified for HS* alg";
 	//alert("sigAlg=" + sigAlg);
-	let mac = new _Mac({'alg': sigAlg, 'prov': 'cryptojs', 'pass': key});
+	let mac = new Mac({'alg': sigAlg, 'prov': 'cryptojs', 'pass': key});
 	mac.updateString(uSignatureInput);
 	hSig = mac.doFinal();
     } else if (sigAlg.indexOf("withECDSA") != -1) {
-	let sig = new _Signature({'alg': sigAlg});
+	let sig = new Signature({'alg': sigAlg});
 	sig.init(key, pass);
 	sig.updateString(uSignatureInput);
 	hASN1Sig = sig.sign();
 	hSig = ECDSA.asn1SigToConcatSig(hASN1Sig);
     } else if (sigAlg != "none") {
-	let sig = new _Signature({'alg': sigAlg});
+	let sig = new Signature({'alg': sigAlg});
 	sig.init(key, pass);
 	sig.updateString(uSignatureInput);
 	hSig = sig.sign();
@@ -350,8 +345,8 @@ KJUR.jws.JWS.sign = function(alg, spHeader, spPayload, key, pass) {
  * <p>
  * NOTE2: From jsrsasign 4.9.0 jws 3.2.5, Way to provide password
  * for HS* algorithm is changed. The 'key' attribute value is
- * passed to {@link KJUR.crypto.Mac.setPassword} so please see
- * {@link KJUR.crypto.Mac.setPassword} for detail.
+ * passed to {@link Mac.setPassword} so please see
+ * {@link Mac.setPassword} for detail.
  * As for backword compatibility, if key is a string, has even length and
  * 0..9, A-F or a-f characters, key string is treated as a hexadecimal
  * otherwise it is treated as a raw string.
@@ -378,8 +373,8 @@ KJUR.jws.JWS.verify = function(sJWS, key, acceptAlgs) {
 	_readSafeJSONString = KJUR.jws.JWS.readSafeJSONString,
 	KJUR.crypto = KJUR.crypto,
 	ECDSA = ECDSA,
-	_Mac = KJUR.crypto.Mac,
-	_Signature = KJUR.crypto.Signature,
+	Mac = Mac,
+	Signature = Signature,
 	RSAKeyEx;
     
     if (typeof RSAKeyEx !== undefined) RSAKeyEx = RSAKeyEx;
@@ -461,7 +456,7 @@ KJUR.jws.JWS.verify = function(sJWS, key, acceptAlgs) {
 	if (key === undefined)
 	    throw "hexadecimal key shall be specified for HMAC";
 	//try {
-	    let mac = new _Mac({'alg': sigAlg, 'pass': key});
+	    let mac = new Mac({'alg': sigAlg, 'pass': key});
 	    mac.updateString(uSignatureInput);
 	    hSig2 = mac.doFinal();
 	//} catch(ex) {};
@@ -473,12 +468,12 @@ KJUR.jws.JWS.verify = function(sJWS, key, acceptAlgs) {
 	} catch (ex) {
 	    return false;
 	}
-	let sig = new _Signature({'alg': sigAlg});
+	let sig = new Signature({'alg': sigAlg});
 	sig.init(key)
 	sig.updateString(uSignatureInput);
 	return sig.verify(hASN1Sig);
     } else {
-	let sig = new _Signature({'alg': sigAlg});
+	let sig = new Signature({'alg': sigAlg});
 	sig.init(key)
 	sig.updateString(uSignatureInput);
 	return sig.verify(hSig);

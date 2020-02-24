@@ -31,17 +31,20 @@ import { oidhex2name } from "./asn1oid.js"
 import { ECDSA } from "./ecdsa-modified-1.0.js"
 import { RSAKeyEx } from "./rsaex.js"
 import { getPublicKeyFromCertHex, getPublicKeyFromCertPEM } from "./x509-1.1.js"
-import { pemtohex, hextopem, hextob64u } from "./base64x-1.1.js"
+import { pemtohex, hextopem, hextob64u, b64utohex } from "./base64x-1.1.js"
+import { BigInteger } from "./../../js-bn/modules/jsbn.js"
+
+/** @typedef {RSAKeyEx | DSA | ECDSA} KeyObject */ export var KeyObject
 
 /** * @description 
  * <br/>
- * {@link KEYUTIL} class is an update of former {@link PKCS5PKEY} class.
- * {@link KEYUTIL} class has following features:
+ * {@link keyutil-1.0.js} module is an update of former {@link PKCS5PKEY} class.
+ * {@link keyutil-1.0.js} module has following features:
  * <dl>
  * <dt><b>key loading - {@link getKey}</b>
  * <dd>
  * <ul>
- * <li>supports RSAKeyEx and KJUR.crypto.{ECDSA,DSA} key object</li>
+ * <li>supports RSAKeyEx and ECDSA and DSA key object</li>
  * <li>supports private key and public key</li>
  * <li>supports encrypted and plain private key</li>
  * <li>supports PKCS#1, PKCS#5 and PKCS#8 key</li>
@@ -410,7 +413,7 @@ export function getEncryptedPKCS5PEMFromPrvKeyHex(pemHeadAlg, hPrvKey, passcode,
 		sharedKeyAlgName = "AES-256-CBC";
 	}
 	if (typeof ALGLIST[sharedKeyAlgName] == "undefined")
-		throw "KEYUTIL unsupported algorithm: " + sharedKeyAlgName;
+		throw "Unsupported algorithm: " + sharedKeyAlgName;
 
 	// 2. set ivsaltHex if undefined
 	if (typeof ivsaltHex == "undefined" || ivsaltHex == null) {
@@ -595,7 +598,7 @@ export function getPlainPKCS8HexFromEncryptedPKCS8PEM(pkcs8PEM, passcode) {
 	encrypted.ciphertext = Hex.parse(info.ciphertext);
 	let pbkdf2KeyWS = Hex.parse(pbkdf2KeyHex);
 	let des3IVWS = Hex.parse(info.encryptionSchemeIV);
-	let decWS = CryptoJS.TripleDES.decrypt(encrypted, pbkdf2KeyWS, { iv: des3IVWS });
+	let decWS = TripleDES.decrypt(encrypted, pbkdf2KeyWS, { iv: des3IVWS });
 	let decHex = Hex.stringify(decWS);
 	return decHex;
 }
@@ -604,7 +607,7 @@ export function getPlainPKCS8HexFromEncryptedPKCS8PEM(pkcs8PEM, passcode) {
  * get RSAKeyEx/ECDSA private key object from encrypted PEM PKCS#8 private key
  * @param {string} pkcs8PEM string of PEM formatted PKCS#8 private key
  * @param {string} passcode passcode string to decrypt key
- * @return {RSAKeyEx | DSA | ECDSA} RSAKeyEx or ECDSA private key object
+ * @return {KeyObject} RSAKeyEx or ECDSA private key object
  */
 export function getKeyFromEncryptedPKCS8PEM(pkcs8PEM, passcode) {
 	let prvKeyHex = getPlainPKCS8HexFromEncryptedPKCS8PEM(pkcs8PEM, passcode);
@@ -676,7 +679,7 @@ export function parsePlainPrivatePKCS8Hex(pkcs8PrvHex) {
 /**
  * get RSAKeyEx/ECDSA private key object from PEM plain PEM PKCS#8 private key
  * @param {string} pkcs8PEM string of plain PEM formatted PKCS#8 private key
- * @return {RSAKeyEx | DSA | ECDSA} RSAKeyEx or ECDSA private key object
+ * @return {KeyObject} RSAKeyEx or ECDSA private key object
  */
 export function getKeyFromPlainPrivatePKCS8PEM(prvKeyPEM) {
 	let prvKeyHex = pemtohex(prvKeyPEM, "PRIVATE KEY");
@@ -687,7 +690,7 @@ export function getKeyFromPlainPrivatePKCS8PEM(prvKeyPEM) {
 /**
  * get RSAKeyEx/DSA/ECDSA private key object from HEX plain PEM PKCS#8 private key
  * @param {string} prvKeyHex hexadecimal string of plain PKCS#8 private key
- * @return {RSAKeyEx | DSA | ECDSA} RSAKeyEx or KJUR.crypto.{DSA,ECDSA} private key object
+ * @return {KeyObject} RSAKeyEx or DSA or ECDSA private key object
  */
 export function getKeyFromPlainPrivatePKCS8Hex(prvKeyHex) {
 	let p8 = parsePlainPrivatePKCS8Hex(prvKeyHex);
@@ -712,7 +715,7 @@ export function getKeyFromPlainPrivatePKCS8Hex(prvKeyHex) {
 /**
  * get RSAKeyEx/DSA/ECDSA public key object from hexadecimal string of PKCS#8 public key
  * @param {string} pkcsPub8Hex hexadecimal string of PKCS#8 public key
- * @return {RSAKeyEx | DSA | ECDSA} RSAKeyEx or KJUR.crypto.{ECDSA,DSA} private key object
+ * @return {KeyObject} RSAKeyEx or ECDSA or DSA private key object
  */
 export function getKeyFromPublicPKCS8Hex(h) {
 	let key;
@@ -848,7 +851,7 @@ export function parsePublicPKCS8Hex(pkcs8PubHex) {
  * @param {string | Object} param parameter to get key object. see description in detail.
  * @param {string=} passcode (OPTION) parameter to get key object. see description in detail.
  * @param {string=} hextype (OPTOIN) parameter to get key object. see description in detail.
- * @return {RSAKeyEx | ECDSA | DSA} object {@link RSAKeyEx}, {@link ECDSA} or {@link ECDSA}
+ * @return {KeyObject} object {@link RSAKeyEx}, {@link ECDSA} or {@link ECDSA}
  * @description
  * This method gets private or public key object({@link RSAKeyEx}, {@link DSA} or {@link ECDSA})
  * for RSA, DSA and ECC.
@@ -1074,7 +1077,7 @@ export function getKey(param, passcode, hextype) {
 	if (hextype === "pkcs5prv") {
 		let h = param;
 		let a = getChildIdx(h, 0);
-		/** @type {RSAKeyEx | DSA | ECDSA} */ let key;
+		/** @type {KeyObject} */ let key;
 		if (a.length === 9) {        // RSA (INT x 9)
 			key = new RSAKeyEx();
 			key.readPKCS5PrvKeyHex(h);
@@ -1424,7 +1427,7 @@ function getEencryptedPKCS8Info(plainKeyHex, passcode) {
 
 /**
  * get PEM formatted private or public key file from a RSA/ECDSA/DSA key object
- * @param {RSAKeyEx | ECDSA | DSA | string} keyObjOrHex key object {@link RSAKeyEx}, {@link ECDSA} or {@link DSA} to encode to
+ * @param {KeyObject | string} keyObjOrHex key object {@link RSAKeyEx}, {@link ECDSA} or {@link DSA} to encode to
  * @param {string=} formatType (OPTION) output format type of "PKCS1PRV", "PKCS5PRV" or "PKCS8PRV" for private key
  * @param {string=} passwd (OPTION) password to protect private key
  * @param {string=} encAlg (OPTION) encryption algorithm for PKCS#5. currently supports DES-CBC, DES-EDE3-CBC and AES-{128,192,256}-CBC
@@ -1670,7 +1673,7 @@ export function getPEM(keyObjOrHex, formatType, passwd, encAlg, hexType, ivsaltH
 /**
  * get RSAKeyEx/DSA/ECDSA public key object from PEM formatted PKCS#10 CSR string
  * @param {string} csrPEM PEM formatted PKCS#10 CSR string
- * @return {RSAKeyEx | DSA | ECDSA} RSAKeyEx/DSA/ECDSA public key object
+ * @return {KeyObject} RSAKeyEx/DSA/ECDSA public key object
  */
 export function getKeyFromCSRPEM(csrPEM) {
 	let csrHex = pemtohex(csrPEM, "CERTIFICATE REQUEST");
@@ -1681,7 +1684,7 @@ export function getKeyFromCSRPEM(csrPEM) {
 /**
  * get RSAKeyEx/DSA/ECDSA public key object from hexadecimal string of PKCS#10 CSR
  * @param {string} csrHex hexadecimal string of PKCS#10 CSR
- * @return {RSAKeyEx | DSA | ECDSA} RSAKeyEx/DSA/ECDSA public key object
+ * @return {KeyObject} RSAKeyEx/DSA/ECDSA public key object
  */
 export function getKeyFromCSRHex(csrHex) {
 	let info = parseCSRHex(csrHex);

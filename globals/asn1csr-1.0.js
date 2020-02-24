@@ -17,6 +17,7 @@ import { DERInteger, DERBitString, DERNull, DERObjectIdentifier, DERSequence, DE
 import { AlgorithmIdentifier, X500Name, X500Extension, SubjectPublicKeyInfo } from "./asn1x509-1.0.js"
 import { getTLVbyList } from "./asn1hex-1.1.js"
 import { getKey } from "./keyutil-1.0.js"
+import { Signature } from "./crypto-1.1.js"
 
 /**
  * @fileOverview
@@ -108,7 +109,7 @@ KJUR.asn1.csr.CertificationRequest = function(params) {
 	this.asn1SignatureAlg = 
 	    new AlgorithmIdentifier({'name': sigAlgName});
 
-        sig = new KJUR.crypto.Signature({'alg': sigAlgName});
+        sig = new Signature({'alg': sigAlgName});
         sig.init(this.prvKey);
         sig.updateHex(this.asn1CSRInfo.getEncodedHex());
         this.hexSig = sig.sign();
@@ -181,9 +182,8 @@ KJUR.asn1.csr.CertificationRequestInfo = function(params) {
 	KJUR.asn1.csr = KJUR.asn1.csr,
 	KJUR.asn1.x509 = KJUR.asn1.x509,
 	_X500Name = X500Name,
-	_Extension = X500Extension,
-	_KEYUTIL = KEYUTIL;
-
+	_Extension = X500Extension;
+	
     KJUR.asn1.csr.CertificationRequestInfo.superclass.constructor.call(this);
 
     this._initialize = function() {
@@ -216,7 +216,7 @@ KJUR.asn1.csr.CertificationRequestInfo = function(params) {
      * csir.setSubjectPublicKeyByGetKeyParam(kjurCryptoECDSAKeyObject); // et.al.
      */
     this.setSubjectPublicKeyByGetKey = function(keyParam) {
-        let keyObj = _KEYUTIL.getKey(keyParam);
+        let keyObj = getKey(keyParam);
         this.asn1SubjPKey = 
 	    new SubjectPublicKeyInfo(keyObj);
     };
@@ -345,9 +345,6 @@ KJUR.asn1.csr.CSRUtil = new function() {
  * });
  */
 KJUR.asn1.csr.CSRUtil.newCSRPEM = function(param) {
-    let _KEYUTIL = KEYUTIL,
-	KJUR.asn1.csr = KJUR.asn1.csr;
-
     if (param.subject === undefined) throw "parameter subject undefined";
     if (param.sbjpubkey === undefined) throw "parameter sbjpubkey undefined";
     if (param.sigalg === undefined) throw "parameter sigalg undefined";
@@ -366,7 +363,7 @@ KJUR.asn1.csr.CSRUtil.newCSRPEM = function(param) {
     }
 
     let csr = new KJUR.asn1.csr.CertificationRequest({'csrinfo': csri});
-    let prvKey = _KEYUTIL.getKey(param.sbjprvkey);
+    let prvKey = getKey(param.sbjprvkey);
     csr.sign(param.sigalg, prvKey);
 
     let pem = csr.getPEMString();
@@ -384,7 +381,7 @@ KJUR.asn1.csr.CSRUtil.newCSRPEM = function(param) {
  * <ul>
  * <li>subject.name - subject name string (ex. /C=US/O=Test)</li>
  * <li>subject.hex - hexadecimal string of X.500 Name of subject</li>
- * <li>pubkey.obj - subject public key object such as RSAKeyEx, KJUR.crypto.{ECDSA,DSA}</li>
+ * <li>pubkey.obj - subject public key object such as RSAKeyEx, ECDSA, DSA</li>
  * <li>pubkey.hex - hexadecimal string of subject public key</li>
  * </ul>
  *

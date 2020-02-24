@@ -29,17 +29,18 @@ import { BigInteger } from "./../../js-bn/modules/jsbn.js"
 import { DSA } from "./dsa-2.0.js"
 import { BAtohex, rstrtohex, utf8tohex, b64utohex } from "./base64x-1.1.js"
 import { b64tohex } from "./../../js-bn/modules/base64.js"
-import { getKey } from "./keyutil-1.0.js"
+import { KeyObject, getKey } from "./keyutil-1.0.js"
 import { ECDSA } from "./ecdsa-modified-1.0.js"
+import { RSAKeyEx } from "./rsaex.js"
 
 /**
  * Cryptographic algorithm provider library module
  * <p>
  * This module privides following crytpgrahic classes.
  * <ul>
- * <li>{@link KJUR.crypto.MessageDigest} - Java JCE(cryptograhic extension) style MessageDigest class</li>
- * <li>{@link KJUR.crypto.Signature} - Java JCE(cryptograhic extension) style Signature class</li>
- * <li>{@link KJUR.crypto.Cipher} - class for encrypting and decrypting data</li>
+ * <li>{@link MessageDigest} - Java JCE(cryptograhic extension) style MessageDigest class</li>
+ * <li>{@link Signature} - Java JCE(cryptograhic extension) style Signature class</li>
+ * <li>{@link Cipher} - class for encrypting and decrypting data</li>
  * <li>{@link Util} - cryptographic utility functions and properties</li>
  * </ul>
  * NOTE: Please ignore method summary and document of this namespace. This caused by a bug of jsdoc2.
@@ -374,12 +375,12 @@ export const HASHLENGTH = {
  * </ul>
  * @example
  * // CryptoJS provider sample
- * let md = new KJUR.crypto.MessageDigest({alg: "sha1", prov: "cryptojs"});
+ * let md = new MessageDigest({alg: "sha1", prov: "cryptojs"});
  * md.updateString('aaa')
  * let mdHex = md.digest()
  *
  * // SJCL(Stanford JavaScript Crypto Library) provider sample
- * let md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "sjcl"}); // sjcl supports sha256 only
+ * let md = new MessageDigest({alg: "sha256", prov: "sjcl"}); // sjcl supports sha256 only
  * md.updateString('aaa')
  * let mdHex = md.digest()
  *
@@ -575,19 +576,19 @@ export class MessageDigest {
  * NOTE2: Hmac signature bug was fixed in jsrsasign 4.9.0 by providing CryptoJS
  * bug workaround.
  * <br/>
- * Please see {@link KJUR.crypto.Mac.setPassword}, how to provide password
+ * Please see {@link Mac.setPassword}, how to provide password
  * in various ways in detail.
  * @example
- * let mac = new KJUR.crypto.Mac({alg: "HmacSHA1", "pass": "pass"});
+ * let mac = new Mac({alg: "HmacSHA1", "pass": "pass"});
  * mac.updateString('aaa')
  * let macHex = mac.doFinal()
  *
  * // other password representation 
- * let mac = new KJUR.crypto.Mac({alg: "HmacSHA256", "pass": {"hex":  "6161"}});
- * let mac = new KJUR.crypto.Mac({alg: "HmacSHA256", "pass": {"utf8": "aa"}});
- * let mac = new KJUR.crypto.Mac({alg: "HmacSHA256", "pass": {"rstr": "\x61\x61"}});
- * let mac = new KJUR.crypto.Mac({alg: "HmacSHA256", "pass": {"b64":  "Mi02/+...a=="}});
- * let mac = new KJUR.crypto.Mac({alg: "HmacSHA256", "pass": {"b64u": "Mi02_-...a"}});
+ * let mac = new Mac({alg: "HmacSHA256", "pass": {"hex":  "6161"}});
+ * let mac = new Mac({alg: "HmacSHA256", "pass": {"utf8": "aa"}});
+ * let mac = new Mac({alg: "HmacSHA256", "pass": {"rstr": "\x61\x61"}});
+ * let mac = new Mac({alg: "HmacSHA256", "pass": {"b64":  "Mi02/+...a=="}});
+ * let mac = new Mac({alg: "HmacSHA256", "pass": {"b64u": "Mi02_-...a"}});
  */
 export class Mac {
 	/**
@@ -731,7 +732,7 @@ export class Mac {
      * to avoid ambiguity. For example string  "6161" can mean a string "6161" or 
      * a hexadecimal string of "aa" (i.e. \x61\x61).
      * @example
-     * mac = KJUR.crypto.Mac({'alg': 'hmacsha256'});
+     * mac = Mac({'alg': 'hmacsha256'});
      * // set password by implicit raw string
      * mac.setPassword("\x65\x70\xb9\x0b");
      * mac.setPassword("password");
@@ -767,7 +768,7 @@ export class Mac {
 		}
 
 		if (pass != 'object')
-			throw "KJUR.crypto.Mac unsupported password type: " + pass;
+			throw "Mac unsupported password type: " + pass;
 
 		/** @type {string | null} */ let hPass = null;
 		if (pass['hex'] !== undefined) {
@@ -781,7 +782,7 @@ export class Mac {
 		if (pass['b64u'] !== undefined) hPass = b64utohex(pass['b64u']);
 
 		if (hPass == null)
-			throw "KJUR.crypto.Mac unsupported password type: " + pass;
+			throw "Mac unsupported password type: " + pass;
 
 		this.pass = Hex.parse(hPass);
 	}
@@ -836,25 +837,25 @@ export class Mac {
  * <h4>EXAMPLES</h4>
  * @example
  * // RSA signature generation
- * let sig = new KJUR.crypto.Signature({"alg": "SHA1withRSA"});
+ * let sig = new Signature({"alg": "SHA1withRSA"});
  * sig.init(prvKeyPEM);
  * sig.updateString('aaa');
  * let hSigVal = sig.sign();
  *
  * // DSA signature validation
- * let sig2 = new KJUR.crypto.Signature({"alg": "SHA1withDSA"});
+ * let sig2 = new Signature({"alg": "SHA1withDSA"});
  * sig2.init(certPEM);
  * sig.updateString('aaa');
  * let isValid = sig2.verify(hSigVal);
  * 
  * // ECDSA signing
- * let sig = new KJUR.crypto.Signature({'alg':'SHA1withECDSA'});
+ * let sig = new Signature({'alg':'SHA1withECDSA'});
  * sig.init(prvKeyPEM);
  * sig.updateString('aaa');
  * let sigValueHex = sig.sign();
  *
  * // ECDSA verifying
- * let sig2 = new KJUR.crypto.Signature({'alg':'SHA1withECDSA'});
+ * let sig2 = new Signature({'alg':'SHA1withECDSA'});
  * sig.init(certPEM);
  * sig.updateString('aaa');
  * let isValid = sig.verify(sigValueHex);
@@ -864,19 +865,17 @@ export class Signature {
  	 * @param {Object=} params parameters for constructor
 	 */
 	constructor(params) {
-		this.prvKey = null; // RSAKeyEx/KJUR.crypto.{ECDSA,DSA} object for signing
-		this.pubKey = null; // RSAKeyEx/KJUR.crypto.{ECDSA,DSA} object for verifying
+		this.prvKey = null; // RSAKeyEx/{ECDSA,DSA} object for signing
+		this.pubKey = null; // RSAKeyEx/{ECDSA,DSA} object for verifying
 
-		/** @type {MessageDigest | null} */ this.md = null; // KJUR.crypto.MessageDigest object
-		this.sig = null;
+		/** @type {MessageDigest | null} */ this.md = null; // MessageDigest object
 		/** @type {string | null} */ this.algName = null;
 		/** @type {string | null} */ this.provName = null;
 		/** @type {string | null} */ this.algProvName = null;
 		/** @type {string | null} */ this.mdAlgName = null;
 		/** @type {string | null} */ this.pubkeyAlgName = null;	// rsa,ecdsa,rsaandmgf1(=rsapss)
-		this.state = null;
+		/** @type {string | null} */ this.state = null;
 		this.pssSaltLen = -1;
-		this.initParams = null;
 
 		/** @type {string | null} */ this.sHashHex = null; // hex hash value for hex
 		this.hDigestInfo = null;
@@ -895,7 +894,7 @@ export class Signature {
 				}
 				this.algProvName = this.algName + ":" + this.provName;
 				this.setAlgAndProvider(this.algName, this.provName);
-				this._setAlgNames();
+				this.setAlgNames();
 			}
 	
 			if (params['psssaltlen'] !== undefined) this.pssSaltLen = params['psssaltlen'] | 0;
@@ -916,7 +915,7 @@ export class Signature {
 	}
 
 	/** @private */
-	_setAlgNames() {
+	setAlgNames() {
 		let matchResult = this.algName.match(/^(.+)with(.+)$/);
 		if (matchResult) {
 			this.mdAlgName = matchResult[1].toLowerCase();
@@ -929,7 +928,7 @@ export class Signature {
 	 * @param {string} hex
 	 * @param {number} bitLength
 	 */
-	_zeroPaddingOfSignature(hex, bitLength) {
+	zeroPaddingOfSignature(hex, bitLength) {
 		let s = "";
 		let nZero = bitLength / 4 - hex.length;
 		for (let i = 0; i < nZero; i++) {
@@ -947,7 +946,7 @@ export class Signature {
      * md.setAlgAndProvider('SHA1withRSA', 'cryptojs/jsrsa');
      */
 	setAlgAndProvider(alg, prov) {
-		this._setAlgNames();
+		this.setAlgNames();
 		if (prov != 'cryptojs/jsrsa')
 			throw "provider not supported: " + prov;
 
@@ -963,8 +962,8 @@ export class Signature {
 
     /**
      * Initialize this object for signing or verifying depends on key
-     * @param {Object} key specifying public or private key as plain/encrypted PKCS#5/8 PEM file, certificate PEM or {@link RSAKeyEx}, {@link DSA} or {@link ECDSA} object
-     * @param {string} pass (OPTION) passcode for encrypted private key
+     * @param {KeyObject | string} key specifying public or private key as plain/encrypted PKCS#5/8 PEM file, certificate PEM or {@link RSAKeyEx}, {@link DSA} or {@link ECDSA} object
+     * @param {string=} pass (OPTION) passcode for encrypted private key
      * @description
      * This method is very useful initialize method for Signature class since
      * you just specify key then this method will automatically initialize it
@@ -996,7 +995,7 @@ export class Signature {
 		if (this.md === null)
 			throw "init(key, pass) not supported for this alg:prov=" + this.algProvName;
 
-		let keyObj = null;
+		/** @type {KeyObject | null} */ let keyObj = null;
 		try {
 			if (pass === undefined) {
 				keyObj = getKey(key);

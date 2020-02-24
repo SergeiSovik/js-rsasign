@@ -24,8 +24,8 @@ import { isArray } from "./../../../include/type.js"
 }} XYHex */ var XYHex;
 
 /** @typedef {{
-	ecprvhex: hPrv,
-	ecpubhex: hPub
+	ecprvhex: string,
+	ecpubhex: string
 }} KeyPairHex */ export var KeyPairHex;
 
 /** @typedef {{
@@ -44,12 +44,14 @@ import { isArray } from "./../../../include/type.js"
  i: number
 }} SigCompact */ var SigCompact;
 
+const rng = new SecureRandom();
+
 /**
  * class for EC key generation, ECDSA signing and verifcation
  * @description
  * <p>
  * CAUTION: Most of the case, you don't need to use this class except
- * for generating an EC key pair. Please use {@link KJUR.crypto.Signature} class instead.
+ * for generating an EC key pair. Please use {@link Signature} class instead.
  * </p>
  * <p>
  * This class was originally developped by Stefan Thomas for Bitcoin JavaScript library.
@@ -64,12 +66,10 @@ import { isArray } from "./../../../include/type.js"
  */
 export class ECDSA {
 	constructor(params) {
-		/** @type {string} */ this.curveName = "secp256r1";	// curve name default
+		/** @type {string | null} */ this.curveName = "secp256r1";	// curve name default
 		/** @type {ECParams | null} */ this.ecparams = null;
 		/** @type {string | null} */ this.prvKeyHex = null;
 		/** @type {string | null} */ this.pubKeyHex = null;
-
-		this.rng = new SecureRandom();
 
 		/** @type {BigInteger | null} */ this.P_OVER_FOUR = null;
 
@@ -182,7 +182,7 @@ export class ECDSA {
 
     /**
      * get NIST curve short name such as "P-256" or "P-384"
-     * @return {string} short NIST P curve name such as "P-256" or "P-384" if it's NIST P curve otherwise null;
+     * @return {string | null} short NIST P curve name such as "P-256" or "P-384" if it's NIST P curve otherwise null;
      * @example
      * ec = new ECDSA({'curve': 'secp256r1', 'pub': pubHex});
      * ec.getShortPCurveName() &rarr; "P-256";
@@ -226,8 +226,11 @@ export class ECDSA {
 
 	/**
 	 * @param {string} hashHex 
+	 * @returns {string | null}
 	 */
 	signWithMessageHash(hashHex) {
+		if (this.prvKeyHex === null)
+			return null;
 		return this.signHex(hashHex, this.prvKeyHex);
 	}
 
@@ -275,7 +278,7 @@ export class ECDSA {
 			let G = this.ecparams.G;
 			let Q = G.multiply(k);
 			r = Q.getX().toBigInteger().mod(n);
-		} while (r.compareTo(BigInteger.ZERO) <= 0);
+		} while (r.compareTo(BigInteger.ZERO()) <= 0);
 
 		let s = k.modInverse(n).multiply(e.add(d.multiply(r))).mod(n);
 		return this.serializeSig(r, s);
@@ -284,9 +287,11 @@ export class ECDSA {
 	/**
 	 * @param {string} hashHex 
 	 * @param {string} sigHex 
-	 * @returns {boolean}
+	 * @returns {boolean | null}
 	 */
 	verifyWithMessageHash(hashHex, sigHex) {
+		if (this.pubKeyHex === null)
+			return null;
 		return this.verifyHex(hashHex, sigHex, this.pubKeyHex);
 	}
 
@@ -322,7 +327,7 @@ export class ECDSA {
 	verify(hash, sig, pubkey) {
 		let r, s;
 		if (isArray(sig)) {
-			let obj = this.parseSig(sig);
+			let obj = this.parseSig(/** @type {Array<number>} */ ( sig ));
 			r = obj.r;
 			s = obj.s;
 		} else if ("object" === typeof sig && sig.r && sig.s) {
@@ -808,7 +813,7 @@ export class ECDSA {
 	/**
 	 * static method to get normalized EC curve name from curve name or hexadecimal OID value
 	 * @param {string} s curve name (ex. P-256) or hexadecimal OID value (ex. 2a86...)
-	 * @return {string} normalized EC curve name (ex. secp256r1) 
+	 * @return {string | null} normalized EC curve name (ex. secp256r1) 
 	 * @description
 	 * This static method returns normalized EC curve name 
 	 * which is supported in jsrsasign

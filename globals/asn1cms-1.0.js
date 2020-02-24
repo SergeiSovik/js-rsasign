@@ -16,8 +16,9 @@
 import { DERInteger, DEROctetString, DERObjectIdentifier, DERSequence, DERSet, DERTaggedObject } from "./asn1-1.0.js"
 import { isHex } from "./base64x-1.1.js"
 import { name2obj, Time, AlgorithmIdentifier, X500Name,  } from "./asn1x509-1.0.js"
-import { hashHex } from "./crypto-1.1.js"
+import { hashHex, Signature } from "./crypto-1.1.js"
 import { getVbyList, getTLVbyList, getIdxbyList, getChildIdx, getTLV, oidname } from "./asn1hex-1.1.js"
+import { getKey } from "./keyutil-1.0.js"
 
 /**
  * @fileOverview
@@ -545,8 +546,7 @@ KJUR.asn1.cms.SignerInfo = function(params) {
 	_SignedData = KJUR.asn1.cms.SignedData,
 	KJUR.asn1.x509 = KJUR.asn1.x509,
 	AlgorithmIdentifier = AlgorithmIdentifier,
-	KJUR.crypto = KJUR.crypto,
-	_KEYUTIL = KEYUTIL;
+	KJUR.crypto = KJUR.crypto;
 
     KJUR.asn1.cms.SignerInfo.superclass.constructor.call(this);
 
@@ -620,12 +620,12 @@ KJUR.asn1.cms.SignerInfo = function(params) {
 
         // set signature
         let data = this.dSignedAttrs.getEncodedHex();
-        let prvKey = _KEYUTIL.getKey(keyParam);
-        let sig = new KJUR.crypto.Signature({alg: sigAlg});
+        let prvKey = getKey(keyParam);
+        let sig = new Signature({'alg': sigAlg});
         sig.init(prvKey);
         sig.updateHex(data);
         let sigValHex = sig.sign();
-        this.dSig = new KJUR.asn1.DEROctetString({hex: sigValHex});
+        this.dSig = new KJUR.asn1.DEROctetString({'hex': sigValHex});
     };
 
     /*
@@ -1217,7 +1217,7 @@ KJUR.asn1.cms.CMSUtil.verifySignedData = function(param) {
 	let hSignedAttr = "31" + getTLV(hCMS, si.idxSignedAttrs).substr(2);
 	si.signedattrshex = hSignedAttr;
 	let pubkey = result.certs[si.certkey_idx].getPublicKey();
-	let sig = new KJUR.crypto.Signature({alg: sigalg});
+	let sig = new Signature({'alg': sigalg});
 	sig.init(pubkey);
 	sig.updateHex(hSignedAttr);
 	let isValid = sig.verify(si.sigval);

@@ -16,11 +16,9 @@
 import { oidHexToInt } from "./asn1-1.0.js"
 import { name2oid, oid2name, oid2atype } from "./asn1oid.js"
 import { getChildIdx, getV, getTLV, getVbyList, getTLVbyList, getIdxbyList, getVidx, oidname, hextooidstr } from "./asn1hex-1.1.js"
-import { pemtohex, hextoutf8 } from "./base64x-1.1.js"
-import { getKey } from "./keyutil-1.0.js"
-import { RSAKeyEx } from "./rsaex.js"
-import { DSA } from "./dsa-2.0.js"
-import { ECDSA } from "./ecdsa-modified-1.0.js"
+import { pemtohex, hextoutf8, hextoip, hextoposhex, hextorstr } from "./base64x-1.1.js"
+import { KeyObject, getKey } from "./keyutil-1.0.js"
+import { Signature } from "./crypto-1.1.js"
 
 /** @typedef {{
 	critical: boolean,
@@ -293,7 +291,7 @@ export class X509 {
 
     /**
      * get a RSAKeyEx/ECDSA/DSA public key object of subjectPublicKeyInfo field.<br/>
-     * @return {RSAKeyEx | ECDSA | DSA} RSAKeyEx/ECDSA/DSA public key object of subjectPublicKeyInfo field
+     * @return {KeyObject} RSAKeyEx/ECDSA/DSA public key object of subjectPublicKeyInfo field
      * @example
      * x = new X509();
      * x.readCertPEM(sCertPEM);
@@ -334,7 +332,7 @@ export class X509 {
 
     /**
      * verifies signature value by public key<br/>
-     * @param {Object} pubKey public key object
+     * @param {KeyObject} pubKey public key object
      * @return {boolean} true if signature value is valid otherwise false
      * @description
      * This method verifies signature value of hexadecimal string of 
@@ -350,7 +348,7 @@ export class X509 {
 		let hSigVal = this.getSignatureValueHex();
 		let hTbsCert = getTLVbyList(this.hex, 0, [0], "30");
 
-		let sig = new KJUR.crypto.Signature({ alg: algName });
+		let sig = new Signature({ 'alg': algName });
 		sig.init(pubKey);
 		sig.updateHex(hTbsCert);
 		return sig.verify(hSigVal);
@@ -1051,7 +1049,7 @@ export function hex2attrTypeValue(hex, idx) {
 /**
  * get RSA/DSA/ECDSA public key object from X.509 certificate hexadecimal string<br/>
  * @param {string} h hexadecimal string of X.509 certificate for RSA/ECDSA/DSA public key
- * @return returns RSAKeyEx/KJUR.crypto.{ECDSA,DSA} object of public key
+ * @return {KeyObject} returns RSAKeyEx/ECDSA/DSA object of public key
  */
 export function getPublicKeyFromCertHex(h) {
 	let x = new X509();
@@ -1062,7 +1060,7 @@ export function getPublicKeyFromCertHex(h) {
 /**
  * get RSA/DSA/ECDSA public key object from PEM certificate string
  * @param {string} sCertPEM PEM formatted RSA/ECDSA/DSA X.509 certificate
- * @return returns RSAKeyEx/KJUR.crypto.{ECDSA,DSA} object of public key
+ * @return {KeyObject} returns RSAKeyEx/ECDSA/DSA object of public key
  * @description
  * NOTE: DSA is also supported since x509 1.1.2.
  */
@@ -1072,10 +1070,16 @@ export function getPublicKeyFromCertPEM(sCertPEM) {
 	return x.getPublicKey();
 }
 
+/** @typedef {{
+	algparam: (string | null),
+	keyhex: string,
+	algoid: string
+}} KeyInfoProp */ var KeyInfoProp;
+
 /**
  * get public key information from PEM certificate
  * @param {string} sCertPEM string of PEM formatted certificate
- * @return {Hash} hash of information for public key
+ * @return {KeyInfoProp} hash of information for public key
  * @description
  * Resulted associative array has following properties:<br/>
  * <ul>
@@ -1086,22 +1090,25 @@ export function getPublicKeyFromCertPEM(sCertPEM) {
  * NOTE: X509v1 certificate is also supported since x509.js 1.1.9.
  */
 export function getPublicKeyInfoPropOfCertPEM(sCertPEM) {
-	let result = {};
 	let x, hSPKI, pubkey;
-	result.algparam = null;
+	/** @type {string | null} */ let algparam = null;
 
 	x = new X509();
 	x.readCertPEM(sCertPEM);
 
 	hSPKI = x.getPublicKeyHex();
-	result.keyhex = getVbyList(hSPKI, 0, [1], "03").substr(2);
-	result.algoid = getVbyList(hSPKI, 0, [0, 0], "06");
+	let keyhex = getVbyList(hSPKI, 0, [1], "03").substr(2);
+	let algoid = getVbyList(hSPKI, 0, [0, 0], "06");
 
-	if (result.algoid === "2a8648ce3d0201") { // ecPublicKey
-		result.algparam = getVbyList(hSPKI, 0, [0, 1], "06");
+	if (algoid === "2a8648ce3d0201") { // ecPublicKey
+		algparam = getVbyList(hSPKI, 0, [0, 1], "06");
+	}
+
+	return {
+		algparam: algparam,
+		keyhex: keyhex,
+		algoid: algoid
 	};
-
-	return result;
 }
 
 /* ======================================================================

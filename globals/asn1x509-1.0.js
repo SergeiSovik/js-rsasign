@@ -16,11 +16,12 @@
 import { ASN1Object, DERNull, DERBoolean, DERInteger, DERAbstractString, DERBitString, DEROctetString, DERUTF8String, DERPrintableString, DERTeletexString, DERObjectIdentifier, DERIA5String, DERAbstractTime, DERUTCTime, DERGeneralizedTime, DERSequence, DERSet, DERTaggedObject, newObject } from "./asn1-1.0.js"
 import { name2obj, atype2obj } from "./asn1oid.js"
 import { KEYUSAGE_NAME, X509 } from "./x509-1.1.js"
-import { hextob64nl, pemtohex } from "./base64x-1.1.js"
+import { hextob64nl, pemtohex, intarystrtohex, ipv6tohex } from "./base64x-1.1.js"
 import { DSA } from "./dsa-2.0.js"
 import { ECDSA } from "./ecdsa-modified-1.0.js"
-import { getKey } from "./keyutil-1.0.js"
-import { RSAKeyEx } from "./rsaex.js";
+import { KeyObject, getKey } from "./keyutil-1.0.js"
+import { RSAKeyEx } from "./rsaex.js"
+import { Signature } from "./crypto-1.1.js"
 
 /**
  * ASN.1 module for X.509 certificate
@@ -99,7 +100,7 @@ export class Certificate extends ASN1Object {
 		/** @type {AlgorithmIdentifier | null} */ this.asn1SignatureAlg = null;
 		/** @type {DERBitString | null} */ this.asn1Sig = null;
 		/** @type {string | null} */ this.hexSig = null;
-		/** @type {RSAKeyEx | DSA | ECDSA | null} */ this.prvKey = null;
+		/** @type {KeyObject | null} */ this.prvKey = null;
 
 		if (params !== undefined) {
 			if (params['tbscertobj'] !== undefined) {
@@ -121,7 +122,7 @@ export class Certificate extends ASN1Object {
 	sign() {
 		this.asn1SignatureAlg = this.asn1TBSCert.asn1SignatureAlg;
 
-		let sig = new KJUR.crypto.Signature({ alg: this.asn1SignatureAlg.nameAlg });
+		let sig = new Signature({ 'alg': this.asn1SignatureAlg.nameAlg });
 		sig.init(this.prvKey);
 		sig.updateHex(this.asn1TBSCert.getEncodedHex());
 		this.hexSig = sig.sign();
@@ -206,7 +207,7 @@ export class TBSCertificate extends ASN1Object {
 
 		/** @type {Array<ASN1Object>} */ this.asn1Array = new Array();
 
-		/** @type {DERTaggetObject} */ this.asn1Version = new DERTaggedObject({ 'obj': new DERInteger({ 'int': 2 }) });
+		/** @type {DERTaggedObject} */ this.asn1Version = new DERTaggedObject({ 'obj': new DERInteger({ 'int': 2 }) });
 		/** @type {DERInteger | null} */ this.asn1SerialNumber = null;
 		/** @type {AlgorithmIdentifier | null} */ this.asn1SignatureAlg = null;
 		/** @type {X500Name | null} */ this.asn1Issuer = null;
@@ -646,7 +647,7 @@ export class CRLDistributionPoints extends X500Extension {
 	}
 
 	setByDPArray(dpArray) {
-		this.asn1ExtnValue = new KJUR.asn1.DERSequence({ 'array': dpArray });
+		this.asn1ExtnValue = new DERSequence({ 'array': dpArray });
 	}
 
 	setByOneURI(uri) {
@@ -1051,7 +1052,7 @@ export class CRL extends ASN1Object {
 	sign() {
 		this.asn1SignatureAlg = this.asn1TBSCertList.asn1SignatureAlg;
 
-		sig = new KJUR.crypto.Signature({ 'alg': 'SHA1withRSA', 'prov': 'cryptojs/jsrsa' });
+		let sig = new Signature({ 'alg': 'SHA1withRSA', 'prov': 'cryptojs/jsrsa' });
 		sig.init(this.prvKey);
 		sig.updateHex(this.asn1TBSCertList.getEncodedHex());
 		this.hexSig = sig.sign();
@@ -1640,6 +1641,8 @@ export class RDN extends ASN1Object {
 	}
 }
 
+const defaultDSType = "utf8";
+
 /**
  * AttributeTypeAndValue ASN.1 structure class
  * @description
@@ -1654,7 +1657,6 @@ export class AttributeTypeAndValue extends ASN1Object {
 
 		/** @type {DERObjectIdentifier | null} */ this.typeObj = null;
 		/** @type {DERAbstractString | null} */ this.valueObj = null;
-		this.defaultDSType = "utf8";
 
 		if (params !== undefined) {
 			if (params['str'] !== undefined) {
@@ -1704,7 +1706,7 @@ export class AttributeTypeAndValue extends ASN1Object {
 	 * @returns {string}
 	 */
 	getEncodedHex() {
-		let o = new KJUR.asn1.DERSequence({ "array": [this.typeObj, this.valueObj] });
+		let o = new DERSequence({ "array": [this.typeObj, this.valueObj] });
 		this.TLV = o.getEncodedHex();
 		return this.TLV;
 	}
@@ -1731,7 +1733,7 @@ export class AttributeTypeAndValue extends ASN1Object {
  */
 export class SubjectPublicKeyInfo extends ASN1Object {
 	/**
-	 * @param {(RSAKeyEx | ECDSA | DSA)=} params parameter for subject public key
+	 * @param {KeyObject=} params parameter for subject public key
 	 */
 	constructor(params) {
 		super();
@@ -1767,7 +1769,7 @@ export class SubjectPublicKeyInfo extends ASN1Object {
 	}
 
     /**
-     * @param {RSAKeyEx | ECDSA | DSA} key {@link RSAKeyEx}, {@link ECDSA} or {@link DSA} object
+     * @param {KeyObject} key {@link RSAKeyEx}, {@link ECDSA} or {@link DSA} object
      * @description
      * @example
      * spki = new SubjectPublicKeyInfo();
@@ -1964,6 +1966,8 @@ export class AlgorithmIdentifier extends ASN1Object {
 	}
 }
 
+const pTag = { 'rfc822': '81', 'dns': '82', 'dn': 'a4', 'uri': '86', 'ip': '87' };
+
 /**
  * GeneralName ASN.1 structure class<br/> * @description
  * <br/>
@@ -2019,7 +2023,6 @@ export class GeneralName extends ASN1Object {
 
 		this.asn1Obj = null;
 		/** @type {string | null} */ this.type = null;
-		this.pTag = { 'rfc822': '81', 'dns': '82', 'dn': 'a4', 'uri': '86', 'ip': '87' };
 
 		this.explicit = false;
 
@@ -2425,7 +2428,7 @@ export function newCertPEM(param) {
 
 	if (param['ext'] !== undefined && param['ext'].length !== undefined) {
 		for (let i = 0; i < param['ext'].length; i++) {
-			for (key in param['ext'][i]) {
+			for (let key in param['ext'][i]) {
 				o.appendExtensionByName(key, param['ext'][i][key]);
 			}
 		}
@@ -2435,7 +2438,7 @@ export function newCertPEM(param) {
 	if (param['cakey'] === undefined && param['sighex'] === undefined)
 		throw "param cakey and sighex undefined.";
 
-	/** @type {RSAKeyEx | DSA | ECDSA | null} */ let caKey = null;
+	/** @type {KeyObject | null} */ let caKey = null;
 	/** @type {Certificate | null} */ let cert = null;
 
 	if (param['cakey']) {

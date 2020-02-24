@@ -14,7 +14,7 @@
 "use strict";
 
 import { jsonToASN1HEX } from "./asn1-1.0.js"
-import { getRandomBigIntegerMinToMax } from "./crypto-1.1.js"
+import { getRandomBigIntegerMinToMax, Signature } from "./crypto-1.1.js"
 import { getVbyList, isASN1HEX } from "./asn1hex-1.1.js"
 import { BigInteger } from "./../../js-bn/modules/jsbn.js"
 
@@ -23,14 +23,14 @@ import { BigInteger } from "./../../js-bn/modules/jsbn.js"
  * @description
  * <p>
  * CAUTION: Most of the case, you don't need to use this class.
- * Please use {@link KJUR.crypto.Signature} class instead.
+ * Please use {@link Signature} class instead.
  * </p>
  * <p>
  * NOTE: Until jsrsasign 6.2.3, DSA class have used codes from openpgpjs library 1.0.0
  * licenced under LGPL licence. To avoid license issue dsa-2.0.js was re-written with
  * my own codes in jsrsasign 7.0.0. 
  * Some random number generators used in dsa-2.0.js was newly defined
- * in KJUR.crypto.Util class. Now all of LGPL codes are removed.
+ * in crypto-1.1.js. Now all of LGPL codes are removed.
  * </p>
  */
 export class DSA {
