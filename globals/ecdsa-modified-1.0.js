@@ -38,6 +38,12 @@ import { isArray } from "./../../../include/type.js"
  s: BigInteger
 }} Sig */ var Sig;
 
+/** @typedef {{
+ r: BigInteger,
+ s: BigInteger,
+ i: number
+}} SigCompact */ var SigCompact;
+
 /**
  * class for EC key generation, ECDSA signing and verifcation
  * @description
@@ -301,7 +307,7 @@ export class ECDSA {
 		r = obj.r;
 		s = obj.s;
 
-		let Q = ECPointFp.decodeFromHex(this.ecparams['curve'], pubkeyHex);
+		let Q = ECPointFp.decodeFromHex(this.ecparams.curve, pubkeyHex);
 		let e = new BigInteger(hashHex, 16);
 
 		return this.verifyRaw(e, r, s, Q);
@@ -311,6 +317,7 @@ export class ECDSA {
 	 * @param {Array<number>} hash 
 	 * @param {Sig | Array<number>} sig 
 	 * @param {ECPointFp | Array<number>} pubkey 
+	 * @returns {boolean}
 	 */
 	verify(hash, sig, pubkey) {
 		let r, s;
@@ -328,15 +335,15 @@ export class ECDSA {
 		let Q;
 		if (pubkey instanceof ECPointFp) {
 			Q = pubkey;
-		} else if (Bitcoin.Util.isArray(pubkey)) {
-			Q = ECPointFp.decodeFrom(this.ecparams['curve'], pubkey);
+		} else if (isArray(pubkey)) {
+			Q = ECPointFp.decodeFrom(this.ecparams.curve, pubkey);
 		} else {
 			throw "Invalid format for pubkey value, must be byte array or ECPointFp";
 		}
-		let e = BigInteger.fromByteArrayUnsigned(hash);
+		let e = new BigInteger(hash, 256); //BigInteger.fromByteArrayUnsigned(hash);
 
 		return this.verifyRaw(e, r, s, Q);
-	};
+	}
 
 	/**
 	 * @param {BigInteger} e 
@@ -346,14 +353,14 @@ export class ECDSA {
 	 * @returns {boolean}
 	 */
 	verifyRaw(e, r, s, Q) {
-		let n = this.ecparams['n'];
-		let G = this.ecparams['G'];
+		let n = this.ecparams.n;
+		let G = this.ecparams.G;
 
-		if (r.compareTo(BigInteger.ONE) < 0 ||
+		if (r.compareTo(BigInteger.ONE()) < 0 ||
 			r.compareTo(n) >= 0)
 			return false;
 
-		if (s.compareTo(BigInteger.ONE) < 0 ||
+		if (s.compareTo(BigInteger.ONE()) < 0 ||
 			s.compareTo(n) >= 0)
 			return false;
 
@@ -371,18 +378,22 @@ export class ECDSA {
 		let v = point.getX().toBigInteger().mod(n);
 
 		return v.equals(r);
-	};
+	}
 
     /**
      * Serialize a signature into DER format.
      *
      * Takes two BigIntegers representing r and s and returns a byte array.
+	 * 
+	 * @param {BigInteger} r
+	 * @param {BigInteger} s
+	 * @returns {Array<number>}
      */
 	serializeSig(r, s) {
-		let rBa = r.toByteArraySigned();
-		let sBa = s.toByteArraySigned();
+		let rBa = r.toByteArray(); //r.toByteArraySigned();
+		let sBa = s.toByteArray(); //s.toByteArraySigned();
 
-		let sequence = [];
+		/** @type {Array<number>} */ let sequence = [];
 		sequence.push(0x02); // INTEGER
 		sequence.push(rBa.length);
 		sequence = sequence.concat(rBa);
@@ -394,7 +405,7 @@ export class ECDSA {
 		sequence.unshift(sequence.length);
 		sequence.unshift(0x30); // SEQUENCE
 		return sequence;
-	};
+	}
 
     /**
      * Parses a byte array containing a DER-encoded signature.
@@ -435,6 +446,10 @@ export class ECDSA {
 		return { r: r, s: s };
 	}
 
+	/**
+	 * @param {Array<number>} sig
+	 * @returns {SigCompact}
+	 */
 	parseSigCompact(sig) {
 		if (sig.length !== 65) {
 			throw "Signature has the wrong length";
@@ -447,24 +462,24 @@ export class ECDSA {
 			throw "Invalid signature type";
 		}
 
-		let n = this.ecparams['n'];
-		let r = BigInteger.fromByteArrayUnsigned(sig.slice(1, 33)).mod(n);
-		let s = BigInteger.fromByteArrayUnsigned(sig.slice(33, 65)).mod(n);
+		let n = this.ecparams.n;
+		let r = new BigInteger(sig.slice(1, 33)).mod(n); //BigInteger.fromByteArrayUnsigned(sig.slice(1, 33)).mod(n);
+		let s = new BigInteger(sig.slice(33, 65)).mod(n); //BigInteger.fromByteArrayUnsigned(sig.slice(33, 65)).mod(n);
 
 		return { r: r, s: s, i: i };
-	};
+	}
 
     /**
      * read an ASN.1 hexadecimal string of PKCS#1/5 plain ECC private key<br/>
      * @param {string} h hexadecimal string of PKCS#1/5 ECC private key
      */
 	readPKCS5PrvKeyHex(h) {
-		let _getName = ECDSA.getName;
-
 		if (isASN1HEX(h) === false)
 			throw "not ASN.1 hex string";
 
-		let hCurve, hPrv, hPub;
+		/** @type {string} */ let hCurve;
+		/** @type {string} */ let hPrv;
+		/** @type {string} */ let hPub;
 		try {
 			hCurve = getVbyList(h, 0, [2, 0], "06");
 			hPrv = getVbyList(h, 0, [1], "04");
@@ -475,26 +490,27 @@ export class ECDSA {
 			throw "malformed PKCS#1/5 plain ECC private key";
 		}
 
-		this.curveName = _getName(hCurve);
-		if (this.curveName === undefined) throw "unsupported curve name";
+		this.curveName = ECDSA.getName(hCurve);
+		if (this.curveName === null) throw "unsupported curve name";
 
 		this.setNamedCurve(this.curveName);
 		this.setPublicKeyHex(hPub);
 		this.setPrivateKeyHex(hPrv);
 		this.isPublic = false;
-	};
+	}
 
     /**
      * read an ASN.1 hexadecimal string of PKCS#8 plain ECC private key<br/>
      * @param {string} h hexadecimal string of PKCS#8 ECC private key
      */
 	readPKCS8PrvKeyHex(h) {
-		let _getName = ECDSA.getName;
-
 		if (isASN1HEX(h) === false)
 			throw "not ASN.1 hex string";
 
-		let hECOID, hCurve, hPrv, hPub;
+		/** @type {string} */ let hECOID;
+		/** @type {string} */ let hCurve;
+		/** @type {string} */ let hPrv;
+		/** @type {string} */ let hPub;
 		try {
 			hECOID = getVbyList(h, 0, [1, 0], "06");
 			hCurve = getVbyList(h, 0, [1, 1], "06");
@@ -506,26 +522,26 @@ export class ECDSA {
 			throw "malformed PKCS#8 plain ECC private key";
 		}
 
-		this.curveName = _getName(hCurve);
-		if (this.curveName === undefined) throw "unsupported curve name";
+		this.curveName = ECDSA.getName(hCurve);
+		if (this.curveName === null) throw "unsupported curve name";
 
 		this.setNamedCurve(this.curveName);
 		this.setPublicKeyHex(hPub);
 		this.setPrivateKeyHex(hPrv);
 		this.isPublic = false;
-	};
+	}
 
     /**
      * read an ASN.1 hexadecimal string of PKCS#8 ECC public key<br/>
      * @param {string} h hexadecimal string of PKCS#8 ECC public key
      */
 	readPKCS8PubKeyHex(h) {
-		let _getName = ECDSA.getName;
-
 		if (isASN1HEX(h) === false)
 			throw "not ASN.1 hex string";
 
-		let hECOID, hCurve, hPub;
+		/** @type {string} */ let hECOID;
+		/** @type {string} */ let hCurve;
+		/** @type {string} */ let hPub;
 		try {
 			hECOID = getVbyList(h, 0, [0, 0], "06");
 			hCurve = getVbyList(h, 0, [0, 1], "06");
@@ -534,12 +550,12 @@ export class ECDSA {
 			throw "malformed PKCS#8 ECC public key";
 		}
 
-		this.curveName = _getName(hCurve);
+		this.curveName = ECDSA.getName(hCurve);
 		if (this.curveName === null) throw "unsupported curve name";
 
 		this.setNamedCurve(this.curveName);
 		this.setPublicKeyHex(hPub);
-	};
+	}
 
     /**
      * read an ASN.1 hexadecimal string of X.509 ECC public key certificate<br/>
@@ -548,12 +564,12 @@ export class ECDSA {
      */
 	readCertPubKeyHex(h, nthPKI) {
 		if (nthPKI !== 5) nthPKI = 6;
-		let _getName = ECDSA.getName;
 
 		if (isASN1HEX(h) === false)
 			throw "not ASN.1 hex string";
 
-		let hCurve, hPub;
+		/** @type {string} */ let hCurve;
+		/** @type {string} */ let hPub;
 		try {
 			hCurve = getVbyList(h, 0, [0, nthPKI, 0, 1], "06");
 			hPub = getVbyList(h, 0, [0, nthPKI, 1], "03").substr(2);
@@ -561,12 +577,12 @@ export class ECDSA {
 			throw "malformed X.509 certificate ECC public key";
 		}
 
-		this.curveName = _getName(hCurve);
+		this.curveName = ECDSA.getName(hCurve);
 		if (this.curveName === null) throw "unsupported curve name";
 
 		this.setNamedCurve(this.curveName);
 		this.setPublicKeyHex(hPub);
-	};
+	}
 
     /*
      * Recover a public key from a signature.
@@ -589,9 +605,9 @@ export class ECDSA {
 	// first or second candidate key.
 	let isSecondKey = i >> 1;
 
-	let n = this.ecparams['n'];
-	let G = this.ecparams['G'];
-	let curve = this.ecparams['curve'];
+	let n = this.ecparams.n;
+	let G = this.ecparams.G;
+	let curve = this.ecparams.curve;
 	let p = curve.getQ();
 	let a = curve.getA().toBigInteger();
 	let b = curve.getB().toBigInteger();
@@ -814,4 +830,3 @@ export class ECDSA {
 		return null;
 	}
 }
-

@@ -968,7 +968,7 @@ export class Signature {
      * @description
      * This method is very useful initialize method for Signature class since
      * you just specify key then this method will automatically initialize it
-     * using {@link KEYUTIL.getKey} method.
+     * using {@link getKey} method.
      * As for 'key',  following argument type are supported:
      * <h5>signing</h5>
      * <ul>

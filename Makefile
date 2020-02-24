@@ -33,6 +33,7 @@ MODULES=$(patsubst ./%,%,$(shell find ./modules/ -type f -name "*.js"))
 
 # List of external modules, executed only if included in main or global modules
 define EXTERNAL
+	src/include/type.js
 endef
 
 # List of excluded modules
@@ -42,14 +43,9 @@ define EXCLUDES
 	globals/asn1csr-1.0.js
 	globals/asn1ocsp-1.0.js
 	globals/asn1tsp-1.0.js
-	globals/asn1x509-1.0.js
-	globals/ecdsa-modified-1.0.js
 	globals/jws-3.3.js
 	globals/jwsjs-2.0.js
 	globals/nodeutil-1.0.js
-	globals/rsapem-1.1.js
-	globals/rsasign-1.2.js
-	globals/x509-1.1.js
 endef
 
 # Detect Current Dir Name (js-example)

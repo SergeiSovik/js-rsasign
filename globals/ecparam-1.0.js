@@ -49,7 +49,7 @@ import { ECCurveFp, ECPointFp } from "./../../js-bn/modules/ec.js"
 	info: string
 }} ECParams */ export var ECParams;
 
-/** @type {Object<string, ECParams */ let db = {};
+/** @type {Object<string, ECParams>} */ let db = {};
 /** @type {Object<string, string>} */ let aliasDB = {};
 
 /**

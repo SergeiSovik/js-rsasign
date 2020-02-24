@@ -15,6 +15,7 @@
 
 import { hashHex } from "./crypto-1.1.js"
 import { ECDSA } from "./ecdsa-modified-1.0.js"
+import { getKey } from "./keyutil-1.0.js"
 
 /**
  * @fileOverview
@@ -367,7 +368,7 @@ KJUR.jws.JWS.sign = function(alg, spHeader, spPayload, key, pass) {
  * isValid = KJUR.jws.JWS.verify('eyJh...', '6f62ada', ['HS256']); // implicit raw string
  *
  * // 3) verify a ES256 JWS signature by a ECDSA key object.
- * let pubkey = KEYUTIL.getKey('-----BEGIN CERT...');
+ * let pubkey = getKey('-----BEGIN CERT...');
  * let isValid = KJUR.jws.JWS.verify('eyJh...', pubkey);
  */
 KJUR.jws.JWS.verify = function(sJWS, key, acceptAlgs) {
@@ -423,7 +424,7 @@ KJUR.jws.JWS.verify = function(sJWS, key, acceptAlgs) {
     // 3.2. convert key object if key is a public key or cert PEM string
     if (typeof key == "string" &&
 	key.indexOf("-----BEGIN ") != -1) {
-	key = KEYUTIL.getKey(key);
+	key = getKey(key);
     }
 
     // 3.3. check whether key is RSAKeyEx obj if alg is RS* or PS*.
@@ -617,7 +618,7 @@ KJUR.jws.JWS.parse = function(sJWS) {
  * isValid = KJUR.jws.JWS.verifyJWT("eyJhbG...", "616161", {alg: ["HS256"]}),
  *
  * // full validation for RS or PS
- * pubkey = KEYUTIL.getKey('-----BEGIN CERT...');
+ * pubkey = getKey('-----BEGIN CERT...');
  * isValid = KJUR.jws.JWS.verifyJWT('eyJh...', pubkey, {
  *   alg: ['RS256', 'RS512', 'PS256', 'PS512'],
  *   iss: ['http://foo.com'],

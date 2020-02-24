@@ -348,7 +348,7 @@ export function hextopem(dataHex, pemHeader) {
  * by sHead argument. 
  * Any space characters such as white space or new line
  * will be omitted.<br/>
- * NOTE: Now {@link KEYUTIL.getHexFromPEM} and {@link X509.pemToHex}
+ * NOTE: Now {@link getHexFromPEM} and {@link X509.pemToHex}
  * have been deprecated since jsrsasign 7.2.1. 
  * Please use this method instead.
  * @example

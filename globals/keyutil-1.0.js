@@ -13,7 +13,7 @@
 
 "use strict";
 
-import { DERInteger, DERObjectIdentifier, newObject } from "./asn1-1.0.js"
+import { DERInteger, DERObjectIdentifier, newObject, ASN1Object } from "./asn1-1.0.js"
 import { SubjectPublicKeyInfo } from "./asn1x509-1.0.js"
 import { Hex } from "./../../js-crypto/modules/enc-hex.js"
 import { CipherHelper } from "./../../js-crypto/modules/cipher-core.js"
@@ -29,13 +29,16 @@ import { PBKDF2 } from "./../../js-crypto/modules/pbkdf2.js"
 import { DSA } from "./dsa-2.0.js"
 import { oidhex2name } from "./asn1oid.js"
 import { ECDSA } from "./ecdsa-modified-1.0.js"
+import { RSAKeyEx } from "./rsaex.js"
+import { getPublicKeyFromCertHex, getPublicKeyFromCertPEM } from "./x509-1.1.js"
+import { pemtohex, hextopem, hextob64u } from "./base64x-1.1.js"
 
 /** * @description 
  * <br/>
  * {@link KEYUTIL} class is an update of former {@link PKCS5PKEY} class.
  * {@link KEYUTIL} class has following features:
  * <dl>
- * <dt><b>key loading - {@link KEYUTIL.getKey}</b>
+ * <dt><b>key loading - {@link getKey}</b>
  * <dd>
  * <ul>
  * <li>supports RSAKeyEx and KJUR.crypto.{ECDSA,DSA} key object</li>
@@ -48,9 +51,9 @@ import { ECDSA } from "./ecdsa-modified-1.0.js"
  * NOTE1: Encrypted PKCS#8 only supports PBKDF2/HmacSHA1/3DES <br/>
  * NOTE2: Encrypted PKCS#5 supports DES-CBC, DES-EDE3-CBC, AES-{128,192.256}-CBC <br/>
  *
- * <dt><b>exporting key - {@link KEYUTIL.getPEM}</b>
+ * <dt><b>exporting key - {@link getPEM}</b>
  * <dd>
- * {@link KEYUTIL.getPEM} method supports following formats:
+ * {@link getPEM} method supports following formats:
  * <ul>
  * <li>supports RSA/EC/DSA keys</li>
  * <li>PKCS#1 plain RSA/EC/DSA private key</li>
@@ -59,7 +62,7 @@ import { ECDSA } from "./ecdsa-modified-1.0.js"
  * <li>PKCS#8 encrypted RSA/EC/DSA private key with PBKDF2_HmacSHA1_3DES</li>
  * </ul>
  *
- * <dt><b>keypair generation - {@link KEYUTIL.generateKeypair}</b>
+ * <dt><b>keypair generation - {@link generateKeypair}</b>
  * <ul>
  * <li>generate key pair of {@link RSAKeyEx} or {@link ECDSA}.</li>
  * <li>generate private key and convert it to PKCS#5 encrypted private key.</li>
@@ -69,21 +72,21 @@ import { ECDSA } from "./ecdsa-modified-1.0.js"
  * 
  * @example
  * // 1. loading PEM private key
- * let key = KEYUTIL.getKey(pemPKCS1PrivateKey);
- * let key = KEYUTIL.getKey(pemPKCS5EncryptedPrivateKey, "passcode");
- * let key = KEYUTIL.getKey(pemPKC85PlainPrivateKey);
- * let key = KEYUTIL.getKey(pemPKC85EncryptedPrivateKey, "passcode");
+ * let key = getKey(pemPKCS1PrivateKey);
+ * let key = getKey(pemPKCS5EncryptedPrivateKey, "passcode");
+ * let key = getKey(pemPKC85PlainPrivateKey);
+ * let key = getKey(pemPKC85EncryptedPrivateKey, "passcode");
  * // 2. loading PEM public key
- * let key = KEYUTIL.getKey(pemPKCS8PublicKey);
- * let key = KEYUTIL.getKey(pemX509Certificate);
+ * let key = getKey(pemPKCS8PublicKey);
+ * let key = getKey(pemX509Certificate);
  * // 3. exporting private key
- * let pem = KEYUTIL.getPEM(privateKeyObj, "PKCS1PRV");
- * let pem = KEYUTIL.getPEM(privateKeyObj, "PKCS5PRV", "passcode"); // DES-EDE3-CBC by default
- * let pem = KEYUTIL.getPEM(privateKeyObj, "PKCS5PRV", "passcode", "DES-CBC");
- * let pem = KEYUTIL.getPEM(privateKeyObj, "PKCS8PRV");
- * let pem = KEYUTIL.getPEM(privateKeyObj, "PKCS8PRV", "passcode");
+ * let pem = getPEM(privateKeyObj, "PKCS1PRV");
+ * let pem = getPEM(privateKeyObj, "PKCS5PRV", "passcode"); // DES-EDE3-CBC by default
+ * let pem = getPEM(privateKeyObj, "PKCS5PRV", "passcode", "DES-CBC");
+ * let pem = getPEM(privateKeyObj, "PKCS8PRV");
+ * let pem = getPEM(privateKeyObj, "PKCS8PRV", "passcode");
  * // 4. exporting public key
- * let pem = KEYUTIL.getPEM(publicKeyObj);
+ * let pem = getPEM(publicKeyObj);
  */
 
 /**
@@ -239,10 +242,10 @@ function encryptKeyHex(privateKeyHex, sharedKeyAlgName, sharedKeyHex, ivsaltHex)
 // -- UTILITY METHODS ------------------------------------------------------------
 
 /** @typedef {{
- cipher: string | undefined,
- ivsalt: string | undefined,
- type: string | undefined,
- data: string | undefined
+ cipher: (string | undefined),
+ ivsalt: (string | undefined),
+ type: (string | undefined),
+ data: (string | undefined)
 }} PKCS5PEM */ var PKCS5PEM;
 
 /**
@@ -395,15 +398,13 @@ export function getDecryptedKeyHex(sEncryptedPEM, passcode) {
  * NOTE1: DES-CBC, DES-EDE3-CBC, AES-{128,192.256}-CBC algorithm are supported.
  * @example
  * let pem = 
- *   KEYUTIL.getEncryptedPKCS5PEMFromPrvKeyHex(plainKeyHex, "password");
+ *   getEncryptedPKCS5PEMFromPrvKeyHex(plainKeyHex, "password");
  * let pem2 = 
- *   KEYUTIL.getEncryptedPKCS5PEMFromPrvKeyHex(plainKeyHex, "password", "AES-128-CBC");
+ *   getEncryptedPKCS5PEMFromPrvKeyHex(plainKeyHex, "password", "AES-128-CBC");
  * let pem3 = 
- *   KEYUTIL.getEncryptedPKCS5PEMFromPrvKeyHex(plainKeyHex, "password", "AES-128-CBC", "1f3d02...");
+ *   getEncryptedPKCS5PEMFromPrvKeyHex(plainKeyHex, "password", "AES-128-CBC", "1f3d02...");
  */
 export function getEncryptedPKCS5PEMFromPrvKeyHex(pemHeadAlg, hPrvKey, passcode, sharedKeyAlgName, ivsaltHex) {
-	let sPEM = "";
-
 	// 1. set sharedKeyAlgName if undefined (default AES-256-CBC)
 	if (typeof sharedKeyAlgName == "undefined" || sharedKeyAlgName == null) {
 		sharedKeyAlgName = "AES-256-CBC";
@@ -588,7 +589,7 @@ export function getPlainPKCS8HexFromEncryptedPKCS8PEM(pkcs8PEM, passcode) {
 	// 2. info - PKCS#5 PBES info
 	let info = this.parseHexOfEncryptedPKCS8(derHex);
 	// 3. hKey - PBKDF2 key
-	let pbkdf2KeyHex = KEYUTIL.getPBKDF2KeyHexFromParam(info, passcode);
+	let pbkdf2KeyHex = getPBKDF2KeyHexFromParam(info, passcode);
 	// 4. decrypt ciphertext by PBKDF2 key
 	let encrypted = {};
 	encrypted.ciphertext = Hex.parse(info.ciphertext);
@@ -603,7 +604,7 @@ export function getPlainPKCS8HexFromEncryptedPKCS8PEM(pkcs8PEM, passcode) {
  * get RSAKeyEx/ECDSA private key object from encrypted PEM PKCS#8 private key
  * @param {string} pkcs8PEM string of PEM formatted PKCS#8 private key
  * @param {string} passcode passcode string to decrypt key
- * @return {Object} RSAKeyEx or ECDSA private key object
+ * @return {RSAKeyEx | DSA | ECDSA} RSAKeyEx or ECDSA private key object
  */
 export function getKeyFromEncryptedPKCS8PEM(pkcs8PEM, passcode) {
 	let prvKeyHex = getPlainPKCS8HexFromEncryptedPKCS8PEM(pkcs8PEM, passcode);
@@ -675,7 +676,7 @@ export function parsePlainPrivatePKCS8Hex(pkcs8PrvHex) {
 /**
  * get RSAKeyEx/ECDSA private key object from PEM plain PEM PKCS#8 private key
  * @param {string} pkcs8PEM string of plain PEM formatted PKCS#8 private key
- * @return {Object} RSAKeyEx or ECDSA private key object
+ * @return {RSAKeyEx | DSA | ECDSA} RSAKeyEx or ECDSA private key object
  */
 export function getKeyFromPlainPrivatePKCS8PEM(prvKeyPEM) {
 	let prvKeyHex = pemtohex(prvKeyPEM, "PRIVATE KEY");
@@ -686,7 +687,7 @@ export function getKeyFromPlainPrivatePKCS8PEM(prvKeyPEM) {
 /**
  * get RSAKeyEx/DSA/ECDSA private key object from HEX plain PEM PKCS#8 private key
  * @param {string} prvKeyHex hexadecimal string of plain PKCS#8 private key
- * @return {Object} RSAKeyEx or KJUR.crypto.{DSA,ECDSA} private key object
+ * @return {RSAKeyEx | DSA | ECDSA} RSAKeyEx or KJUR.crypto.{DSA,ECDSA} private key object
  */
 export function getKeyFromPlainPrivatePKCS8Hex(prvKeyHex) {
 	let p8 = parsePlainPrivatePKCS8Hex(prvKeyHex);
@@ -711,7 +712,7 @@ export function getKeyFromPlainPrivatePKCS8Hex(prvKeyHex) {
 /**
  * get RSAKeyEx/DSA/ECDSA public key object from hexadecimal string of PKCS#8 public key
  * @param {string} pkcsPub8Hex hexadecimal string of PKCS#8 public key
- * @return {Object} RSAKeyEx or KJUR.crypto.{ECDSA,DSA} private key object
+ * @return {RSAKeyEx | DSA | ECDSA} RSAKeyEx or KJUR.crypto.{ECDSA,DSA} private key object
  */
 export function getKeyFromPublicPKCS8Hex(h) {
 	let key;
@@ -844,11 +845,10 @@ export function parsePublicPKCS8Hex(pkcs8PubHex) {
 
 /**
  * get private or public key object from any arguments
- * @static
  * @param {string | Object} param parameter to get key object. see description in detail.
  * @param {string=} passcode (OPTION) parameter to get key object. see description in detail.
  * @param {string=} hextype (OPTOIN) parameter to get key object. see description in detail.
- * @return {Object} {@link RSAKeyEx}, {@link ECDSA} or {@link ECDSA} object
+ * @return {RSAKeyEx | ECDSA | DSA} object {@link RSAKeyEx}, {@link ECDSA} or {@link ECDSA}
  * @description
  * This method gets private or public key object({@link RSAKeyEx}, {@link DSA} or {@link ECDSA})
  * for RSA, DSA and ECC.
@@ -892,22 +892,22 @@ export function parsePublicPKCS8Hex(pkcs8PubHex) {
  * <h5>EXAMPLE</h5>
  * @example
  * // 1. loading private key from PEM string
- * keyObj = KEYUTIL.getKey("-----BEGIN RSA PRIVATE KEY...");
- * keyObj = KEYUTIL.getKey("-----BEGIN RSA PRIVATE KEY..., "passcode");
- * keyObj = KEYUTIL.getKey("-----BEGIN PRIVATE KEY...");
- * keyObj = KEYUTIL.getKey("-----BEGIN PRIVATE KEY...", "passcode");
+ * keyObj = getKey("-----BEGIN RSA PRIVATE KEY...");
+ * keyObj = getKey("-----BEGIN RSA PRIVATE KEY..., "passcode");
+ * keyObj = getKey("-----BEGIN PRIVATE KEY...");
+ * keyObj = getKey("-----BEGIN PRIVATE KEY...", "passcode");
  * // 2. loading public key from PEM string
- * keyObj = KEYUTIL.getKey("-----BEGIN PUBLIC KEY...");
- * keyObj = KEYUTIL.getKey("-----BEGIN X509 CERTIFICATE...");
+ * keyObj = getKey("-----BEGIN PUBLIC KEY...");
+ * keyObj = getKey("-----BEGIN X509 CERTIFICATE...");
  * // 3. loading hexadecimal PKCS#5/PKCS#8 key
- * keyObj = KEYUTIL.getKey("308205c1...", null, "pkcs8pub");
- * keyObj = KEYUTIL.getKey("3082048b...", null, "pkcs5prv");
+ * keyObj = getKey("308205c1...", null, "pkcs8pub");
+ * keyObj = getKey("3082048b...", null, "pkcs5prv");
  * // 4. loading JSON Web Key(JWK)
- * keyObj = KEYUTIL.getKey({kty: "RSA", n: "0vx7...", e: "AQAB"});
- * keyObj = KEYUTIL.getKey({kty: "EC", crv: "P-256", 
- *                          x: "MKBC...", y: "4Etl6...", d: "870Mb..."});
+ * keyObj = getKey({'kty': "RSA", 'n': "0vx7...", 'e': "AQAB"});
+ * keyObj = getKey({'kty': "EC", 'crv': "P-256", 
+ *                          'x': "MKBC...", 'y': "4Etl6...", 'd': "870Mb..."});
  * // 5. bare hexadecimal key
- * keyObj = KEYUTIL.getKey({n: "75ab..", e: "010001"});
+ * keyObj = getKey({'n': "75ab..", 'e': "010001"});
  */
 export function getKey(param, passcode, hextype) {
 	// 1. by key RSAKeyEx/ECDSA/DSA object
@@ -922,148 +922,148 @@ export function getKey(param, passcode, hextype) {
 
 	// 2.1. bare ECC
 	// 2.1.1. bare ECC public key by hex values
-	if (param.curve !== undefined &&
-		param.xy !== undefined && param.d === undefined) {
-		return new ECDSA({ pub: param.xy, curve: param.curve });
+	if (param['curve'] !== undefined &&
+		param['xy'] !== undefined && param['d'] === undefined) {
+		return new ECDSA({ 'pub': param['xy'], 'curve': param['curve'] });
 	}
 
 	// 2.1.2. bare ECC private key by hex values
-	if (param.curve !== undefined && param.d !== undefined) {
-		return new ECDSA({ prv: param.d, curve: param.curve });
+	if (param['curve'] !== undefined && param['d'] !== undefined) {
+		return new ECDSA({ 'prv': param['d'], 'curve': param['curve'] });
 	}
 
 	// 2.2. bare RSA
 	// 2.2.1. bare RSA public key by hex values
-	if (param.kty === undefined &&
-		param.n !== undefined && param.e !== undefined &&
-		param.d === undefined) {
+	if (param['kty'] === undefined &&
+		param['n'] !== undefined && param['e'] !== undefined &&
+		param['d'] === undefined) {
 		let key = new RSAKeyEx();
-		key.setPublic(param.n, param.e);
+		key.setPublic(param['n'], param['e']);
 		return key;
 	}
 
 	// 2.2.2. bare RSA private key with P/Q/DP/DQ/COEFF by hex values
-	if (param.kty === undefined &&
-		param.n !== undefined &&
-		param.e !== undefined &&
-		param.d !== undefined &&
-		param.p !== undefined &&
-		param.q !== undefined &&
-		param.dp !== undefined &&
-		param.dq !== undefined &&
-		param.co !== undefined &&
-		param.qi === undefined) {
+	if (param['kty'] === undefined &&
+		param['n'] !== undefined &&
+		param['e'] !== undefined &&
+		param['d'] !== undefined &&
+		param['p'] !== undefined &&
+		param['q'] !== undefined &&
+		param['dp'] !== undefined &&
+		param['dq'] !== undefined &&
+		param['co'] !== undefined &&
+		param['qi'] === undefined) {
 		let key = new RSAKeyEx();
-		key.setPrivateEx(param.n, param.e, param.d, param.p, param.q,
-			param.dp, param.dq, param.co);
+		key.setPrivateEx(param['n'], param['e'], param['d'], param['p'], param['q'],
+			param['dp'], param['dq'], param['co']);
 		return key;
 	}
 
 	// 2.2.3. bare RSA public key without P/Q/DP/DQ/COEFF by hex values
-	if (param.kty === undefined &&
-		param.n !== undefined &&
-		param.e !== undefined &&
-		param.d !== undefined &&
-		param.p === undefined) {
+	if (param['kty'] === undefined &&
+		param['n'] !== undefined &&
+		param['e'] !== undefined &&
+		param['d'] !== undefined &&
+		param['p'] === undefined) {
 		let key = new RSAKeyEx();
-		key.setPrivate(param.n, param.e, param.d);
+		key.setPrivate(param['n'], param['e'], param['d']);
 		return key;
 	}
 
 	// 2.3. bare DSA
 	// 2.3.1. bare DSA public key by hex values
-	if (param.p !== undefined && param.q !== undefined &&
-		param.g !== undefined &&
-		param.y !== undefined && param.x === undefined) {
+	if (param['p'] !== undefined && param['q'] !== undefined &&
+		param['g'] !== undefined &&
+		param['y'] !== undefined && param['x'] === undefined) {
 		let key = new DSA();
-		key.setPublic(param.p, param.q, param.g, param.y);
+		key.setPublic(param['p'], param['q'], param['g'], param['y']);
 		return key;
 	}
 
 	// 2.3.2. bare DSA private key by hex values
-	if (param.p !== undefined && param.q !== undefined &&
-		param.g !== undefined &&
-		param.y !== undefined && param.x !== undefined) {
+	if (param['p'] !== undefined && param['q'] !== undefined &&
+		param['g'] !== undefined &&
+		param['y'] !== undefined && param['x'] !== undefined) {
 		let key = new DSA();
-		key.setPrivate(param.p, param.q, param.g, param.y, param.x);
+		key.setPrivate(param['p'], param['q'], param['g'], param['y'], param['x']);
 		return key;
 	}
 
 	// 3. JWK
 	// 3.1. JWK RSA
 	// 3.1.1. JWK RSA public key by b64u values
-	if (param.kty === "RSA" &&
-		param.n !== undefined &&
-		param.e !== undefined &&
-		param.d === undefined) {
+	if (param['kty'] === "RSA" &&
+		param['n'] !== undefined &&
+		param['e'] !== undefined &&
+		param['d'] === undefined) {
 		let key = new RSAKeyEx();
-		key.setPublic(b64utohex(param.n), b64utohex(param.e));
+		key.setPublic(b64utohex(param['n']), b64utohex(param['e']));
 		return key;
 	}
 
 	// 3.1.2. JWK RSA private key with p/q/dp/dq/coeff by b64u values
-	if (param.kty === "RSA" &&
-		param.n !== undefined &&
-		param.e !== undefined &&
-		param.d !== undefined &&
-		param.p !== undefined &&
-		param.q !== undefined &&
-		param.dp !== undefined &&
-		param.dq !== undefined &&
-		param.qi !== undefined) {
+	if (param['kty'] === "RSA" &&
+		param['n'] !== undefined &&
+		param['e'] !== undefined &&
+		param['d'] !== undefined &&
+		param['p'] !== undefined &&
+		param['q'] !== undefined &&
+		param['dp'] !== undefined &&
+		param['dq'] !== undefined &&
+		param['qi'] !== undefined) {
 		let key = new RSAKeyEx();
-		key.setPrivateEx(b64utohex(param.n),
-			b64utohex(param.e),
-			b64utohex(param.d),
-			b64utohex(param.p),
-			b64utohex(param.q),
-			b64utohex(param.dp),
-			b64utohex(param.dq),
-			b64utohex(param.qi));
+		key.setPrivateEx(b64utohex(param['n']),
+			b64utohex(param['e']),
+			b64utohex(param['d']),
+			b64utohex(param['p']),
+			b64utohex(param['q']),
+			b64utohex(param['dp']),
+			b64utohex(param['dq']),
+			b64utohex(param['qi']));
 		return key;
 	}
 
 	// 3.1.3. JWK RSA private key without p/q/dp/dq/coeff by b64u
 	//        since jsrsasign 5.0.0 keyutil 1.0.11
-	if (param.kty === "RSA" &&
-		param.n !== undefined &&
-		param.e !== undefined &&
-		param.d !== undefined) {
+	if (param['kty'] === "RSA" &&
+		param['n'] !== undefined &&
+		param['e'] !== undefined &&
+		param['d'] !== undefined) {
 		let key = new RSAKeyEx();
-		key.setPrivate(b64utohex(param.n),
-			b64utohex(param.e),
-			b64utohex(param.d));
+		key.setPrivate(b64utohex(param['n']),
+			b64utohex(param['e']),
+			b64utohex(param['d']));
 		return key;
 	}
 
 	// 3.2. JWK ECC
 	// 3.2.1. JWK ECC public key by b64u values
-	if (param.kty === "EC" &&
-		param.crv !== undefined &&
-		param.x !== undefined &&
-		param.y !== undefined &&
-		param.d === undefined) {
-		let ec = new ECDSA({ "curve": param.crv });
+	if (param['kty'] === "EC" &&
+		param['crv'] !== undefined &&
+		param['x'] !== undefined &&
+		param['y'] !== undefined &&
+		param['d'] === undefined) {
+		let ec = new ECDSA({ "curve": param['crv'] });
 		let charlen = ec.ecparams.keylen / 4;
-		let hX = ("0000000000" + b64utohex(param.x)).slice(- charlen);
-		let hY = ("0000000000" + b64utohex(param.y)).slice(- charlen);
+		let hX = ("0000000000" + b64utohex(param['x'])).slice(- charlen);
+		let hY = ("0000000000" + b64utohex(param['y'])).slice(- charlen);
 		let hPub = "04" + hX + hY;
 		ec.setPublicKeyHex(hPub);
 		return ec;
 	}
 
 	// 3.2.2. JWK ECC private key by b64u values
-	if (param.kty === "EC" &&
-		param.crv !== undefined &&
-		param.x !== undefined &&
-		param.y !== undefined &&
-		param.d !== undefined) {
-		let ec = new ECDSA({ "curve": param.crv });
+	if (param['kty'] === "EC" &&
+		param['crv'] !== undefined &&
+		param['x'] !== undefined &&
+		param['y'] !== undefined &&
+		param['d'] !== undefined) {
+		let ec = new ECDSA({ "curve": param['crv'] });
 		let charlen = ec.ecparams.keylen / 4;
-		let hX = ("0000000000" + b64utohex(param.x)).slice(- charlen);
-		let hY = ("0000000000" + b64utohex(param.y)).slice(- charlen);
+		let hX = ("0000000000" + b64utohex(param['x'])).slice(- charlen);
+		let hY = ("0000000000" + b64utohex(param['y'])).slice(- charlen);
 		let hPub = "04" + hX + hY;
-		let hPrv = ("0000000000" + b64utohex(param.d)).slice(- charlen);
+		let hPrv = ("0000000000" + b64utohex(param['d'])).slice(- charlen);
 		ec.setPublicKeyHex(hPub);
 		ec.setPrivateKeyHex(hPrv);
 		return ec;
@@ -1072,8 +1072,9 @@ export function getKey(param, passcode, hextype) {
 	// 4. (plain) hexadecimal data
 	// 4.1. get private key by PKCS#5 plain RSA/DSA/ECDSA hexadecimal string
 	if (hextype === "pkcs5prv") {
-		let h = param, a, key;
-		a = getChildIdx(h, 0);
+		let h = param;
+		let a = getChildIdx(h, 0);
+		/** @type {RSAKeyEx | DSA | ECDSA} */ let key;
 		if (a.length === 9) {        // RSA (INT x 9)
 			key = new RSAKeyEx();
 			key.readPKCS5PrvKeyHex(h);
@@ -1093,31 +1094,31 @@ export function getKey(param, passcode, hextype) {
 
 	// 4.2. get private key by PKCS#8 plain RSA/DSA/ECDSA hexadecimal string
 	if (hextype === "pkcs8prv") {
-		let key = _KEYUTIL.getKeyFromPlainPrivatePKCS8Hex(param);
+		let key = getKeyFromPlainPrivatePKCS8Hex(param);
 		return key;
 	}
 
 	// 4.3. get public key by PKCS#8 RSA/DSA/ECDSA hexadecimal string
 	if (hextype === "pkcs8pub") {
-		return _KEYUTIL._getKeyFromPublicPKCS8Hex(param);
+		return getKeyFromPublicPKCS8Hex(param);
 	}
 
 	// 4.4. get public key by X.509 hexadecimal string for RSA/DSA/ECDSA
 	if (hextype === "x509pub") {
-		return X509.getPublicKeyFromCertHex(param);
+		return getPublicKeyFromCertHex(param);
 	}
 
 	// 5. by PEM certificate (-----BEGIN ... CERTIFICATE----)
 	if (param.indexOf("-END CERTIFICATE-", 0) != -1 ||
 		param.indexOf("-END X509 CERTIFICATE-", 0) != -1 ||
 		param.indexOf("-END TRUSTED CERTIFICATE-", 0) != -1) {
-		return X509.getPublicKeyFromCertPEM(param);
+		return getPublicKeyFromCertPEM(param);
 	}
 
 	// 6. public key by PKCS#8 PEM string
 	if (param.indexOf("-END PUBLIC KEY-") != -1) {
 		let pubKeyHex = pemtohex(param, "PUBLIC KEY");
-		return _KEYUTIL._getKeyFromPublicPKCS8Hex(pubKeyHex);
+		return getKeyFromPublicPKCS8Hex(pubKeyHex);
 	}
 
 	// 8.1 private key by plain PKCS#5 PEM RSA string 
@@ -1125,7 +1126,7 @@ export function getKey(param, passcode, hextype) {
 	if (param.indexOf("-END RSA PRIVATE KEY-") != -1 &&
 		param.indexOf("4,ENCRYPTED") == -1) {
 		let hex = pemtohex(param, "RSA PRIVATE KEY");
-		return _KEYUTIL.getKey(hex, null, "pkcs5prv");
+		return getKey(hex, null, "pkcs5prv");
 	}
 
 	// 8.2. private key by plain PKCS#5 PEM DSA string
@@ -1149,13 +1150,13 @@ export function getKey(param, passcode, hextype) {
 
 	// 10. private key by plain PKCS#8 PEM ECC/RSA string
 	if (param.indexOf("-END PRIVATE KEY-") != -1) {
-		return _KEYUTIL.getKeyFromPlainPrivatePKCS8PEM(param);
+		return getKeyFromPlainPrivatePKCS8PEM(param);
 	}
 
 	// 11.1 private key by encrypted PKCS#5 PEM RSA string
 	if (param.indexOf("-END RSA PRIVATE KEY-") != -1 &&
 		param.indexOf("4,ENCRYPTED") != -1) {
-		let hPKey = _KEYUTIL.getDecryptedKeyHex(param, passcode);
+		let hPKey = getDecryptedKeyHex(param, passcode);
 		let rsaKey = new RSAKeyEx();
 		rsaKey.readPKCS5PrvKeyHex(hPKey);
 		return rsaKey;
@@ -1164,7 +1165,7 @@ export function getKey(param, passcode, hextype) {
 	// 11.2. private key by encrypted PKCS#5 PEM ECDSA string
 	if (param.indexOf("-END EC PRIVATE KEY-") != -1 &&
 		param.indexOf("4,ENCRYPTED") != -1) {
-		let hKey = _KEYUTIL.getDecryptedKeyHex(param, passcode);
+		let hKey = getDecryptedKeyHex(param, passcode);
 
 		let key = getVbyList(hKey, 0, [1], "04");
 		let curveNameOidHex = getVbyList(hKey, 0, [2, 0], "06");
@@ -1187,7 +1188,7 @@ export function getKey(param, passcode, hextype) {
 	// 11.3. private key by encrypted PKCS#5 PEM DSA string
 	if (param.indexOf("-END DSA PRIVATE KEY-") != -1 &&
 		param.indexOf("4,ENCRYPTED") != -1) {
-		let hKey = _KEYUTIL.getDecryptedKeyHex(param, passcode);
+		let hKey = getDecryptedKeyHex(param, passcode);
 		let p = getVbyList(hKey, 0, [1], "02");
 		let q = getVbyList(hKey, 0, [2], "02");
 		let g = getVbyList(hKey, 0, [3], "02");
@@ -1204,17 +1205,21 @@ export function getKey(param, passcode, hextype) {
 
 	// 11. private key by encrypted PKCS#8 hexadecimal RSA/ECDSA string
 	if (param.indexOf("-END ENCRYPTED PRIVATE KEY-") != -1) {
-		return _KEYUTIL.getKeyFromEncryptedPKCS8PEM(param, passcode);
+		return getKeyFromEncryptedPKCS8PEM(param, passcode);
 	}
 
 	throw "not supported argument";
-};
+}
+
+/** @typedef {{
+	prvKeyObj: (RSAKeyEx | ECDSA),
+	pubKeyObj: (RSAKeyEx | ECDSA)
+}} Keypair */ export var Keypair;
 
 /**
- * @static
  * @param {string} alg 'RSA' or 'EC'
- * @param {Object} keylenOrCurve key length for RSA or curve name for EC
- * @return {Array} associative array of keypair which has prvKeyObj and pubKeyObj parameters
+ * @param {number | string} keylenOrCurve key length for RSA or curve name for EC
+ * @return {Keypair} associative array of keypair which has prvKeyObj and pubKeyObj parameters
  * @description
  * This method generates a key pair of public key algorithm.
  * The result will be an associative array which has following
@@ -1229,13 +1234,13 @@ export function getKey(param, passcode, hextype) {
  * secp256r1, secp256k1 and secp384r1.
  * NOTE3: DSA is not supported yet.
  * @example
- * let rsaKeypair = KEYUTIL.generateKeypair("RSA", 1024);
- * let ecKeypair = KEYUTIL.generateKeypair("EC", "secp256r1");
+ * let rsaKeypair = generateKeypair("RSA", 1024);
+ * let ecKeypair = generateKeypair("EC", "secp256r1");
  *
  */
-KEYUTIL.export function generateKeypair(alg, keylenOrCurve) {
+export function generateKeypair(alg, keylenOrCurve) {
 	if (alg == "RSA") {
-		let keylen = keylenOrCurve;
+		let keylen = keylenOrCurve | 0;
 		let prvKey = new RSAKeyEx();
 		prvKey.generate(keylen, '10001');
 		prvKey.isPrivate = true;
@@ -1248,10 +1253,10 @@ KEYUTIL.export function generateKeypair(alg, keylenOrCurve) {
 		pubKey.isPrivate = false;
 		pubKey.isPublic = true;
 
-		let result = {};
-		result.prvKeyObj = prvKey;
-		result.pubKeyObj = pubKey;
-		return result;
+		return {
+			prvKeyObj: prvKey,
+			pubKeyObj: pubKey
+		}
 	} else if (alg == "EC") {
 		let curve = keylenOrCurve;
 		let ec = new ECDSA({ curve: curve });
@@ -1268,24 +1273,164 @@ KEYUTIL.export function generateKeypair(alg, keylenOrCurve) {
 		pubKey.isPrivate = false;
 		pubKey.isPublic = true;
 
-		let result = {};
-		result.prvKeyObj = prvKey;
-		result.pubKeyObj = pubKey;
-		return result;
+		return {
+			prvKeyObj: prvKey,
+			pubKeyObj: pubKey
+		}
 	} else {
 		throw "unknown algorithm: " + alg;
 	}
-};
+}
+
+/**
+ * @param {RSAKeyEx} keyObjOrHex 
+ * @returns {ASN1Object}
+ */
+function rsaprv2asn1obj(keyObjOrHex) {
+	let asn1Obj = newObject({
+		"seq": [
+			{ "int": 0 },
+			{ "int": { "bigint": keyObjOrHex.n } },
+			{ "int": keyObjOrHex.e },
+			{ "int": { "bigint": keyObjOrHex.d } },
+			{ "int": { "bigint": keyObjOrHex.p } },
+			{ "int": { "bigint": keyObjOrHex.q } },
+			{ "int": { "bigint": keyObjOrHex.dmp1 } },
+			{ "int": { "bigint": keyObjOrHex.dmq1 } },
+			{ "int": { "bigint": keyObjOrHex.coeff } }
+		]
+	});
+	return asn1Obj;
+}
+
+/**
+ * @param {ECDSA} keyObjOrHex 
+ * @returns {ASN1Object}
+ */
+function ecdsaprv2asn1obj(keyObjOrHex) {
+	let asn1Obj2 = newObject({
+		"seq": [
+			{ "int": 1 },
+			{ "octstr": { "hex": keyObjOrHex.prvKeyHex } },
+			{ "tag": ['a0', true, { 'oid': { 'name': keyObjOrHex.curveName } }] },
+			{ "tag": ['a1', true, { 'bitstr': { 'hex': '00' + keyObjOrHex.pubKeyHex } }] }
+		]
+	});
+	return asn1Obj2;
+}
+
+/**
+ * @param {DSA} keyObjOrHex 
+ * @returns {ASN1Object}
+ */
+function dsaprv2asn1obj(keyObjOrHex) {
+	let asn1Obj = newObject({
+		"seq": [
+			{ "int": 0 },
+			{ "int": { "bigint": keyObjOrHex.p } },
+			{ "int": { "bigint": keyObjOrHex.q } },
+			{ "int": { "bigint": keyObjOrHex.g } },
+			{ "int": { "bigint": keyObjOrHex.y } },
+			{ "int": { "bigint": keyObjOrHex.x } }
+		]
+	});
+	return asn1Obj;
+}
+
+/**
+ * 
+ * @param {string} plainKeyHex 
+ * @param {string | WordArray} passcode 
+ * @returns {ASN1Object}
+ */
+function getEncryptedPKCS8(plainKeyHex, passcode) {
+	let info = getEencryptedPKCS8Info(plainKeyHex, passcode);
+	//alert("iv=" + info.encryptionSchemeIV);
+	//alert("info.ciphertext2[" + info.ciphertext.length + "=" + info.ciphertext);
+	let asn1Obj = new newObject({
+		"seq": [
+			{
+				"seq": [
+					{ "oid": { "name": "pkcs5PBES2" } },
+					{
+						"seq": [
+							{
+								"seq": [
+									{ "oid": { "name": "pkcs5PBKDF2" } },
+									{
+										"seq": [
+											{ "octstr": { "hex": info.pbkdf2Salt } },
+											{ "int": info.pbkdf2Iter }
+										]
+									}
+								]
+							},
+							{
+								"seq": [
+									{ "oid": { "name": "des-EDE3-CBC" } },
+									{ "octstr": { "hex": info.encryptionSchemeIV } }
+								]
+							}
+						]
+					}
+				]
+			},
+			{ "octstr": { "hex": info.ciphertext } }
+		]
+	});
+	return asn1Obj.getEncodedHex();
+}
+
+/** @typedef {{
+	ciphertext: string,
+	pbkdf2Salt: string,
+	pbkdf2Iter: number,
+	encryptionSchemeAlg: string,
+	encryptionSchemeIV: string
+}} PKCS8Info */ var PKCS8Info;
+
+/**
+ * @param {string} plainKeyHex 
+ * @param {string | WordArray} passcode 
+ * @returns {PKCS8Info}
+ */
+function getEencryptedPKCS8Info(plainKeyHex, passcode) {
+	let pbkdf2Iter = 100;
+	let pbkdf2SaltWS = WordArray.random(8);
+	let encryptionSchemeAlg = "DES-EDE3-CBC";
+	let encryptionSchemeIVWS = WordArray.random(8);
+	// PBKDF2 key
+	let pbkdf2KeyWS = PBKDF2(passcode,
+		pbkdf2SaltWS, {
+		"keySize": 192 / 32,
+		"iterations": pbkdf2Iter
+	});
+	// ENCRYPT
+	let plainKeyWS = Hex.parse(plainKeyHex);
+	let encryptedKeyHex =
+		TripleDES.encrypt(plainKeyWS, pbkdf2KeyWS, { "iv": encryptionSchemeIVWS }) + "";
+
+	//alert("encryptedKeyHex=" + encryptedKeyHex);
+
+	//alert("info.ciphertext=" + info.ciphertext);
+	return {
+		ciphertext: encryptedKeyHex,
+		pbkdf2Salt: Hex.stringify(pbkdf2SaltWS),
+		pbkdf2Iter: pbkdf2Iter,
+		encryptionSchemeAlg: encryptionSchemeAlg,
+		encryptionSchemeIV: Hex.stringify(encryptionSchemeIVWS)
+	}
+}
 
 /**
  * get PEM formatted private or public key file from a RSA/ECDSA/DSA key object
- * @static
- * @param {Object} keyObjOrHex key object {@link RSAKeyEx}, {@link ECDSA} or {@link DSA} to encode to
- * @param {string} formatType (OPTION) output format type of "PKCS1PRV", "PKCS5PRV" or "PKCS8PRV" for private key
- * @param {string} passwd (OPTION) password to protect private key
- * @param {string} encAlg (OPTION) encryption algorithm for PKCS#5. currently supports DES-CBC, DES-EDE3-CBC and AES-{128,192,256}-CBC
- * @param {string} hexType (OPTION) type of hex string (ex. pkcs5prv, pkcs8prv)
- * @param {string} ivsaltHex hexadecimal string of IV and salt (default generated random IV)
+ * @param {RSAKeyEx | ECDSA | DSA | string} keyObjOrHex key object {@link RSAKeyEx}, {@link ECDSA} or {@link DSA} to encode to
+ * @param {string=} formatType (OPTION) output format type of "PKCS1PRV", "PKCS5PRV" or "PKCS8PRV" for private key
+ * @param {string=} passwd (OPTION) password to protect private key
+ * @param {string=} encAlg (OPTION) encryption algorithm for PKCS#5. currently supports DES-CBC, DES-EDE3-CBC and AES-{128,192,256}-CBC
+ * @param {string=} hexType (OPTION) type of hex string (ex. pkcs5prv, pkcs8prv)
+ * @param {string=} ivsaltHex hexadecimal string of IV and salt (default generated random IV)
+ * @returns {string}
  * @description
  * <dl>
  * <dt><b>NOTE1:</b>
@@ -1310,71 +1455,16 @@ KEYUTIL.export function generateKeypair(alg, keylenOrCurve) {
  * KEUUTIL.getPEM(privateKey, "PKCS8PRV", "pass") =&gt; generates PEM PKCS#8 encrypted private key
  *                                                      with PBKDF2_HmacSHA1_3DES
  */
-KEYUTIL.export function getPEM(keyObjOrHex, formatType, passwd, encAlg, hexType, ivsaltHex) {
-
-
-
-
-	newObject = KJUR.asn1.ASN1Util.newObject,
-		KJUR.asn1.x509 = KJUR.asn1.x509,
-		_SubjectPublicKeyInfo = SubjectPublicKeyInfo,
-		KJUR.crypto = KJUR.crypto,
-		_DSA = DSA,
-		ECDSA = ECDSA,
-		RSAKeyEx = RSAKeyEx;
-
-	function _rsaprv2asn1obj(keyObjOrHex) {
-		let asn1Obj = newObject({
-			"seq": [
-				{ "int": 0 },
-				{ "int": { "bigint": keyObjOrHex.n } },
-				{ "int": keyObjOrHex.e },
-				{ "int": { "bigint": keyObjOrHex.d } },
-				{ "int": { "bigint": keyObjOrHex.p } },
-				{ "int": { "bigint": keyObjOrHex.q } },
-				{ "int": { "bigint": keyObjOrHex.dmp1 } },
-				{ "int": { "bigint": keyObjOrHex.dmq1 } },
-				{ "int": { "bigint": keyObjOrHex.coeff } }
-			]
-		});
-		return asn1Obj;
-	};
-
-	function _ecdsaprv2asn1obj(keyObjOrHex) {
-		let asn1Obj2 = newObject({
-			"seq": [
-				{ "int": 1 },
-				{ "octstr": { "hex": keyObjOrHex.prvKeyHex } },
-				{ "tag": ['a0', true, { 'oid': { 'name': keyObjOrHex.curveName } }] },
-				{ "tag": ['a1', true, { 'bitstr': { 'hex': '00' + keyObjOrHex.pubKeyHex } }] }
-			]
-		});
-		return asn1Obj2;
-	};
-
-	function _dsaprv2asn1obj(keyObjOrHex) {
-		let asn1Obj = newObject({
-			"seq": [
-				{ "int": 0 },
-				{ "int": { "bigint": keyObjOrHex.p } },
-				{ "int": { "bigint": keyObjOrHex.q } },
-				{ "int": { "bigint": keyObjOrHex.g } },
-				{ "int": { "bigint": keyObjOrHex.y } },
-				{ "int": { "bigint": keyObjOrHex.x } }
-			]
-		});
-		return asn1Obj;
-	};
-
+export function getPEM(keyObjOrHex, formatType, passwd, encAlg, hexType, ivsaltHex) {
 	// 1. public key
 
 	// x. PEM PKCS#8 public key of RSA/ECDSA/DSA public key object
 	if (((RSAKeyEx !== undefined && keyObjOrHex instanceof RSAKeyEx) ||
-		(_DSA !== undefined && keyObjOrHex instanceof _DSA) ||
+		(DSA !== undefined && keyObjOrHex instanceof DSA) ||
 		(ECDSA !== undefined && keyObjOrHex instanceof ECDSA)) &&
 		keyObjOrHex.isPublic == true &&
 		(formatType === undefined || formatType == "PKCS8PUB")) {
-		let asn1Obj = new _SubjectPublicKeyInfo(keyObjOrHex);
+		let asn1Obj = new SubjectPublicKeyInfo(keyObjOrHex);
 		let asn1Hex = asn1Obj.getEncodedHex();
 		return hextopem(asn1Hex, "PUBLIC KEY");
 	}
@@ -1388,7 +1478,7 @@ KEYUTIL.export function getPEM(keyObjOrHex, formatType, passwd, encAlg, hexType,
 		(passwd === undefined || passwd == null) &&
 		keyObjOrHex.isPrivate == true) {
 
-		let asn1Obj = _rsaprv2asn1obj(keyObjOrHex);
+		let asn1Obj = rsaprv2asn1obj(keyObjOrHex);
 		let asn1Hex = asn1Obj.getEncodedHex();
 		return hextopem(asn1Hex, "RSA PRIVATE KEY");
 	}
@@ -1403,7 +1493,7 @@ KEYUTIL.export function getPEM(keyObjOrHex, formatType, passwd, encAlg, hexType,
 		let asn1Obj1 =
 			new DERObjectIdentifier({ 'name': keyObjOrHex.curveName });
 		let asn1Hex1 = asn1Obj1.getEncodedHex();
-		let asn1Obj2 = _ecdsaprv2asn1obj(keyObjOrHex);
+		let asn1Obj2 = ecdsaprv2asn1obj(keyObjOrHex);
 		let asn1Hex2 = asn1Obj2.getEncodedHex();
 
 		let s = "";
@@ -1414,12 +1504,12 @@ KEYUTIL.export function getPEM(keyObjOrHex, formatType, passwd, encAlg, hexType,
 
 	// x. PEM PKCS#1 plain private key of DSA private key object
 	if (formatType == "PKCS1PRV" &&
-		_DSA !== undefined &&
-		keyObjOrHex instanceof _DSA &&
+		DSA !== undefined &&
+		keyObjOrHex instanceof DSA &&
 		(passwd === undefined || passwd == null) &&
 		keyObjOrHex.isPrivate == true) {
 
-		let asn1Obj = _dsaprv2asn1obj(keyObjOrHex);
+		let asn1Obj = dsaprv2asn1obj(keyObjOrHex);
 		let asn1Hex = asn1Obj.getEncodedHex();
 		return hextopem(asn1Hex, "DSA PRIVATE KEY");
 	}
@@ -1433,11 +1523,11 @@ KEYUTIL.export function getPEM(keyObjOrHex, formatType, passwd, encAlg, hexType,
 		(passwd !== undefined && passwd != null) &&
 		keyObjOrHex.isPrivate == true) {
 
-		let asn1Obj = _rsaprv2asn1obj(keyObjOrHex);
+		let asn1Obj = rsaprv2asn1obj(keyObjOrHex);
 		let asn1Hex = asn1Obj.getEncodedHex();
 
 		if (encAlg === undefined) encAlg = "DES-EDE3-CBC";
-		return this.getEncryptedPKCS5PEMFromPrvKeyHex("RSA", asn1Hex, passwd, encAlg, ivsaltHex);
+		return getEncryptedPKCS5PEMFromPrvKeyHex("RSA", asn1Hex, passwd, encAlg, ivsaltHex);
 	}
 
 	// x. PEM PKCS#5 encrypted private key of ECDSA private key object
@@ -1447,94 +1537,26 @@ KEYUTIL.export function getPEM(keyObjOrHex, formatType, passwd, encAlg, hexType,
 		(passwd !== undefined && passwd != null) &&
 		keyObjOrHex.isPrivate == true) {
 
-		let asn1Obj = _ecdsaprv2asn1obj(keyObjOrHex);
+		let asn1Obj = ecdsaprv2asn1obj(keyObjOrHex);
 		let asn1Hex = asn1Obj.getEncodedHex();
 
 		if (encAlg === undefined) encAlg = "DES-EDE3-CBC";
-		return this.getEncryptedPKCS5PEMFromPrvKeyHex("EC", asn1Hex, passwd, encAlg, ivsaltHex);
+		return getEncryptedPKCS5PEMFromPrvKeyHex("EC", asn1Hex, passwd, encAlg, ivsaltHex);
 	}
 
 	// x. PEM PKCS#5 encrypted private key of DSA private key object
 	if (formatType == "PKCS5PRV" &&
-		_DSA !== undefined &&
-		keyObjOrHex instanceof _DSA &&
+		DSA !== undefined &&
+		keyObjOrHex instanceof DSA &&
 		(passwd !== undefined && passwd != null) &&
 		keyObjOrHex.isPrivate == true) {
 
-		let asn1Obj = _dsaprv2asn1obj(keyObjOrHex);
+		let asn1Obj = dsaprv2asn1obj(keyObjOrHex);
 		let asn1Hex = asn1Obj.getEncodedHex();
 
 		if (encAlg === undefined) encAlg = "DES-EDE3-CBC";
-		return this.getEncryptedPKCS5PEMFromPrvKeyHex("DSA", asn1Hex, passwd, encAlg, ivsaltHex);
+		return getEncryptedPKCS5PEMFromPrvKeyHex("DSA", asn1Hex, passwd, encAlg, ivsaltHex);
 	}
-
-	// x. ======================================================================
-
-	let _getEncryptedPKCS8 = function (plainKeyHex, passcode) {
-		let info = _getEencryptedPKCS8Info(plainKeyHex, passcode);
-		//alert("iv=" + info.encryptionSchemeIV);
-		//alert("info.ciphertext2[" + info.ciphertext.length + "=" + info.ciphertext);
-		let asn1Obj = new newObject({
-			"seq": [
-				{
-					"seq": [
-						{ "oid": { "name": "pkcs5PBES2" } },
-						{
-							"seq": [
-								{
-									"seq": [
-										{ "oid": { "name": "pkcs5PBKDF2" } },
-										{
-											"seq": [
-												{ "octstr": { "hex": info.pbkdf2Salt } },
-												{ "int": info.pbkdf2Iter }
-											]
-										}
-									]
-								},
-								{
-									"seq": [
-										{ "oid": { "name": "des-EDE3-CBC" } },
-										{ "octstr": { "hex": info.encryptionSchemeIV } }
-									]
-								}
-							]
-						}
-					]
-				},
-				{ "octstr": { "hex": info.ciphertext } }
-			]
-		});
-		return asn1Obj.getEncodedHex();
-	};
-
-	let _getEencryptedPKCS8Info = function (plainKeyHex, passcode) {
-		let pbkdf2Iter = 100;
-		let pbkdf2SaltWS = CryptoJS.lib.WordArray.random(8);
-		let encryptionSchemeAlg = "DES-EDE3-CBC";
-		let encryptionSchemeIVWS = CryptoJS.lib.WordArray.random(8);
-		// PBKDF2 key
-		let pbkdf2KeyWS = CryptoJS.PBKDF2(passcode,
-			pbkdf2SaltWS, {
-			"keySize": 192 / 32,
-			"iterations": pbkdf2Iter
-		});
-		// ENCRYPT
-		let plainKeyWS = Hex.parse(plainKeyHex);
-		let encryptedKeyHex =
-			CryptoJS.TripleDES.encrypt(plainKeyWS, pbkdf2KeyWS, { "iv": encryptionSchemeIVWS }) + "";
-
-		//alert("encryptedKeyHex=" + encryptedKeyHex);
-
-		let info = {};
-		info.ciphertext = encryptedKeyHex;
-		//alert("info.ciphertext=" + info.ciphertext);
-		info.pbkdf2Salt = Hex.stringify(pbkdf2SaltWS);
-		info.pbkdf2Iter = pbkdf2Iter;
-		info.encryptionSchemeAlg = encryptionSchemeAlg;
-		info.encryptionSchemeIV = Hex.stringify(encryptionSchemeIVWS);
-		return info;
-	};
 
 	// x. PEM PKCS#8 plain private key of RSA private key object
 	if (formatType == "PKCS8PRV" &&
@@ -1542,7 +1564,7 @@ KEYUTIL.export function getPEM(keyObjOrHex, formatType, passwd, encAlg, hexType,
 		keyObjOrHex instanceof RSAKeyEx &&
 		keyObjOrHex.isPrivate == true) {
 
-		let keyObj = _rsaprv2asn1obj(keyObjOrHex);
+		let keyObj = rsaprv2asn1obj(keyObjOrHex);
 		let keyHex = keyObj.getEncodedHex();
 
 		let asn1Obj = newObject({
@@ -1557,7 +1579,7 @@ KEYUTIL.export function getPEM(keyObjOrHex, formatType, passwd, encAlg, hexType,
 		if (passwd === undefined || passwd == null) {
 			return hextopem(asn1Hex, "PRIVATE KEY");
 		} else {
-			let asn1Hex2 = _getEncryptedPKCS8(asn1Hex, passwd);
+			let asn1Hex2 = getEncryptedPKCS8(asn1Hex, passwd);
 			return hextopem(asn1Hex2, "ENCRYPTED PRIVATE KEY");
 		}
 	}
@@ -1568,7 +1590,7 @@ KEYUTIL.export function getPEM(keyObjOrHex, formatType, passwd, encAlg, hexType,
 		keyObjOrHex instanceof ECDSA &&
 		keyObjOrHex.isPrivate == true) {
 
-		let keyObj = new newObject({
+		let keyObj = newObject({
 			"seq": [
 				{ "int": 1 },
 				{ "octstr": { "hex": keyObjOrHex.prvKeyHex } },
@@ -1594,15 +1616,15 @@ KEYUTIL.export function getPEM(keyObjOrHex, formatType, passwd, encAlg, hexType,
 		if (passwd === undefined || passwd == null) {
 			return hextopem(asn1Hex, "PRIVATE KEY");
 		} else {
-			let asn1Hex2 = _getEncryptedPKCS8(asn1Hex, passwd);
+			let asn1Hex2 = getEncryptedPKCS8(asn1Hex, passwd);
 			return hextopem(asn1Hex2, "ENCRYPTED PRIVATE KEY");
 		}
 	}
 
 	// x. PEM PKCS#8 plain private key of DSA private key object
 	if (formatType == "PKCS8PRV" &&
-		_DSA !== undefined &&
-		keyObjOrHex instanceof _DSA &&
+		DSA !== undefined &&
+		keyObjOrHex instanceof DSA &&
 		keyObjOrHex.isPrivate == true) {
 
 		let keyObj = new DERInteger({ 'bigint': keyObjOrHex.x });
@@ -1631,50 +1653,53 @@ KEYUTIL.export function getPEM(keyObjOrHex, formatType, passwd, encAlg, hexType,
 		if (passwd === undefined || passwd == null) {
 			return hextopem(asn1Hex, "PRIVATE KEY");
 		} else {
-			let asn1Hex2 = _getEncryptedPKCS8(asn1Hex, passwd);
+			let asn1Hex2 = getEncryptedPKCS8(asn1Hex, passwd);
 			return hextopem(asn1Hex2, "ENCRYPTED PRIVATE KEY");
 		}
 	}
 
 	throw "unsupported object nor format";
-};
+}
 
 // -- PUBLIC METHODS FOR CSR --------------------------------------------------
+
+/** @typedef {{
+	p8pubkeyhex: string
+}} CSRHex */ var CSRHex
 
 /**
  * get RSAKeyEx/DSA/ECDSA public key object from PEM formatted PKCS#10 CSR string
  * @param {string} csrPEM PEM formatted PKCS#10 CSR string
- * @return {Object} RSAKeyEx/DSA/ECDSA public key object
+ * @return {RSAKeyEx | DSA | ECDSA} RSAKeyEx/DSA/ECDSA public key object
  */
-KEYUTIL.export function getKeyFromCSRPEM(csrPEM) {
+export function getKeyFromCSRPEM(csrPEM) {
 	let csrHex = pemtohex(csrPEM, "CERTIFICATE REQUEST");
-	let key = KEYUTIL.getKeyFromCSRHex(csrHex);
+	let key = getKeyFromCSRHex(csrHex);
 	return key;
-};
+}
 
 /**
  * get RSAKeyEx/DSA/ECDSA public key object from hexadecimal string of PKCS#10 CSR
  * @param {string} csrHex hexadecimal string of PKCS#10 CSR
- * @return {Object} RSAKeyEx/DSA/ECDSA public key object
+ * @return {RSAKeyEx | DSA | ECDSA} RSAKeyEx/DSA/ECDSA public key object
  */
-KEYUTIL.export function getKeyFromCSRHex(csrHex) {
-	let info = KEYUTIL.parseCSRHex(csrHex);
-	let key = KEYUTIL.getKey(info.p8pubkeyhex, null, "pkcs8pub");
+export function getKeyFromCSRHex(csrHex) {
+	let info = parseCSRHex(csrHex);
+	let key = getKey(info.p8pubkeyhex, null, "pkcs8pub");
 	return key;
-};
+}
 
 /**
  * parse hexadecimal string of PKCS#10 CSR (certificate signing request)
  * @param {string} csrHex hexadecimal string of PKCS#10 CSR
- * @return {Array} associative array of parsed CSR
+ * @return {CSRHex} associative array of parsed CSR
  * @description
  * Resulted associative array has following properties:
  * <ul>
  * <li>p8pubkeyhex - hexadecimal string of subject public key in PKCS#8</li>
  * </ul>
  */
-KEYUTIL.export function parseCSRHex(csrHex) {
-	let result = {};
+export function parseCSRHex(csrHex) {
 	let h = csrHex;
 
 	// 1. sequence
@@ -1693,72 +1718,72 @@ KEYUTIL.export function parseCSRHex(csrHex) {
 	if (a2.length < 3)
 		throw "malformed CSR(code:004)"; // 2nd seq short elem
 
-	result.p8pubkeyhex = getTLV(h, a2[2]);
-
-	return result;
-};
+	return {
+		p8pubkeyhex: getTLV(h, a2[2])
+	}
+}
 
 // -- OTHER STATIC PUBLIC METHODS  -------------------------------------------------
 
 /**
  * convert from RSAKeyEx/ECDSA public/private key object to RFC 7517 JSON Web Key(JWK)
- * @static
- * @param {Object} RSAKeyEx/ECDSA public/private key object
+ * @param {RSAKeyEx | ECDSA} keyObj RSAKeyEx/ECDSA public/private key object
  * @return {Object} JWK object
  * @description
  * This static method convert from RSAKeyEx/ECDSA public/private key object 
  * to RFC 7517 JSON Web Key(JWK)
  * @example
- * kp1 = KEYUTIL.generateKeypair("EC", "P-256");
- * jwkPrv1 = KEYUTIL.getJWKFromKey(kp1.prvKeyObj);
- * jwkPub1 = KEYUTIL.getJWKFromKey(kp1.pubKeyObj);
+ * kp1 = generateKeypair("EC", "P-256");
+ * jwkPrv1 = getJWKFromKey(kp1.prvKeyObj);
+ * jwkPub1 = getJWKFromKey(kp1.pubKeyObj);
  *
- * kp2 = KEYUTIL.generateKeypair("RSA", 2048);
- * jwkPrv2 = KEYUTIL.getJWKFromKey(kp2.prvKeyObj);
- * jwkPub2 = KEYUTIL.getJWKFromKey(kp2.pubKeyObj);
+ * kp2 = generateKeypair("RSA", 2048);
+ * jwkPrv2 = getJWKFromKey(kp2.prvKeyObj);
+ * jwkPub2 = getJWKFromKey(kp2.pubKeyObj);
  *
  * // if you need RFC 7638 JWK thumprint as kid do like this:
  * jwkPub2.kid = KJUR.jws.JWS.getJWKthumbprint(jwkPub2);
  */
-KEYUTIL.export function getJWKFromKey(keyObj) {
+export function getJWKFromKey(keyObj) {
+	/** @dict */
 	let jwk = {};
 	if (keyObj instanceof RSAKeyEx && keyObj.isPrivate) {
-		jwk.kty = "RSA";
-		jwk.n = hextob64u(keyObj.n.toString(16));
-		jwk.e = hextob64u(keyObj.e.toString(16));
-		jwk.d = hextob64u(keyObj.d.toString(16));
-		jwk.p = hextob64u(keyObj.p.toString(16));
-		jwk.q = hextob64u(keyObj.q.toString(16));
-		jwk.dp = hextob64u(keyObj.dmp1.toString(16));
-		jwk.dq = hextob64u(keyObj.dmq1.toString(16));
-		jwk.qi = hextob64u(keyObj.coeff.toString(16));
+		jwk['kty'] = "RSA";
+		jwk['n'] = hextob64u(keyObj.n.toString(16));
+		jwk['e'] = hextob64u(keyObj.e.toString(16));
+		jwk['d'] = hextob64u(keyObj.d.toString(16));
+		jwk['p'] = hextob64u(keyObj.p.toString(16));
+		jwk['q'] = hextob64u(keyObj.q.toString(16));
+		jwk['dp'] = hextob64u(keyObj.dmp1.toString(16));
+		jwk['dq'] = hextob64u(keyObj.dmq1.toString(16));
+		jwk['qi'] = hextob64u(keyObj.coeff.toString(16));
 		return jwk;
 	} else if (keyObj instanceof RSAKeyEx && keyObj.isPublic) {
-		jwk.kty = "RSA";
-		jwk.n = hextob64u(keyObj.n.toString(16));
-		jwk.e = hextob64u(keyObj.e.toString(16));
+		jwk['kty'] = "RSA";
+		jwk['n'] = hextob64u(keyObj.n.toString(16));
+		jwk['e'] = hextob64u(keyObj.e.toString(16));
 		return jwk;
 	} else if (keyObj instanceof ECDSA && keyObj.isPrivate) {
 		let name = keyObj.getShortNISTPCurveName();
 		if (name !== "P-256" && name !== "P-384")
 			throw "unsupported curve name for JWT: " + name;
 		let xy = keyObj.getPublicKeyXYHex();
-		jwk.kty = "EC";
-		jwk.crv = name;
-		jwk.x = hextob64u(xy.x);
-		jwk.y = hextob64u(xy.y);
-		jwk.d = hextob64u(keyObj.prvKeyHex);
+		jwk['kty'] = "EC";
+		jwk['crv'] = name;
+		jwk['x'] = hextob64u(xy.x);
+		jwk['y'] = hextob64u(xy.y);
+		jwk['d'] = hextob64u(keyObj.prvKeyHex);
 		return jwk;
 	} else if (keyObj instanceof ECDSA && keyObj.isPublic) {
 		let name = keyObj.getShortNISTPCurveName();
 		if (name !== "P-256" && name !== "P-384")
 			throw "unsupported curve name for JWT: " + name;
 		let xy = keyObj.getPublicKeyXYHex();
-		jwk.kty = "EC";
-		jwk.crv = name;
-		jwk.x = hextob64u(xy.x);
-		jwk.y = hextob64u(xy.y);
+		jwk['kty'] = "EC";
+		jwk['crv'] = name;
+		jwk['x'] = hextob64u(xy.x);
+		jwk['y'] = hextob64u(xy.y);
 		return jwk;
 	}
 	throw "not supported key object";
-};
+}

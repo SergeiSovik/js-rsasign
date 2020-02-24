@@ -52,7 +52,7 @@ if (typeof KJUR.jws == "undefined" || !KJUR.jws) KJUR.jws = {};
  * jwsjs1.readJWSJS("{headers: [...], payload: "eyJ...", signatures: [...]}");
  * 
  * // add PS256 signature with RSA private key object
- * prvKeyObj = KEYUTIL.getKey("-----BEGIN PRIVATE KEY...");
+ * prvKeyObj = getKey("-----BEGIN PRIVATE KEY...");
  * jwsjs1.addSignature("PS256", {alg: "PS256"}, prvKeyObj);
  * // add HS256 signature with HMAC password "secret"
  * jwsjs1.addSignature(null, {alg: "HS256"}, {utf8: "secret"});
@@ -118,7 +118,7 @@ KJUR.jws.JWSJS = function() {
      * jwsjs1.readJWSJS("{headers: [...], payload: "eyJ...", signatures: [...]}");
      *
      * // add PS256 signature with RSA private key object
-     * prvKeyObj = KEYUTIL.getKey("-----BEGIN PRIVATE KEY...");
+     * prvKeyObj = getKey("-----BEGIN PRIVATE KEY...");
      * jwsjs1.addSignature("PS256", {alg: "PS256"}, prvKeyObj);
      *
      * // add HS256 signature with HMAC password "secret"

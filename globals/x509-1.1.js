@@ -17,6 +17,10 @@ import { oidHexToInt } from "./asn1-1.0.js"
 import { name2oid, oid2name, oid2atype } from "./asn1oid.js"
 import { getChildIdx, getV, getTLV, getVbyList, getTLVbyList, getIdxbyList, getVidx, oidname, hextooidstr } from "./asn1hex-1.1.js"
 import { pemtohex, hextoutf8 } from "./base64x-1.1.js"
+import { getKey } from "./keyutil-1.0.js"
+import { RSAKeyEx } from "./rsaex.js"
+import { DSA } from "./dsa-2.0.js"
+import { ECDSA } from "./ecdsa-modified-1.0.js"
 
 /** @typedef {{
 	critical: boolean,
@@ -289,14 +293,14 @@ export class X509 {
 
     /**
      * get a RSAKeyEx/ECDSA/DSA public key object of subjectPublicKeyInfo field.<br/>
-     * @return {Object} RSAKeyEx/ECDSA/DSA public key object of subjectPublicKeyInfo field
+     * @return {RSAKeyEx | ECDSA | DSA} RSAKeyEx/ECDSA/DSA public key object of subjectPublicKeyInfo field
      * @example
      * x = new X509();
      * x.readCertPEM(sCertPEM);
      * pubkey= x.getPublicKey();
      */
 	getPublicKey() {
-		return KEYUTIL.getKey(this.getPublicKeyHex(), null, "pkcs8pub");
+		return getKey(this.getPublicKeyHex(), null, "pkcs8pub");
 	}
 
     /**
@@ -336,7 +340,7 @@ export class X509 {
      * This method verifies signature value of hexadecimal string of 
      * X.509 certificate by specified public key object.
      * @example
-     * pubKey = KEYUTIL.getKey(pemPublicKey); // or certificate
+     * pubKey = getKey(pemPublicKey); // or certificate
      * x = new X509();
      * x.readCertPEM(pemCert);
      * x.verifySignature(pubKey) &rarr; true, false or raising exception

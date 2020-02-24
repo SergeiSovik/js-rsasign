@@ -19,6 +19,8 @@ import { KEYUSAGE_NAME, X509 } from "./x509-1.1.js"
 import { hextob64nl, pemtohex } from "./base64x-1.1.js"
 import { DSA } from "./dsa-2.0.js"
 import { ECDSA } from "./ecdsa-modified-1.0.js"
+import { getKey } from "./keyutil-1.0.js"
+import { RSAKeyEx } from "./rsaex.js";
 
 /**
  * ASN.1 module for X.509 certificate
@@ -65,7 +67,6 @@ import { ECDSA } from "./ecdsa-modified-1.0.js"
 
 /**
  * X.509 Certificate class to sign and generate hex encoded certificate
- * @param {Object} params dictionary of parameters (ex. {'tbscertobj': obj, 'prvkeyobj': key})
  * @description
  * <br/>
  * As for argument 'params' for constructor, you can specify one of
@@ -77,7 +78,7 @@ import { ECDSA } from "./ecdsa-modified-1.0.js"
  * NOTE1: 'params' can be omitted.<br/>
  * NOTE2: DSA/ECDSA is also supported for CA signging key from asn1x509 1.0.6.
  * @example
- * let caKey = KEYUTIL.getKey(caKeyPEM); // CA's private key
+ * let caKey = getKey(caKeyPEM); // CA's private key
  * let cert = new KJUR.asn1x509.Certificate({'tbscertobj': tbs, 'prvkeyobj': caKey});
  * cert.sign(); // issue certificate by CA's private key
  * let certPEM = cert.getPEMString();
@@ -89,16 +90,16 @@ import { ECDSA } from "./ecdsa-modified-1.0.js"
  */
 export class Certificate extends ASN1Object {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {'tbscertobj': obj, 'prvkeyobj': key})
 	 */
 	constructor(params) {
 		super();
 
-		/** @type {???? | null} */ this.asn1TBSCert = null;
-		/** @type {???? | null} */ this.asn1SignatureAlg = null;
+		/** @type {TBSCertificate | null} */ this.asn1TBSCert = null;
+		/** @type {AlgorithmIdentifier | null} */ this.asn1SignatureAlg = null;
 		/** @type {DERBitString | null} */ this.asn1Sig = null;
 		/** @type {string | null} */ this.hexSig = null;
-		/** @type {???? | null} */ this.prvKey = null;
+		/** @type {RSAKeyEx | DSA | ECDSA | null} */ this.prvKey = null;
 
 		if (params !== undefined) {
 			if (params['tbscertobj'] !== undefined) {
@@ -181,7 +182,6 @@ export class Certificate extends ASN1Object {
 
 /**
  * ASN.1 TBSCertificate structure class
- * @param {Object} params dictionary of parameters (ex. {})
  * @description
  * <br/>
  * <h4>EXAMPLE</h4>
@@ -199,7 +199,7 @@ export class Certificate extends ASN1Object {
  */
 export class TBSCertificate extends ASN1Object {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {})
 	 */
 	constructor(params) {
 		super();
@@ -296,7 +296,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set subject public key info by RSA/ECDSA/DSA key parameter
-     * @param {Object} keyParam public key parameter which passed to {@link KEYUTIL.getKey} argument
+     * @param {Object} keyParam public key parameter which passed to {@link getKey} argument
      * @description
      * @example
      * tbsc.setSubjectPublicKeyByGetKeyParam(certPEMString); // or
@@ -304,7 +304,7 @@ export class TBSCertificate extends ASN1Object {
      * tbsc.setSubjectPublicKeyByGetKeyParam(kjurCryptoECDSAKeyObject); // et.al.
      */
 	setSubjectPublicKeyByGetKey(keyParam) {
-		let keyObj = KEYUTIL.getKey(keyParam);
+		let keyObj = getKey(keyParam);
 		this.asn1SubjPKey = new SubjectPublicKeyInfo(keyObj);
 	}
 
@@ -393,7 +393,6 @@ export class TBSCertificate extends ASN1Object {
 /**
  * base Extension ASN.1 structure class
  * @abstract
- * @param {Object} params dictionary of parameters (ex. {'critical': true})
  * @description
  * @example
  * // Extension  ::=  SEQUENCE  {
@@ -403,7 +402,7 @@ export class TBSCertificate extends ASN1Object {
  */
 export class X500Extension extends ASN1Object {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {'critical': true})
 	 */
 	constructor(params) {
 		super();
@@ -426,7 +425,7 @@ export class X500Extension extends ASN1Object {
 		let asn1Oid = new DERObjectIdentifier({ 'oid': this.oid });
 		let asn1EncapExtnValue = new DEROctetString({ 'hex': this.getExtnValueHex() });
 
-		/** @type {Array<ASN1Object> */ let asn1Array = new Array();
+		/** @type {Array<ASN1Object>} */ let asn1Array = new Array();
 		asn1Array.push(asn1Oid);
 		if (this.critical) asn1Array.push(new DERBoolean());
 		asn1Array.push(asn1EncapExtnValue);
@@ -451,7 +450,7 @@ export class X500Extension extends ASN1Object {
 	 * X500Extension.appendByNameToArray("KeyUsage", {'bin':'11'}, a);
 	 */
 	static appendByNameToArray(name, extParams, a) {
-		let lowname = name.toLowerCase(),
+		let lowname = name.toLowerCase();
 
 		if (lowname == "basicconstraints") {
 			let extObj = new BasicConstraints(extParams);
@@ -491,7 +490,6 @@ export class X500Extension extends ASN1Object {
 
 /**
  * KeyUsage ASN.1 structure class
- * @param {Object} params dictionary of parameters (ex. {'bin': '11', 'critical': true})
  * @description
  * This class is for <a href="https://tools.ietf.org/html/rfc5280#section-4.2.1.3" target="_blank">KeyUsage</a> X.509v3 extension.
  * <pre>
@@ -515,7 +513,7 @@ export class X500Extension extends ASN1Object {
  */
 export class KeyUsage extends X500Extension {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {'bin': '11', 'critical': true})
 	 */
 	constructor(params) {
 		super(params);
@@ -553,13 +551,12 @@ export class KeyUsage extends X500Extension {
 
 /**
  * BasicConstraints ASN.1 structure class
- * @param {Object} params dictionary of parameters (ex. {'cA': true, 'critical': true})
  * @description
  * @example
  */
 export class BasicConstraints extends X500Extension {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {'cA': true, 'critical': true})
 	 */
 	constructor(params) {
 		super(params);
@@ -596,7 +593,6 @@ export class BasicConstraints extends X500Extension {
 
 /**
  * CRLDistributionPoints ASN.1 structure class
- * @param {Object} params dictionary of parameters (ex. {'uri': 'http://a.com/', 'critical': true})
  * @description
  * <pre>
  * id-ce-cRLDistributionPoints OBJECT IDENTIFIER ::=  { id-ce 31 }
@@ -627,7 +623,7 @@ export class BasicConstraints extends X500Extension {
  */
 export class CRLDistributionPoints extends X500Extension {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {'uri': 'http://a.com/', 'critical': true})
 	 */
 	constructor(params) {
 		super(params);
@@ -663,7 +659,6 @@ export class CRLDistributionPoints extends X500Extension {
 
 /**
  * KeyUsage ASN.1 structure class
- * @param {Object} params dictionary of parameters
  * @description
  * @example
  * e1 = new ExtKeyUsage({
@@ -679,7 +674,7 @@ export class CRLDistributionPoints extends X500Extension {
  */
 export class ExtKeyUsage extends X500Extension {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters
 	 */
 	constructor(params) {
 		super(params);
@@ -715,7 +710,6 @@ export class ExtKeyUsage extends X500Extension {
 
 /**
  * AuthorityKeyIdentifier ASN.1 structure class
- * @param {Object} params dictionary of parameters (ex. {'uri': 'http://a.com/', 'critical': true})
  * @description
  * <pre>
  * d-ce-authorityKeyIdentifier OBJECT IDENTIFIER ::=  { id-ce 35 }
@@ -735,7 +729,7 @@ export class ExtKeyUsage extends X500Extension {
  */
 export class AuthorityKeyIdentifier extends X500Extension {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {'uri': 'http://a.com/', 'critical': true})
 	 */
 	constructor(params) {
 		super(params);
@@ -825,7 +819,6 @@ export class AuthorityKeyIdentifier extends X500Extension {
 
 /**
  * AuthorityInfoAccess ASN.1 structure class
- * @param {Object} params dictionary of parameters
  * @description
  * <pre>
  * id-pe OBJECT IDENTIFIER  ::=  { id-pkix 1 }
@@ -849,7 +842,7 @@ export class AuthorityKeyIdentifier extends X500Extension {
  */
 export class AuthorityInfoAccess extends X500Extension {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters
 	 */
 	constructor(params) {
 		super(params);
@@ -889,7 +882,6 @@ export class AuthorityInfoAccess extends X500Extension {
 
 /**
  * SubjectAltName ASN.1 structure class<br/>
- * @param {Object} params dictionary of parameters
  * @description
  * This class provides X.509v3 SubjectAltName extension.
  * <pre>
@@ -915,7 +907,7 @@ export class AuthorityInfoAccess extends X500Extension {
  */
 export class SubjectAltName extends X500Extension {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters
 	 */
 	constructor(params) {
 		super(params);
@@ -947,7 +939,6 @@ export class SubjectAltName extends X500Extension {
 
 /**
  * IssuerAltName ASN.1 structure class<br/>
- * @param {Object} params dictionary of parameters
  * @description
  * This class provides X.509v3 IssuerAltName extension.
  * <pre>
@@ -973,7 +964,7 @@ export class SubjectAltName extends X500Extension {
  */
 export class IssuerAltName extends X500Extension {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters
 	 */
 	constructor(params) {
 		super(params);
@@ -1005,7 +996,6 @@ export class IssuerAltName extends X500Extension {
 
 /**
  * X.509 CRL class to sign and generate hex encoded CRL
- * @param {Object} params dictionary of parameters (ex. {'tbsobj': obj, 'rsaprvkey': key})
  * @description
  * <br/>
  * As for argument 'params' for constructor, you can specify one of
@@ -1030,15 +1020,15 @@ export class IssuerAltName extends X500Extension {
  */
 export class CRL extends ASN1Object {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {'tbsobj': obj, 'rsaprvkey': key})
 	 */
 	constructor(params) {
 		super();
 
-		this.asn1TBSCertList = null,
-		this.asn1SignatureAlg = null,
-		/** @type {DERBitString | null} */ this.asn1Sig = null,
-		/** @type {string | null} */ this.hexSig = null,
+		this.asn1TBSCertList = null;
+		this.asn1SignatureAlg = null;
+		/** @type {DERBitString | null} */ this.asn1Sig = null;
+		/** @type {string | null} */ this.hexSig = null;
 		this.prvKey = null;
 
 		if (params !== undefined) {
@@ -1105,7 +1095,6 @@ export class CRL extends ASN1Object {
 
 /**
  * ASN.1 TBSCertList structure class for CRL
- * @param {Object} params dictionary of parameters (ex. {})
  * @description
  * <br/>
  * <h4>EXAMPLE</h4>
@@ -1135,7 +1124,7 @@ export class CRL extends ASN1Object {
  */
 export class TBSCertList extends ASN1Object {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {})
 	 */
 	constructor(params) {
 		super();
@@ -1238,7 +1227,6 @@ export class TBSCertList extends ASN1Object {
 
 /**
  * ASN.1 CRLEntry structure class for CRL
- * @param {Object} params dictionary of parameters (ex. {})
  * @description
  * @example
  * let e = new CRLEntry({'time': {'str': '130514235959Z'}, 'sn': {'int': 234}});
@@ -1251,7 +1239,7 @@ export class TBSCertList extends ASN1Object {
  */
 export class CRLEntry extends ASN1Object {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {})
 	 */
 	constructor(params) {
 		super(params);
@@ -1304,7 +1292,6 @@ export class CRLEntry extends ASN1Object {
 
 /**
  * X500Name ASN.1 structure class
- * @param {Object} params dictionary of parameters (ex. {'str': '/C=US/O=a'})
  * @description
  * This class provides DistinguishedName ASN.1 class structure
  * defined in <a href="https://tools.ietf.org/html/rfc2253#section-2">RFC 2253 section 2</a>.
@@ -1334,7 +1321,7 @@ export class CRLEntry extends ASN1Object {
  */
 export class X500Name extends ASN1Object {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {'str': '/C=US/O=a'})
 	 */
 	constructor(params) {
 		super();
@@ -1509,7 +1496,6 @@ export class X500Name extends ASN1Object {
 
 /**
  * RDN (Relative Distinguished Name) ASN.1 structure class
- * @param {Object} params dictionary of parameters (ex. {'str': 'C=US'})
  * @description
  * This class provides RelativeDistinguishedName ASN.1 class structure
  * defined in <a href="https://tools.ietf.org/html/rfc2253#section-2">RFC 2253 section 2</a>.
@@ -1531,7 +1517,7 @@ export class X500Name extends ASN1Object {
  */
 export class RDN extends ASN1Object {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {'str': 'C=US'})
 	 */
 	constructor(params) {
 		super();
@@ -1656,19 +1642,18 @@ export class RDN extends ASN1Object {
 
 /**
  * AttributeTypeAndValue ASN.1 structure class
- * @param {Object} params dictionary of parameters (ex. {'str': 'C=US'})
  * @description
  * @example
  */
 export class AttributeTypeAndValue extends ASN1Object {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {'str': 'C=US'})
 	 */
 	constructor(params) {
 		super();
 
-		/** @type {DERObjectIdentifier | null} */ this.typeObj = null,
-		/** @type {DERAbstractString | null} */ this.valueObj = null,
+		/** @type {DERObjectIdentifier | null} */ this.typeObj = null;
+		/** @type {DERAbstractString | null} */ this.valueObj = null;
 		this.defaultDSType = "utf8";
 
 		if (params !== undefined) {
@@ -1705,7 +1690,6 @@ export class AttributeTypeAndValue extends ASN1Object {
 	 * @param {string} dsType 
 	 * @param {string} valueStr 
 	 * @returns {DERAbstractString}
-	 * @throws
 	 */
 	getValueObj(dsType, valueStr) {
 		if (dsType == "utf8") return new DERUTF8String({ "str": valueStr });
@@ -1728,7 +1712,6 @@ export class AttributeTypeAndValue extends ASN1Object {
 
 /**
  * SubjectPublicKeyInfo ASN.1 structure class
- * @param {Object} params parameter for subject public key
  * @description
  * <br/>
  * As for argument 'params' for constructor, you can specify one of
@@ -1748,7 +1731,7 @@ export class AttributeTypeAndValue extends ASN1Object {
  */
 export class SubjectPublicKeyInfo extends ASN1Object {
 	/**
-	 * @param {Object=} params 
+	 * @param {(RSAKeyEx | ECDSA | DSA)=} params parameter for subject public key
 	 */
 	constructor(params) {
 		super();
@@ -1784,11 +1767,11 @@ export class SubjectPublicKeyInfo extends ASN1Object {
 	}
 
     /**
-     * @param {Object} {@link RSAKeyEx}, {@link ECDSA} or {@link DSA} object
+     * @param {RSAKeyEx | ECDSA | DSA} key {@link RSAKeyEx}, {@link ECDSA} or {@link DSA} object
      * @description
      * @example
      * spki = new SubjectPublicKeyInfo();
-     * pubKey = KEYUTIL.getKey(PKCS8PUBKEYPEM);
+     * pubKey = getKey(PKCS8PUBKEYPEM);
      * spki.setPubKey(pubKey);
      */
 	setPubKey(key) {
@@ -1837,7 +1820,6 @@ export class SubjectPublicKeyInfo extends ASN1Object {
 
 /**
  * Time ASN.1 structure class
- * @param {Object} params dictionary of parameters (ex. {'str': '130508235959Z'})
  * @description
  * <br/>
  * <h4>EXAMPLES</h4>
@@ -1847,7 +1829,7 @@ export class SubjectPublicKeyInfo extends ASN1Object {
  */
 export class Time extends ASN1Object {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {'str': '130508235959Z'})
 	 */
 	constructor(params) {
 		super();
@@ -1903,7 +1885,6 @@ export class Time extends ASN1Object {
 
 /**
  * AlgorithmIdentifier ASN.1 structure class
- * @param {Object} params dictionary of parameters (ex. {'name': 'SHA1withRSA'})
  * @description
  * The 'params' argument is an associative array and has following parameters:
  * <ul>
@@ -1928,7 +1909,7 @@ export class Time extends ASN1Object {
  */
 export class AlgorithmIdentifier extends ASN1Object {
 	/**
-	 * @param {Object=} params 
+	 * @param {Object=} params dictionary of parameters (ex. {'name': 'SHA1withRSA'})
 	 */
 	constructor(params) {
 		super();
@@ -2454,14 +2435,14 @@ export function newCertPEM(param) {
 	if (param['cakey'] === undefined && param['sighex'] === undefined)
 		throw "param cakey and sighex undefined.";
 
-	let caKey = null;
-	let cert = null;
+	/** @type {RSAKeyEx | DSA | ECDSA | null} */ let caKey = null;
+	/** @type {Certificate | null} */ let cert = null;
 
 	if (param['cakey']) {
 		if (param['cakey'].isPrivate === true) {
 			caKey = param['cakey'];
 		} else {
-			caKey = KEYUTIL.getKey.apply(null, param['cakey']);
+			caKey = getKey.apply(null, param['cakey']);
 		}
 		cert = new Certificate({ 'tbscertobj': o, 'prvkeyobj': caKey });
 		cert.sign();

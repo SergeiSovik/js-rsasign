@@ -16,6 +16,7 @@
 import { DERInteger, DERBitString, DERNull, DERObjectIdentifier, DERSequence, DERSet, DERTaggedObject } from "./asn1-1.0.js"
 import { AlgorithmIdentifier, X500Name, X500Extension, SubjectPublicKeyInfo } from "./asn1x509-1.0.js"
 import { getTLVbyList } from "./asn1hex-1.1.js"
+import { getKey } from "./keyutil-1.0.js"
 
 /**
  * @fileOverview
@@ -207,7 +208,7 @@ KJUR.asn1.csr.CertificationRequestInfo = function(params) {
 
     /**
      * set subject public key info by RSA/ECDSA/DSA key parameter
-     * @param {Object} keyParam public key parameter which passed to {@link KEYUTIL.getKey} argument
+     * @param {Object} keyParam public key parameter which passed to {@link getKey} argument
      * @description
      * @example
      * csri.setSubjectPublicKeyByGetKeyParam(certPEMString); // or 
@@ -301,9 +302,9 @@ KJUR.asn1.csr.CSRUtil = new function() {
  * request by a simple JSON object which has following parameters:
  * <ul>
  * <li>subject - parameter to be passed to {@link X500Name}</li>
- * <li>sbjpubkey - parameter to be passed to {@link KEYUTIL.getKey}</li>
+ * <li>sbjpubkey - parameter to be passed to {@link getKey}</li>
  * <li>sigalg - signature algorithm name (ex. SHA256withRSA)</li>
- * <li>sbjprvkey - parameter to be passed to {@link KEYUTIL.getKey}</li>
+ * <li>sbjprvkey - parameter to be passed to {@link getKey}</li>
  * </ul>
  *
  * @example
@@ -324,7 +325,7 @@ KJUR.asn1.csr.CSRUtil = new function() {
  * });
  *
  * // 3) with generateKeypair
- * kp = KEYUTIL.generateKeypair("RSA", 2048);
+ * kp = generateKeypair("RSA", 2048);
  * pem = KJUR.asn1.csr.CSRUtil.newCSRPEM({
  *   subject: {str: '/C=US/O=Test/CN=example.com'},
  *   sbjpubkey: kp.pubKeyObj,
@@ -405,7 +406,7 @@ KJUR.asn1.csr.CSRUtil.getInfo = function(sPEM) {
     result.subject.name = X509.hex2dn(result.subject.hex);
 
     result.pubkey.hex = getTLVbyList(hex, 0, [0, 2]);
-    result.pubkey.obj = KEYUTIL.getKey(result.pubkey.hex, null, "pkcs8pub");
+    result.pubkey.obj = getKey(result.pubkey.hex, null, "pkcs8pub");
 
     return result;
 };
