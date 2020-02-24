@@ -17,6 +17,7 @@ import { oidHexToInt, ASN1Object } from "./asn1-1.0.js"
 import { isHex, hextoutf8 } from "./base64x-1.1.js"
 import { oid2name } from "./asn1oid.js"
 import { BigInteger } from "./../../js-bn/modules/jsbn.js"
+import { isNumber } from "./../../../include/type.js"
 
 /*
  * MEMO:
@@ -467,7 +468,7 @@ export function dump(hexOrObj, flags, idx, indent) {
 	if (flags === undefined) flags = { "ommit_long_octet": 32 };
 	if (idx === undefined) idx = 0;
 	if (indent === undefined) indent = "";
-	let skipLongHexOctets = flags['ommit_long_octet'];
+	let skipLongHexOctets = isNumber(flags['ommit_long_octet']) ? /** @type {number} */ ( flags['ommit_long_octet'] ) : 32;
 
 	if (hex.substr(idx, 2) == "01") {
 		let v = getV(hex, idx);

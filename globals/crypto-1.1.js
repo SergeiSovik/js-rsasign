@@ -32,7 +32,7 @@ import { b64tohex } from "./../../js-bn/modules/base64.js"
 import { KeyObject, getKey } from "./keyutil-1.0.js"
 import { ECDSA } from "./ecdsa-modified-1.0.js"
 import { RSAKeyEx } from "./rsaex.js"
-import { isString } from "./../../../include/type.js"
+import { isString, isDictionary, isNumber } from "./../../../include/type.js"
 
 /**
  * Cryptographic algorithm provider library module
@@ -607,8 +607,8 @@ export class Mac {
 		/** @type {string | null} */ this.algProv = null;
 
 		if (params !== undefined) {
-			if (params['pass'] !== undefined) {
-				this.setPassword(params['pass']);
+			if (isString(params['pass']) || isDictionary(params['pass'])) {
+				this.setPassword(/** @type {string | Object<string,*>} */ ( params['pass'] ));
 			}
 			if (isString(params['alg'])) {
 				this.algName = /** @type {string} */ ( params['alg'] );
@@ -870,8 +870,8 @@ export class Signature {
  	 * @param {Object<string,*>=} params parameters for constructor
 	 */
 	constructor(params) {
-		this.prvKey = null; // RSAKeyEx/{ECDSA,DSA} object for signing
-		this.pubKey = null; // RSAKeyEx/{ECDSA,DSA} object for verifying
+		/** @type {KeyObject | null} */ this.prvKey = null; // RSAKeyEx/ECDSA/DSA object for signing
+		/** @type {KeyObject | null} */ this.pubKey = null; // RSAKeyEx/ECDSA/DSA object for verifying
 
 		/** @type {MessageDigest | null} */ this.md = null; // MessageDigest object
 		/** @type {string | null} */ this.algName = null;
@@ -880,14 +880,14 @@ export class Signature {
 		/** @type {string | null} */ this.mdAlgName = null;
 		/** @type {string | null} */ this.pubkeyAlgName = null;	// rsa,ecdsa,rsaandmgf1(=rsapss)
 		/** @type {string | null} */ this.state = null;
-		this.pssSaltLen = -1;
+		/** @type {number} */ this.pssSaltLen = -1;
 
 		/** @type {string | null} */ this.sHashHex = null; // hex hash value for hex
-		this.hDigestInfo = null;
-		this.hPaddedDigestInfo = null;
-		this.hSign = null;
+		/** @type {string | null} */ this.hDigestInfo = null;
+		/** @type {string | null} */ this.hPaddedDigestInfo = null;
+		/** @type {string | null} */ this.hSign = null;
 
-		this.initParams = params;
+		/** @type {Object<string,*> | undefined} */ this.initParams = params;
 
 		if (params !== undefined) {
 			if (isString(params['alg'])) {
@@ -902,14 +902,15 @@ export class Signature {
 				this.setAlgNames();
 			}
 	
-			if (params['psssaltlen'] !== undefined) this.pssSaltLen = params['psssaltlen'] | 0;
+			if (isNumber(params['psssaltlen'])) this.pssSaltLen = /** @type {number} */ ( params['psssaltlen'] );
 	
-			if (params['prvkeypem'] !== undefined) {
+			let prvkeypem = params['prvkeypem'];
+			if ((prvkeypem !== undefined) && (isString(prvkeypem) || isDictionary(prvkeypem) || prvkeypem instanceof RSAKeyEx || prvkeypem instanceof DSA || prvkeypem instanceof ECDSA)) {
 				if (params['prvkeypas'] !== undefined) {
 					throw "both prvkeypem and prvkeypas parameters not supported";
 				} else {
 					try {
-						let prvKey = getKey(params['prvkeypem']);
+						let prvKey = getKey(/** @type {string | KeyObject | Object<string,*>} */ ( params['prvkeypem'] ));
 						this.init(prvKey);
 					} catch (ex) {
 						throw "fatal error to load pem private key: " + ex;

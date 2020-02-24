@@ -22,6 +22,7 @@ import { ECDSA } from "./ecdsa-modified-1.0.js"
 import { KeyObject, getKey } from "./keyutil-1.0.js"
 import { RSAKeyEx } from "./rsaex.js"
 import { Signature } from "./crypto-1.1.js"
+import { isBoolean, isNumber, isListOfDictionaries, isDictionary, isString } from "./../../../include/type.js"
 
 /**
  * ASN.1 module for X.509 certificate
@@ -137,6 +138,7 @@ export class Certificate extends ASN1Object {
 
     /**
      * set signature value internally by hex string
+	 * @param {string} sigHex
      * @description
      * @example
      * let cert = new Certificate({'tbscertobj': tbs});
@@ -412,10 +414,10 @@ export class X500Extension extends ASN1Object {
 		/** @type {ASN1Object | null} */ this.asn1ExtnValue = null;
 		/** @type {string} */ this.oid;
 
-		this.critical = false;
+		/** @type {boolean} */ this.critical = false;
 		if (params !== undefined) {
-			if (params['critical'] !== undefined) {
-				this.critical = params['critical'] ? true : false;
+			if (isBoolean(params['critical'])) {
+				this.critical = /** @type {boolean} */ ( params['critical'] );
 			}
 		}
 	}
@@ -529,7 +531,7 @@ export class KeyUsage extends X500Extension {
 				this.asn1ExtnValue = new DERBitString(params);
 			}
 			if (params['names'] !== undefined && params['names'].length !== undefined) {
-				let names = params['names'];
+				let names = /** @type {Array} */ ( params['names'] );
 				let s = "000000000";
 				for (let i = 0; i < names.length; i++) {
 					for (let j = 0; j < KEYUSAGE_NAME.length; j++) {
@@ -539,7 +541,7 @@ export class KeyUsage extends X500Extension {
 						}
 					}
 				}
-				this.asn1ExtnValue = new DERBitString({ bin: s });
+				this.asn1ExtnValue = new DERBitString({ 'bin': s });
 			}
 		}
 	}
@@ -571,11 +573,11 @@ export class BasicConstraints extends X500Extension {
 		/** @type {number} */ this.pathLen = -1;
 
 		if (params !== undefined) {
-			if (params['cA'] !== undefined) {
-				this.cA = params['cA'];
+			if (isBoolean(params['cA'])) {
+				this.cA = /** @type {boolean} */ ( params['cA'] );
 			}
-			if (params['pathLen'] !== undefined) {
-				this.pathLen = params['pathLen'];
+			if (isNumber(params['pathLen'])) {
+				this.pathLen = /** @type {number} */ ( params['pathLen'] );
 			}
 		}	
 	}
@@ -686,14 +688,14 @@ export class ExtKeyUsage extends X500Extension {
 
 		this.oid = "2.5.29.37";
 		if (params !== undefined) {
-			if (params['array'] !== undefined) {
-				this.setPurposeArray(params['array']);
+			if (isListOfDictionaries(params['array'])) {
+				this.setPurposeArray(/** @type {Array<Object<string,*>>} */ ( params['array'] ));
 			}
 		}
 	}
 
 	/**
-	 * @param {Array<Object>} purposeArray 
+	 * @param {Array<Object<string,*>>} purposeArray 
 	 */
 	setPurposeArray(purposeArray) {
 		this.asn1ExtnValue = new DERSequence();
@@ -745,14 +747,14 @@ export class AuthorityKeyIdentifier extends X500Extension {
 
 		this.oid = "2.5.29.35";
 		if (params !== undefined) {
-			if (params['kid'] !== undefined) {
-				this.setKIDByParam(params['kid']);
+			if (isDictionary(params['kid'])) {
+				this.setKIDByParam(/** @type {Object<string,*>} */ ( params['kid'] ));
 			}
-			if (params['issuer'] !== undefined) {
-				this.setCertIssuerByParam(params['issuer']);
+			if (isDictionary(params['issuer'])) {
+				this.setCertIssuerByParam(/** @type {Object<string,*>} */ ( params['issuer'] ));
 			}
-			if (params['sn'] !== undefined) {
-				this.setCertSNByParam(params['sn']);
+			if (isDictionary(params['sn'])) {
+				this.setCertSNByParam(/** @type {Object<string,*>} */ ( params['sn'] ));
 			}
 		}	
 	}
@@ -854,23 +856,27 @@ export class AuthorityInfoAccess extends X500Extension {
 
 		this.oid = "1.3.6.1.5.5.7.1.1";		
 		if (params !== undefined) {
-			if (params['array'] !== undefined) {
-				this.setAccessDescriptionArray(params['array']);
+			if (isListOfDictionaries(params['array'])) {
+				this.setAccessDescriptionArray(/** @type {Array<Object<string,*>>} */ ( params['array'] ));
 			}
 		}
 	}
 	
 	/**
-	 * @param {Array<Object>} accessDescriptionArray 
+	 * @param {Array<Object<string,*>>} accessDescriptionArray 
 	 */
 	setAccessDescriptionArray(accessDescriptionArray) {
 		/** @type {Array<DERSequence>} */ let array = new Array();
 
 		for (let i = 0; i < accessDescriptionArray.length; i++) {
-			let o = new DERObjectIdentifier(accessDescriptionArray[i]['accessMethod']);
-			let gn = new GeneralName(accessDescriptionArray[i]['accessLocation']);
-			let accessDescription = new DERSequence({ 'array': [o, gn] });
-			array.push(accessDescription);
+			let accessMethod = accessDescriptionArray[i]['accessMethod'];
+			let accessLocation = accessDescriptionArray[i]['accessLocation'];
+			if ((isString(accessMethod) || isDictionary(accessMethod)) && isDictionary(accessLocation)) {
+				let o = new DERObjectIdentifier(/** @type {string | Object<string,*>} */ ( accessMethod ));
+				let gn = new GeneralName(/** @type {Object<string,*>} */ ( accessLocation ));
+				let accessDescription = new DERSequence({ 'array': [o, gn] });
+				array.push(accessDescription);
+			}
 		}
 		this.asn1ExtnValue = new DERSequence({ 'array': array });
 	}
@@ -919,14 +925,14 @@ export class SubjectAltName extends X500Extension {
 
 		this.oid = "2.5.29.17";
 		if (params !== undefined) {
-			if (params['array'] !== undefined) {
-				this.setNameArray(params['array']);
+			if (isListOfDictionaries(params['array'])) {
+				this.setNameArray(/** @type {Array<Object<string,*>>} */ ( params['array'] ));
 			}
 		}	
 	}
 
 	/**
-	 * @param {Array<Object>} paramsArray 
+	 * @param {Array<Object<string,*>>} paramsArray 
 	 */
 	setNameArray(paramsArray) {
 		this.asn1ExtnValue = new GeneralNames(paramsArray);
@@ -976,14 +982,14 @@ export class IssuerAltName extends X500Extension {
 
 		this.oid = "2.5.29.18";
 		if (params !== undefined) {
-			if (params['array'] !== undefined) {
-				this.setNameArray(params['array']);
+			if (isListOfDictionaries(params['array'])) {
+				this.setNameArray(/** @type {Array<Object<string,*>>} */ ( params['array'] ));
 			}
 		}
 	}
 		
 	/**
-	 * @param {Array<Object>} paramsArray 
+	 * @param {Array<Object<string,*>>} paramsArray 
 	 */
 	setNameArray(paramsArray) {
 		this.asn1ExtnValue = new GeneralNames(paramsArray);
@@ -1028,18 +1034,19 @@ export class CRL extends ASN1Object {
 	constructor(params) {
 		super();
 
-		this.asn1TBSCertList = null;
-		this.asn1SignatureAlg = null;
+		/** @type {TBSCertList | null} */ this.asn1TBSCertList = null;
+		/** @type {AlgorithmIdentifier | null} */ this.asn1SignatureAlg = null;
 		/** @type {DERBitString | null} */ this.asn1Sig = null;
 		/** @type {string | null} */ this.hexSig = null;
-		this.prvKey = null;
+		/** @type {string | RSAKeyEx | DSA | ECDSA | null} */ this.prvKey = null;
 
 		if (params !== undefined) {
-			if (params['tbsobj'] !== undefined) {
-				this.asn1TBSCertList = params['tbsobj'];
+			if (params['tbsobj'] instanceof TBSCertList) {
+				this.asn1TBSCertList = /** @type {TBSCertList} */ ( params['tbsobj'] );
 			}
-			if (params['prvkeyobj'] !== undefined) {
-				this.prvKey = params['prvkeyobj'];
+			let prvkeyobj = params['prvkeyobj'];
+			if (isString(prvkeyobj) || prvkeyobj instanceof RSAKeyEx || prvkeyobj instanceof DSA || prvkeyobj instanceof ECDSA) {
+				this.prvKey = /** @type {string | RSAKeyEx | DSA | ECDSA} */ ( params['prvkeyobj'] );
 			}
 		}
 	}
@@ -1194,7 +1201,7 @@ export class TBSCertList extends ASN1Object {
      * tbsc.addRevokedCert({'int': 3}, {'str': '130508235959Z'});
      */
 	addRevokedCert(snParam, timeParam) {
-		let param = {};
+		/** @dict */ let param = {};
 		if (snParam != undefined && snParam != null)
 			param['sn'] = snParam;
 		if (timeParam != undefined && timeParam != null)
@@ -1252,18 +1259,18 @@ export class CRLEntry extends ASN1Object {
 		/** @type {string | null} */ this.TLV = null;
 
 		if (params !== undefined) {
-			if (params['time'] !== undefined) {
-				this.setRevocationDate(params['time']);
+			if (isDictionary(params['time'])) {
+				this.setRevocationDate(/** @type {Object<string,*>} */ ( params['time'] ));
 			}
-			if (params['sn'] !== undefined) {
-				this.setCertSerial(params['sn']);
+			if (isNumber(params['sn']) || isDictionary(params['sn'])) {
+				this.setCertSerial(/** @type {number | Object<string,*>} */ ( params['sn'] ));
 			}
 		}
 	}
 
     /**
      * set DERInteger parameter for serial number of revoked certificate
-     * @param {Object<string,*>} intParam DERInteger parameter for certificate serial number
+     * @param {number | Object<string,*>} intParam DERInteger parameter for certificate serial number
      * @description
      * @example
      * entry.setCertSerial({'int': 3});
@@ -1333,25 +1340,25 @@ export class X500Name extends ASN1Object {
 		/** @type {Array<RDN>} */ this.asn1Array = new Array();
 
 		if (params !== undefined) {
-			if (params['str'] !== undefined) {
-				this.setByString(params['str']);
-			} else if (params['ldapstr'] !== undefined) {
-				this.setByLdapString(params['ldapstr']);
+			if (isString(params['str'])) {
+				this.setByString(/** @type {string} */ ( params['str'] ));
+			} else if (isString(params['ldapstr'])) {
+				this.setByLdapString(/** @type {string} */ ( params['ldapstr'] ));
 				// If params is an object, then set the ASN1 array just using the object
 				// attributes. This is nice for fields that have lots of special
-				// characters (i.e. CN: 'https://www.github.com/kjur//').
+				// characters (i.e. CN: 'https://www.github.com/SergioRando/').
 			} else if (typeof params === "object") {
 				this.setByObject(params);
 			}
 	
-			if (params['certissuer'] !== undefined) {
+			if (isString(params['certissuer'])) {
 				let x = new X509();
-				x.hex = pemtohex(params['certissuer']);
+				x.hex = pemtohex(/** @type {string} */ ( params['certissuer'] ));
 				this.hTLV = x.getIssuerHex();
 			}
-			if (params['certsubject'] !== undefined) {
+			if (isString(params['certsubject'])) {
 				let x = new X509();
-				x.hex = pemtohex(params['certsubject']);
+				x.hex = pemtohex(/** @type {string} */ ( params['certsubject'] ));
 				this.hTLV = x.getSubjectHex();
 			}
 		}
@@ -1530,8 +1537,8 @@ export class RDN extends ASN1Object {
 		/** @type {string | null} */ this.hTLV = null;
 
 		if (params !== undefined) {
-			if (params['str'] !== undefined) {
-				this.addByMultiValuedString(params['str']);
+			if (isString(params['str'])) {
+				this.addByMultiValuedString(/** @type {string} */ ( params['str'] ));
 			}
 		}
 	}
@@ -1662,8 +1669,8 @@ export class AttributeTypeAndValue extends ASN1Object {
 		/** @type {string | null} */ this.hTLV = null;
 
 		if (params !== undefined) {
-			if (params['str'] !== undefined) {
-				this.setByString(params['str']);
+			if (isString(params['str'])) {
+				this.setByString(/** @type {string} */ ( params['str'] ));
 			}
 		}	
 	}
@@ -1846,12 +1853,13 @@ export class Time extends ASN1Object {
 
 		this.type = "utc";
 		if (params !== undefined) {
-			if (params['type'] !== undefined) {
-				this.type = params['type'];
+			if (isString(params['type'])) {
+				this.type = /** @type {string} */ ( params['type'] );
 			} else {
-				if (params['str'] !== undefined) {
-					if (params['str'].match(/^[0-9]{12}Z$/)) this.type = "utc";
-					if (params['str'].match(/^[0-9]{14}Z$/)) this.type = "gen";
+				if (isString(params['str'])) {
+					let str = /** @type {string} */ ( params['str'] );
+					if (str.match(/^[0-9]{12}Z$/)) this.type = "utc";
+					if (str.match(/^[0-9]{14}Z$/)) this.type = "gen";
 				}
 			}
 			this.timeParams = params;
@@ -1906,13 +1914,13 @@ export class Time extends ASN1Object {
  * (OPTION, DEFAULT = false)</li>
  * </ul>
  * @example
- * algId = new AlgorithmIdentifier({name: "sha1"});
+ * algId = new AlgorithmIdentifier({'name': "sha1"});
  * // set parameter to NULL authomatically if algorithm name is "*withRSA".
- * algId = new AlgorithmIdentifier({name: "SHA256withRSA"});
+ * algId = new AlgorithmIdentifier({'name': "SHA256withRSA"});
  * // set parameter to NULL authomatically if algorithm name is "rsaEncryption".
- * algId = new AlgorithmIdentifier({name: "rsaEncryption"});
+ * algId = new AlgorithmIdentifier({'name': "rsaEncryption"});
  * // SHA256withRSA and set parameter empty by force
- * algId = new AlgorithmIdentifier({name: "SHA256withRSA", paramempty: true});
+ * algId = new AlgorithmIdentifier({'name': "SHA256withRSA", 'paramempty': true});
  */
 export class AlgorithmIdentifier extends ASN1Object {
 	/**
@@ -1924,17 +1932,17 @@ export class AlgorithmIdentifier extends ASN1Object {
 		/** @type {string | null} */ this.nameAlg = null;
 		/** @type {DERObjectIdentifier | null} */ this.asn1Alg = null;
 		/** @type {ASN1Object | null} */ this.asn1Params = null;
-		this.paramEmpty = false;
+		/** @type {boolean} */ this.paramEmpty = false;
 
 		if (params !== undefined) {
 			if (params['name'] !== undefined) {
 				this.nameAlg = String(params['name']);
 			}
-			if (params['asn1params'] !== undefined) {
-				this.asn1Params = params['asn1params'];
+			if (params['asn1params'] instanceof ASN1Object) {
+				this.asn1Params = /** @type {ASN1Object} */ ( params['asn1params'] );
 			}
-			if (params['paramempty'] !== undefined) {
-				this.paramEmpty = params['paramempty'] ? true : false;
+			if (isBoolean(params['paramempty'])) {
+				this.paramEmpty = /** @type {boolean} */ ( params['paramempty'] );
 			}
 		}
 	
@@ -2071,10 +2079,10 @@ export class GeneralName extends ASN1Object {
 			v = new X500Name({ 'ldapstr': params['ldapdn'] });
 		}
 
-		if (params['certissuer'] !== undefined) {
+		if (isString(params['certissuer'])) {
 			this.type = 'dn';
 			this.explicit = true;
-			let certStr = params['certissuer'];
+			let certStr = /** @type {string} */ ( params['certissuer'] );
 			/** @type {string | null} */ let certHex = null;
 
 			if (certStr.match(/^[0-9A-Fa-f]+$/)) {
@@ -2093,10 +2101,10 @@ export class GeneralName extends ASN1Object {
 			v.hTLV = dnHex;
 		}
 
-		if (params['certsubj'] !== undefined) {
+		if (isString(params['certsubj'])) {
 			this.type = 'dn';
 			this.explicit = true;
-			let certStr = params['certsubj'];
+			let certStr = /** @type {string} */ ( params['certsubj'] );
 			/** @type {string | null} */ let certHex = null;
 			if (certStr.match(/^[0-9A-Fa-f]+$/)) {
 				certHex = certStr;
@@ -2112,10 +2120,10 @@ export class GeneralName extends ASN1Object {
 			v.hTLV = dnHex;
 		}
 
-		if (params['ip'] !== undefined) {
+		if (isString(params['ip'])) {
 			this.type = 'ip';
 			this.explicit = false;
-			let ip = params['ip'];
+			let ip = /** @type {string} */ ( params['ip'] );
 			let hIP;
 			let malformedIPMsg = "malformed IP address";
 			if (ip.match(/^[0-9.]+[.][0-9.]+$/)) { // ipv4
@@ -2133,6 +2141,7 @@ export class GeneralName extends ASN1Object {
 
 		if (this.type == null)
 			throw "unsupported type in params=" + params;
+
 		this.asn1Obj = new DERTaggedObject({
 			'explicit': this.explicit,
 			'tag': pTag[this.type],
@@ -2299,8 +2308,8 @@ export class DistributionPoint extends ASN1Object {
 		/** @type {ASN1Object | null} */ this.asn1DP = null;
 
 		if (params !== undefined) {
-			if (params['dpobj'] !== undefined) {
-				this.asn1DP = params['dpobj'];
+			if (params['dpobj'] instanceof ASN1Object) {
+				this.asn1DP = /** @type {ASN1Object} */ ( params['dpobj'] );
 			}
 		}
 	}
@@ -2396,45 +2405,50 @@ export class DistributionPoint extends ASN1Object {
 export function newCertPEM(param) {
 	let o = new TBSCertificate();
 
-	if (param['serial'] !== undefined)
-		o.setSerialNumberByParam(param['serial']);
+	if (isNumber(param['serial']) || isDictionary(param['serial']))
+		o.setSerialNumberByParam(/** @type {number | Object<string,*> } */ ( param['serial'] ));
 	else
 		throw "serial number undefined.";
 
-	if (typeof param['sigalg']['name'] === 'string')
-		o.setSignatureAlgByParam(param['sigalg']);
+	if (isDictionary(param['sigalg']) && isString(param['sigalg']['name']))
+		o.setSignatureAlgByParam(/** @type {Object<string,*>} */ ( param['sigalg'] ));
 	else
 		throw "unproper signature algorithm name";
 
-	if (param['issuer'] !== undefined)
-		o.setIssuerByParam(param['issuer']);
+	if (isDictionary(param['issuer']))
+		o.setIssuerByParam(/** @type {Object<string,*>} */ ( param['issuer'] ));
 	else
 		throw "issuer name undefined.";
 
-	if (param['notbefore'] !== undefined)
-		o.setNotBeforeByParam(param['notbefore']);
+	if (isDictionary(param['notbefore']))
+		o.setNotBeforeByParam(/** @type {Object<string,*>} */ ( param['notbefore'] ));
 	else
 		throw "notbefore undefined.";
 
-	if (param['notafter'] !== undefined)
-		o.setNotAfterByParam(param['notafter']);
+	if (isDictionary(param['notafter']))
+		o.setNotAfterByParam(/** @type {Object<string,*>} */ ( param['notafter'] ));
 	else
 		throw "notafter undefined.";
 
-	if (param['subject'] !== undefined)
-		o.setSubjectByParam(param['subject']);
+	if (isDictionary(param['subject']))
+		o.setSubjectByParam(/** @type {Object<string,*>} */ ( param['subject'] ));
 	else
 		throw "subject name undefined.";
 
-	if (param['sbjpubkey'] !== undefined)
-		o.setSubjectPublicKeyByGetKey(param['sbjpubkey']);
+	let sbjpubkey = param['sbjpubkey'];
+	if ((sbjpubkey !== undefined) && (isString(sbjpubkey) || isDictionary(sbjpubkey) || sbjpubkey instanceof RSAKeyEx || sbjpubkey instanceof DSA || sbjpubkey instanceof ECDSA))
+		o.setSubjectPublicKeyByGetKey(/** @type {string | KeyObject | Object<string,*>} */ ( param['sbjpubkey'] ));
 	else
 		throw "subject public key undefined.";
 
-	if (param['ext'] !== undefined && param['ext'].length !== undefined) {
-		for (let i = 0; i < param['ext'].length; i++) {
-			for (let key in param['ext'][i]) {
-				o.appendExtensionByName(key, param['ext'][i][key]);
+	if (isListOfDictionaries(param['ext'])) {
+		let aList = /** @type {Array<Object<string,*>>} */ ( param['ext'] );
+		for (let i = 0; i < aList.length; i++) {
+			for (let key in aList[i]) {
+				let oVal = aList[i][key];
+				if (isDictionary(oVal)) {
+					o.appendExtensionByName(key, /** @type {Object<string,*>} */ ( oVal ));
+				}
 			}
 		}
 	}
@@ -2447,18 +2461,21 @@ export function newCertPEM(param) {
 	/** @type {Certificate | null} */ let cert = null;
 
 	if (param['cakey']) {
-		if (param['cakey'].isPrivate === true) {
-			caKey = param['cakey'];
-		} else {
-			caKey = getKey.apply(null, param['cakey']);
+		let tmpkey = param['cakey'];
+		if ((tmpkey instanceof RSAKeyEx || tmpkey instanceof DSA || tmpkey instanceof ECDSA) && (tmpkey.isPrivate === true)) {
+			caKey = tmpkey;
+		} else if (isString(tmpkey) || isDictionary(tmpkey) || tmpkey instanceof RSAKeyEx || tmpkey instanceof DSA || tmpkey instanceof ECDSA) {
+			caKey = getKey(/** @type {string | KeyObject | Object<string,*>} */ ( tmpkey ));
 		}
-		cert = new Certificate({ 'tbscertobj': o, 'prvkeyobj': caKey });
-		cert.sign();
+		if (caKey !== null) {
+			cert = new Certificate({ 'tbscertobj': o, 'prvkeyobj': caKey });
+			cert.sign();
+		}
 	}
 
-	if (param['sighex']) {
+	if (isString(param['sighex'])) {
 		cert = new Certificate({ 'tbscertobj': o });
-		cert.setSignatureHex(param['sighex']);
+		cert.setSignatureHex(/** @type {string} */ ( param['sighex'] ));
 	}
 
 	return cert.getPEMString();
