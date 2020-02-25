@@ -38,14 +38,6 @@ endef
 
 # List of excluded modules
 define EXCLUDES
-	globals/asn1cades-1.0.js
-	globals/asn1cms-1.0.js
-	globals/asn1csr-1.0.js
-	globals/asn1ocsp-1.0.js
-	globals/asn1tsp-1.0.js
-	globals/jws-3.3.js
-	globals/jwsjs-2.0.js
-	globals/nodeutil-1.0.js
 endef
 
 # Detect Current Dir Name (js-example)

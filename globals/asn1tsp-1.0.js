@@ -18,6 +18,7 @@ import { oid2name, AlgorithmIdentifier, X500Name } from "./asn1x509-1.0.js"
 import { hashHex } from "./crypto-1.1.js"
 import { getChildIdx, getV, getTLV, hextooidstr, getIdxbyList } from "./asn1hex-1.1.js"
 import { Dictionary } from "./../../../include/type.js"
+import { SignedData, SigningCertificate } from "./asn1cms-1.0.js"
 
 /**
  * @fileOverview
@@ -719,7 +720,7 @@ KJUR.asn1.tsp.TSPUtil = new function () {
 /**
  * generate TimeStampToken ASN.1 object specified by JSON parameters
  * @param {Dictionary} param JSON parameter to generate TimeStampToken
- * @return {KJUR.asn1.cms.SignedData} object just generated
+ * @return {SignedData} object just generated
  * @description
  * @example
  */
@@ -730,7 +731,7 @@ KJUR.asn1.tsp.TSPUtil.export function newTimeStampToken(param) {
 		KJUR.asn1.tsp = KJUR.asn1.tsp,
 		_TSTInfo = KJUR.asn1.tsp.TSTInfo;
 
-	let sd = new KJUR.asn1.cms.SignedData();
+	let sd = new SignedData();
 
 	let dTSTInfo = new _TSTInfo(param.tstInfo);
 	let tstInfoHex = dTSTInfo.getEncodedHex();
@@ -751,7 +752,7 @@ KJUR.asn1.tsp.TSPUtil.export function newTimeStampToken(param) {
 		hashAlg: param.hashAlg
 	});
 	let signingCertificate =
-		new KJUR.asn1.cms.SigningCertificate({ array: [param.signerCert] });
+		new SigningCertificate({ array: [param.signerCert] });
 	si.dSignedAttrs.add(signingCertificate);
 
 	si.sign(param.signerPrvKey, param.sigAlg);

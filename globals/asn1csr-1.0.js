@@ -19,19 +19,13 @@ import { getTLVbyList } from "./asn1hex-1.1.js"
 import { getKey } from "./keyutil-1.0.js"
 import { Signature } from "./crypto-1.1.js"
 import { Dictionary } from "./../../../include/type.js"
+import { RSAKeyEx } from "./rsaex.js";
+import { DSA } from "./dsa-2.0.js";
+import { ECDSA } from "./ecdsa-modified-1.0.js";
 
 /**
- * @fileOverview
- * @name asn1csr-1.0.js
- * @author Kenji Urushima kenji.urushima@gmail.com
- * @version jsrsasign 8.0.5 asn1csr 1.0.6 (2018-Jan-13)
- * @license <a href="https://kjur.github.io/jsrsasign/license/">MIT License</a>
- */
-
-/**
- * kjur's ASN.1 class for CSR/PKCS#10 name space
+ * ASN.1 module for CSR/PKCS#10
  * <p>
- * This module is a sub name space for {@link asn1-1.0.js}.
  * This module contains classes for
  * <a href="https://tools.ietf.org/html/rfc2986">RFC 2986</a>
  * certificate signing request(CSR/PKCS#10) and its utilities
@@ -48,10 +42,7 @@ import { Dictionary } from "./../../../include/type.js"
  * {@link KJUR.asn1.csr.CSRUtil.newCSRPEM} method is very useful to
  * get your certificate signing request (CSR/PKCS#10) file.
  * </p>
- * @name KJUR.asn1.csr
- * @namespace
  */
-if (typeof KJUR.asn1.csr == "undefined" || !KJUR.asn1.csr) KJUR.asn1.csr = {};
 
 /**
  * ASN.1 CertificationRequest structure class
@@ -78,24 +69,28 @@ if (typeof KJUR.asn1.csr == "undefined" || !KJUR.asn1.csr) KJUR.asn1.csr = {};
  * //   subjectPKInfo SubjectPublicKeyInfo{{ PKInfoAlgorithms }},
  * //   attributes    [0] Attributes{{ CRIAttributes }} }
  */
-KJUR.asn1.csr.CertificationRequest = function(params) {
+export class CertificationRequest extends ASN1Object {
+	/**
+	 * @param {Dictionary} params dictionary of parameters
+	 */
+	constructor(params) {
+		super(params);
 
+		/** @type {CertificationRequestInfo | null} */ this.asn1CSRInfo = null;
+		/** @type {AlgorithmIdentifier | null} */ this.asn1SignatureAlg = null;
+		/** @type {DERBitString | null} */ this.asn1Sig = null;
+		/** @type {string | null} */ this.hexSig = null;
+		/** @type {string | RSAKeyEx | DSA | ECDSA | null} */ this.prvKey = null;
 
-
-
-	KJUR.asn1.csr = KJUR.asn1.csr,
-	KJUR.asn1.x509 = KJUR.asn1.x509;
-
-    KJUR.asn1.csr.CertificationRequest.superclass.constructor.call(this);
-
-    let asn1CSRInfo = null;
-    let asn1SignatureAlg = null;
-    let asn1Sig = null;
-    let hexSig = null;
-    let prvKey = null;
+		if (params !== undefined && params['csrinfo'] !== undefined) {
+			this.asn1CSRInfo = params['csrinfo'];
+		}
+	}
 
     /**
      * sign CertificationRequest and set signature value internally<br/>
+	 * @param {string} sigAlgName
+	 * @param {string | RSAKeyEx | DSA | ECDSA} prvKeyObj
      * @description
      * This method self-signs CertificateRequestInfo with a subject's
      * private key and set signature value internally.
@@ -104,24 +99,26 @@ KJUR.asn1.csr.CertificationRequest = function(params) {
      * csr = new KJUR.asn1.csr.CertificationRequest({'csrinfo': csri});
      * csr.sign("SHA256withRSA", prvKeyObj);
      */
-    this.sign = function(sigAlgName, prvKeyObj) {
-	if (this.prvKey == null) this.prvKey = prvKeyObj;
+	sign(sigAlgName, prvKeyObj) {
+		if (this.prvKey == null) this.prvKey = prvKeyObj;
 
-	this.asn1SignatureAlg = 
-	    new AlgorithmIdentifier({'name': sigAlgName});
+		this.asn1SignatureAlg =
+			new AlgorithmIdentifier({ 'name': sigAlgName });
 
-        sig = new Signature({'alg': sigAlgName});
-        sig.init(this.prvKey);
-        sig.updateHex(this.asn1CSRInfo.getEncodedHex());
-        this.hexSig = sig.sign();
+		let sig = new Signature({ 'alg': sigAlgName });
+		sig.init(this.prvKey);
+		sig.updateHex(this.asn1CSRInfo.getEncodedHex());
+		this.hexSig = sig.sign();
 
-        this.asn1Sig = new DERBitString({'hex': '00' + this.hexSig});
-        let seq = new DERSequence({'array': [this.asn1CSRInfo,
-                                              this.asn1SignatureAlg,
-                                              this.asn1Sig]});
-        this.hTLV = seq.getEncodedHex();
-        this.isModified = false;
-    };
+		this.asn1Sig = new DERBitString({ 'hex': '00' + this.hexSig });
+		let seq = new DERSequence({
+			'array': [this.asn1CSRInfo,
+			this.asn1SignatureAlg,
+			this.asn1Sig]
+		});
+		this.hTLV = seq.getEncodedHex();
+		this.isModified = false;
+	}
 
     /**
      * get PEM formatted certificate signing request (CSR/PKCS#10)<br/>
@@ -138,20 +135,19 @@ KJUR.asn1.csr.CertificationRequest = function(params) {
      * // MII ...snip...
      * // -----END CERTIFICATE REQUEST-----
      */
-    this.getPEMString = function() {
-	return hextopem(this.getEncodedHex(), "CERTIFICATE REQUEST");
-    };
+	getPEMString() {
+		return hextopem(this.getEncodedHex(), "CERTIFICATE REQUEST");
+	}
 
-    this.getEncodedHex = function() {
-        if (this.isModified == false && this.hTLV != null) return this.hTLV;
-        throw "not signed yet";
-    };
-
-    if (params !== undefined && params['csrinfo'] !== undefined) {
-        this.asn1CSRInfo = params['csrinfo'];
-    }
-};
-YAHOO.lang.extend(KJUR.asn1.csr.CertificationRequest, KJUR.asn1.ASN1Object);
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
+		if (this.isModified == false && this.hTLV != null) return this.hTLV;
+		throw "not signed yet";
+	}
+}
 
 /**
  * ASN.1 CertificationRequestInfo structure class
@@ -171,7 +167,12 @@ YAHOO.lang.extend(KJUR.asn1.csr.CertificationRequest, KJUR.asn1.ASN1Object);
  * csri.setSubjectByParam({'str': '/C=US/O=Test/CN=example.com'});
  * csri.setSubjectPublicKeyByGetKey(pubKeyObj);
  */
-KJUR.asn1.csr.CertificationRequestInfo = function(params) {
+export class CertificationRequestInfo {
+	/**
+	 * @param {Dictionary} params dictionary of parameters
+	 */
+	constructor(params) {
+		super(params);
 
 
 
@@ -180,233 +181,236 @@ KJUR.asn1.csr.CertificationRequestInfo = function(params) {
 
 
 
-	KJUR.asn1.csr = KJUR.asn1.csr,
-	KJUR.asn1.x509 = KJUR.asn1.x509,
-	_X500Name = X500Name,
-	_Extension = X500Extension;
-	
-    KJUR.asn1.csr.CertificationRequestInfo.superclass.constructor.call(this);
 
-    this._initialize = function() {
-        this.asn1Array = new Array();
+		KJUR.asn1.csr = KJUR.asn1.csr,
+			KJUR.asn1.x509 = KJUR.asn1.x509,
+			_X500Name = X500Name,
+			_Extension = X500Extension;
 
-	this.asn1Version = new DERInteger({'int': 0});
-	this.asn1Subject = null;
-	this.asn1SubjPKey = null;
-	this.extensionsArray = new Array();
-    };
+		KJUR.asn1.csr.CertificationRequestInfo.superclass.constructor.call(this);
 
-    /**
-     * set subject name field by parameter
-     * @param {Array} x500NameParam X500Name parameter
-     * @description
-     * @example
-     * csri.setSubjectByParam({'str': '/C=US/CN=b'});
-     */
-    this.setSubjectByParam = function(x500NameParam) {
-        this.asn1Subject = new _X500Name(x500NameParam);
-    };
+		this._initialize = function () {
+			this.asn1Array = new Array();
 
-    /**
-     * set subject public key info by RSA/ECDSA/DSA key parameter
-     * @param {string | RSAKeyEx | DSA | ECDSA | Dictionary} keyParam public key parameter which passed to {@link getKey} argument
-     * @description
-     * @example
-     * csri.setSubjectPublicKeyByGetKeyParam(certPEMString); // or 
-     * csri.setSubjectPublicKeyByGetKeyParam(pkcs8PublicKeyPEMString); // or 
-     * csir.setSubjectPublicKeyByGetKeyParam(kjurCryptoECDSAKeyObject); // et.al.
-     */
-    this.setSubjectPublicKeyByGetKey = function(keyParam) {
-        let keyObj = getKey(keyParam);
-        this.asn1SubjPKey = 
-	    new SubjectPublicKeyInfo(keyObj);
-    };
+			this.asn1Version = new DERInteger({ 'int': 0 });
+			this.asn1Subject = null;
+			this.asn1SubjPKey = null;
+			this.extensionsArray = new Array();
+		}
 
-    /**
-     * append X.509v3 extension to this object by name and parameters
-     * @param {name} name name of X.509v3 Extension object
-     * @param {Array} extParams parameters as argument of Extension constructor.
-     * @description
-     * @example
-     * let o = new KJUR.asn1.csr.CertificationRequestInfo();
-     * o.appendExtensionByName('BasicConstraints', {'cA':true, 'critical': true});
-     * o.appendExtensionByName('KeyUsage', {'bin':'11'});
-     * o.appendExtensionByName('CRLDistributionPoints', {uri: 'http://aaa.com/a.crl'});
-     * o.appendExtensionByName('ExtKeyUsage', {array: [{name: 'clientAuth'}]});
-     * o.appendExtensionByName('AuthorityKeyIdentifier', {kid: '1234ab..'});
-     * o.appendExtensionByName('AuthorityInfoAccess', {array: [{accessMethod:{oid:...},accessLocation:{uri:...}}]});
-     */
-    this.appendExtensionByName = function(name, extParams) {
-	_Extension.appendByNameToArray(name,
-				       extParams,
-				       this.extensionsArray);
-    };
+		/**
+		 * set subject name field by parameter
+		 * @param {Array} x500NameParam X500Name parameter
+		 * @description
+		 * @example
+		 * csri.setSubjectByParam({'str': '/C=US/CN=b'});
+		 */
+		setSubjectByParam(x500NameParam) {
+			this.asn1Subject = new _X500Name(x500NameParam);
+		}
 
-    this.getEncodedHex = function() {
-        this.asn1Array = new Array();
+		/**
+		 * set subject public key info by RSA/ECDSA/DSA key parameter
+		 * @param {string | RSAKeyEx | DSA | ECDSA | Dictionary} keyParam public key parameter which passed to {@link getKey} argument
+		 * @description
+		 * @example
+		 * csri.setSubjectPublicKeyByGetKeyParam(certPEMString); // or 
+		 * csri.setSubjectPublicKeyByGetKeyParam(pkcs8PublicKeyPEMString); // or 
+		 * csir.setSubjectPublicKeyByGetKeyParam(kjurCryptoECDSAKeyObject); // et.al.
+		 */
+		setSubjectPublicKeyByGetKey(keyParam) {
+			let keyObj = getKey(keyParam);
+			this.asn1SubjPKey =
+				new SubjectPublicKeyInfo(keyObj);
+		}
 
-        this.asn1Array.push(this.asn1Version);
-        this.asn1Array.push(this.asn1Subject);
-        this.asn1Array.push(this.asn1SubjPKey);
+		/**
+		 * append X.509v3 extension to this object by name and parameters
+		 * @param {name} name name of X.509v3 Extension object
+		 * @param {Array} extParams parameters as argument of Extension constructor.
+		 * @description
+		 * @example
+		 * let o = new KJUR.asn1.csr.CertificationRequestInfo();
+		 * o.appendExtensionByName('BasicConstraints', {'cA':true, 'critical': true});
+		 * o.appendExtensionByName('KeyUsage', {'bin':'11'});
+		 * o.appendExtensionByName('CRLDistributionPoints', {uri: 'http://aaa.com/a.crl'});
+		 * o.appendExtensionByName('ExtKeyUsage', {array: [{name: 'clientAuth'}]});
+		 * o.appendExtensionByName('AuthorityKeyIdentifier', {kid: '1234ab..'});
+		 * o.appendExtensionByName('AuthorityInfoAccess', {array: [{accessMethod:{oid:...},accessLocation:{uri:...}}]});
+		 */
+		appendExtensionByName(name, extParams) {
+			_Extension.appendByNameToArray(name,
+				extParams,
+				this.extensionsArray);
+		}
 
-	// extensionRequest
-	if (this.extensionsArray.length > 0) {
-            let extSeq = new DERSequence({array: this.extensionsArray});
-	    let extSet = new DERSet({array: [extSeq]});
-	    let extSeq2 = new DERSequence({array: [
-		new DERObjectIdentifier({oid: "1.2.840.113549.1.9.14"}),
-		extSet
-	    ]});
-            let extTagObj = new DERTaggedObject({
-		explicit: true,
-		tag: 'a0',
-		obj: extSeq2
-	    });
-            this.asn1Array.push(extTagObj);
-	} else {
-            let extTagObj = new DERTaggedObject({
-		explicit: false,
-		tag: 'a0',
-		obj: new DERNull()
-	    });
-            this.asn1Array.push(extTagObj);
-	}
+		getEncodedHex() {
+			this.asn1Array = new Array();
 
-        let o = new DERSequence({"array": this.asn1Array});
-        this.hTLV = o.getEncodedHex();
-        this.isModified = false;
-        return this.hTLV;
-    };
+			this.asn1Array.push(this.asn1Version);
+			this.asn1Array.push(this.asn1Subject);
+			this.asn1Array.push(this.asn1SubjPKey);
 
-    this._initialize();
-};
-YAHOO.lang.extend(KJUR.asn1.csr.CertificationRequestInfo, KJUR.asn1.ASN1Object);
+			// extensionRequest
+			if (this.extensionsArray.length > 0) {
+				let extSeq = new DERSequence({ array: this.extensionsArray });
+				let extSet = new DERSet({ array: [extSeq] });
+				let extSeq2 = new DERSequence({
+					array: [
+						new DERObjectIdentifier({ oid: "1.2.840.113549.1.9.14" }),
+						extSet
+					]
+				});
+				let extTagObj = new DERTaggedObject({
+					explicit: true,
+					tag: 'a0',
+					obj: extSeq2
+				});
+				this.asn1Array.push(extTagObj);
+			} else {
+				let extTagObj = new DERTaggedObject({
+					explicit: false,
+					tag: 'a0',
+					obj: new DERNull()
+				});
+				this.asn1Array.push(extTagObj);
+			}
 
-/**
- * Certification Request (CSR/PKCS#10) utilities class<br/> * @description
- * This class provides utility static methods for CSR/PKCS#10.
- * Here is a list of methods:
- * <ul>
- * <li>{@link KJUR.asn1.csr.CSRUtil.newCSRPEM}</li>
- * <li>{@link KJUR.asn1.csr.CSRUtil.getInfo}</li>
- * </ul>
- * <br/>
- */
-KJUR.asn1.csr.CSRUtil = new function() {
-};
+			let o = new DERSequence({ "array": this.asn1Array });
+			this.hTLV = o.getEncodedHex();
+			this.isModified = false;
+			return this.hTLV;
+		}
 
-/**
- * generate a PEM format of CSR/PKCS#10 certificate signing request
- * @param {Dictionary} param parameter to generate CSR
- * @description
- * This method can generate a CSR certificate signing
- * request by a simple JSON object which has following parameters:
- * <ul>
- * <li>subject - parameter to be passed to {@link X500Name}</li>
- * <li>sbjpubkey - parameter to be passed to {@link getKey}</li>
- * <li>sigalg - signature algorithm name (ex. SHA256withRSA)</li>
- * <li>sbjprvkey - parameter to be passed to {@link getKey}</li>
- * </ul>
- *
- * @example
- * // 1) by key object
- * pem = KJUR.asn1.csr.CSRUtil.newCSRPEM({
- *   subject: {str: '/C=US/O=Test/CN=example.com'},
- *   sbjpubkey: pubKeyObj,
- *   sigalg: "SHA256withRSA",
- *   sbjprvkey: prvKeyObj
- * });
- *
- * // 2) by private/public key PEM 
- * pem = KJUR.asn1.csr.CSRUtil.newCSRPEM({
- *   subject: {str: '/C=US/O=Test/CN=example.com'},
- *   sbjpubkey: pubKeyPEM,
- *   sigalg: "SHA256withRSA",
- *   sbjprvkey: prvKeyPEM
- * });
- *
- * // 3) with generateKeypair
- * kp = generateKeypair("RSA", 2048);
- * pem = KJUR.asn1.csr.CSRUtil.newCSRPEM({
- *   subject: {str: '/C=US/O=Test/CN=example.com'},
- *   sbjpubkey: kp.pubKeyObj,
- *   sigalg: "SHA256withRSA",
- *   sbjprvkey: kp.prvKeyObj
- * });
- *
- * // 4) by private/public key PEM with extension
- * pem = KJUR.asn1.csr.CSRUtil.newCSRPEM({
- *   subject: {str: '/C=US/O=Test/CN=example.com'},
- *   ext: [
- *     {subjectAltName: {array: [{dns: 'example.net'}]}
- *   ],
- *   sbjpubkey: pubKeyPEM,
- *   sigalg: "SHA256withRSA",
- *   sbjprvkey: prvKeyPEM
- * });
- */
-KJUR.asn1.csr.CSRUtil.newCSRPEM = function(param) {
-    if (param.subject === undefined) throw "parameter subject undefined";
-    if (param.sbjpubkey === undefined) throw "parameter sbjpubkey undefined";
-    if (param.sigalg === undefined) throw "parameter sigalg undefined";
-    if (param.sbjprvkey === undefined) throw "parameter sbjpubkey undefined";
+		this._initialize();
+	};
+	YAHOO.lang.extend(KJUR.asn1.csr.CertificationRequestInfo, KJUR.asn1.ASN1Object);
 
-    let csri = new KJUR.asn1.csr.CertificationRequestInfo();
-    csri.setSubjectByParam(param.subject);
-    csri.setSubjectPublicKeyByGetKey(param.sbjpubkey);
+	/**
+	 * Certification Request (CSR/PKCS#10) utilities class<br/> * @description
+	 * This class provides utility static methods for CSR/PKCS#10.
+	 * Here is a list of methods:
+	 * <ul>
+	 * <li>{@link KJUR.asn1.csr.CSRUtil.newCSRPEM}</li>
+	 * <li>{@link KJUR.asn1.csr.CSRUtil.getInfo}</li>
+	 * </ul>
+	 * <br/>
+	 */
+	KJUR.asn1.csr.CSRUtil = new function () {
+	};
 
-    if (param.ext !== undefined && param.ext.length !== undefined) {
-	for (let i = 0; i < param.ext.length; i++) {
-	    for (key in param.ext[i]) {
-                csri.appendExtensionByName(key, param.ext[i][key]);
-	    }
-	}
-    }
+	/**
+	 * generate a PEM format of CSR/PKCS#10 certificate signing request
+	 * @param {Dictionary} param parameter to generate CSR
+	 * @description
+	 * This method can generate a CSR certificate signing
+	 * request by a simple JSON object which has following parameters:
+	 * <ul>
+	 * <li>subject - parameter to be passed to {@link X500Name}</li>
+	 * <li>sbjpubkey - parameter to be passed to {@link getKey}</li>
+	 * <li>sigalg - signature algorithm name (ex. SHA256withRSA)</li>
+	 * <li>sbjprvkey - parameter to be passed to {@link getKey}</li>
+	 * </ul>
+	 *
+	 * @example
+	 * // 1) by key object
+	 * pem = KJUR.asn1.csr.CSRUtil.newCSRPEM({
+	 *   subject: {str: '/C=US/O=Test/CN=example.com'},
+	 *   sbjpubkey: pubKeyObj,
+	 *   sigalg: "SHA256withRSA",
+	 *   sbjprvkey: prvKeyObj
+	 * });
+	 *
+	 * // 2) by private/public key PEM 
+	 * pem = KJUR.asn1.csr.CSRUtil.newCSRPEM({
+	 *   subject: {str: '/C=US/O=Test/CN=example.com'},
+	 *   sbjpubkey: pubKeyPEM,
+	 *   sigalg: "SHA256withRSA",
+	 *   sbjprvkey: prvKeyPEM
+	 * });
+	 *
+	 * // 3) with generateKeypair
+	 * kp = generateKeypair("RSA", 2048);
+	 * pem = KJUR.asn1.csr.CSRUtil.newCSRPEM({
+	 *   subject: {str: '/C=US/O=Test/CN=example.com'},
+	 *   sbjpubkey: kp.pubKeyObj,
+	 *   sigalg: "SHA256withRSA",
+	 *   sbjprvkey: kp.prvKeyObj
+	 * });
+	 *
+	 * // 4) by private/public key PEM with extension
+	 * pem = KJUR.asn1.csr.CSRUtil.newCSRPEM({
+	 *   subject: {str: '/C=US/O=Test/CN=example.com'},
+	 *   ext: [
+	 *     {subjectAltName: {array: [{dns: 'example.net'}]}
+	 *   ],
+	 *   sbjpubkey: pubKeyPEM,
+	 *   sigalg: "SHA256withRSA",
+	 *   sbjprvkey: prvKeyPEM
+	 * });
+	 */
+	KJUR.asn1.csr.CSRUtil.newCSRPEM = function (param) {
+		if (param.subject === undefined) throw "parameter subject undefined";
+		if (param.sbjpubkey === undefined) throw "parameter sbjpubkey undefined";
+		if (param.sigalg === undefined) throw "parameter sigalg undefined";
+		if (param.sbjprvkey === undefined) throw "parameter sbjpubkey undefined";
 
-    let csr = new KJUR.asn1.csr.CertificationRequest({'csrinfo': csri});
-    let prvKey = getKey(param.sbjprvkey);
-    csr.sign(param.sigalg, prvKey);
+		let csri = new KJUR.asn1.csr.CertificationRequestInfo();
+		csri.setSubjectByParam(param.subject);
+		csri.setSubjectPublicKeyByGetKey(param.sbjpubkey);
 
-    let pem = csr.getPEMString();
-    return pem;
-};
+		if (param.ext !== undefined && param.ext.length !== undefined) {
+			for (let i = 0; i < param.ext.length; i++) {
+				for (key in param.ext[i]) {
+					csri.appendExtensionByName(key, param.ext[i][key]);
+				}
+			}
+		}
 
-/**
- * get field values from CSR/PKCS#10 PEM string<br/>
- * @param {string} sPEM PEM string of CSR/PKCS#10
- * @returns {Dictionary} JSON object with parsed parameters such as name or public key
- * @description
- * This method parses PEM CSR/PKCS#1 string and retrieves
- * subject name and public key. Following parameters are available in the
- * resulted JSON object.
- * <ul>
- * <li>subject.name - subject name string (ex. /C=US/O=Test)</li>
- * <li>subject.hex - hexadecimal string of X.500 Name of subject</li>
- * <li>pubkey.obj - subject public key object such as RSAKeyEx, ECDSA, DSA</li>
- * <li>pubkey.hex - hexadecimal string of subject public key</li>
- * </ul>
- *
- * @example
- * o = KJUR.asn1.csr.CSRUtil.getInfo("-----BEGIN CERTIFICATE REQUEST...");
- * console.log(o.subject.name) &rarr; "/C=US/O=Test"
- */
-KJUR.asn1.csr.CSRUtil.getInfo = function(sPEM) {
-    let result = {};
-    result.subject = {};
-    result.pubkey = {};
+		let csr = new KJUR.asn1.csr.CertificationRequest({ 'csrinfo': csri });
+		let prvKey = getKey(param.sbjprvkey);
+		csr.sign(param.sigalg, prvKey);
 
-    if (sPEM.indexOf("-----BEGIN CERTIFICATE REQUEST") == -1)
-	throw "argument is not PEM file";
+		let pem = csr.getPEMString();
+		return pem;
+	};
 
-    let hex = pemtohex(sPEM, "CERTIFICATE REQUEST");
+	/**
+	 * get field values from CSR/PKCS#10 PEM string<br/>
+	 * @param {string} sPEM PEM string of CSR/PKCS#10
+	 * @returns {Dictionary} JSON object with parsed parameters such as name or public key
+	 * @description
+	 * This method parses PEM CSR/PKCS#1 string and retrieves
+	 * subject name and public key. Following parameters are available in the
+	 * resulted JSON object.
+	 * <ul>
+	 * <li>subject.name - subject name string (ex. /C=US/O=Test)</li>
+	 * <li>subject.hex - hexadecimal string of X.500 Name of subject</li>
+	 * <li>pubkey.obj - subject public key object such as RSAKeyEx, ECDSA, DSA</li>
+	 * <li>pubkey.hex - hexadecimal string of subject public key</li>
+	 * </ul>
+	 *
+	 * @example
+	 * o = KJUR.asn1.csr.CSRUtil.getInfo("-----BEGIN CERTIFICATE REQUEST...");
+	 * console.log(o.subject.name) &rarr; "/C=US/O=Test"
+	 */
+	KJUR.asn1.csr.CSRUtil.getInfo = function (sPEM) {
+		let result = {};
+		result.subject = {};
+		result.pubkey = {};
 
-    result.subject.hex = getTLVbyList(hex, 0, [0, 1]);
-    result.subject.name = X509.hex2dn(result.subject.hex);
+		if (sPEM.indexOf("-----BEGIN CERTIFICATE REQUEST") == -1)
+			throw "argument is not PEM file";
 
-    result.pubkey.hex = getTLVbyList(hex, 0, [0, 2]);
-    result.pubkey.obj = getKey(result.pubkey.hex, null, "pkcs8pub");
+		let hex = pemtohex(sPEM, "CERTIFICATE REQUEST");
 
-    return result;
-};
+		result.subject.hex = getTLVbyList(hex, 0, [0, 1]);
+		result.subject.name = X509.hex2dn(result.subject.hex);
+
+		result.pubkey.hex = getTLVbyList(hex, 0, [0, 2]);
+		result.pubkey.obj = getKey(result.pubkey.hex, null, "pkcs8pub");
+
+		return result;
+	};
 
 

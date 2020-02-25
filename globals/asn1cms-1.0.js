@@ -13,40 +13,20 @@
 
 "use strict";
 
-import { DERInteger, DEROctetString, DERObjectIdentifier, DERSequence, DERSet, DERTaggedObject } from "./asn1-1.0.js"
-import { isHex } from "./base64x-1.1.js"
-import { name2obj, Time, AlgorithmIdentifier, X500Name,  } from "./asn1x509-1.0.js"
+import { ASN1Object, DERInteger, DEROctetString, DERObjectIdentifier, DERSequence, DERSet, DERTaggedObject } from "./asn1-1.0.js"
+import { isHex, pemtohex, utf8tohex } from "./base64x-1.1.js"
+import { name2obj, Time, AlgorithmIdentifier, X500Name, } from "./asn1x509-1.0.js"
 import { hashHex, Signature } from "./crypto-1.1.js"
 import { getVbyList, getTLVbyList, getIdxbyList, getChildIdx, getTLV, oidname } from "./asn1hex-1.1.js"
 import { getKey } from "./keyutil-1.0.js"
 import { Dictionary } from "./../../../include/type.js"
+import { RSAKeyEx } from "./rsaex.js";
+import { DSA } from "./dsa-2.0.js";
+import { ECDSA } from "./ecdsa-modified-1.0.js";
+import { SignaturePolicyIdentifier } from "./asn1cades-1.0.js"
 
 /**
- * @fileOverview
- * @name asn1cms-1.0.js
- * @author Kenji Urushima kenji.urushima@gmail.com
- * @version 1.0.5 (2017-Sep-15)
- * @license <a href="https://kjur.github.io/jsrsasign/license/">MIT License</a>
- */
-
-/** 
- * kjur's module
- * // already documented in asn1-1.0.js
- * @name KJUR
- * @namespace kjur's module
- */
-if (typeof KJUR == "undefined" || !KJUR) KJUR = {};
-
-/**
- * kjur's ASN.1 module
- * // already documented in asn1-1.0.js
- * @name KJUR.asn1
- * @namespace
- */
-if (typeof KJUR.asn1 == "undefined" || !KJUR.asn1) KJUR.asn1 = {};
-
-/**
- * kjur's ASN.1 class for Cryptographic Message Syntax(CMS)
+ * ASN.1 module for Cryptographic Message Syntax(CMS)
  * <p>
  * This module provides 
  * <a href="https://tools.ietf.org/html/rfc5652">RFC 5652
@@ -61,31 +41,27 @@ if (typeof KJUR.asn1 == "undefined" || !KJUR.asn1) KJUR.asn1 = {};
  * 
  * <h4>PROVIDED CLASSES</h4>
  * <ul>
- * <li>{@link KJUR.asn1.cms.SignedData}</li>
- * <li>{@link KJUR.asn1.cms.SignerInfo}</li>
- * <li>{@link KJUR.asn1.cms.AttributeList}</li>
- * <li>{@link KJUR.asn1.cms.ContentInfo}</li>
- * <li>{@link KJUR.asn1.cms.EncapsulatedContentInfo}</li>
- * <li>{@link KJUR.asn1.cms.IssuerAndSerialNumber}</li>
- * <li>{@link KJUR.asn1.cms.CMSUtil}</li>
- * <li>{@link KJUR.asn1.cms.Attribute}</li>
- * <li>{@link KJUR.asn1.cms.ContentType}</li>
- * <li>{@link KJUR.asn1.cms.MessageDigest}</li>
- * <li>{@link KJUR.asn1.cms.SigningTime}</li>
- * <li>{@link KJUR.asn1.cms.SigningCertificate}</li>
- * <li>{@link KJUR.asn1.cms.SigningCertificateV2}</li>
+ * <li>{@link SignedData}</li>
+ * <li>{@link SignerInfo}</li>
+ * <li>{@link AttributeList}</li>
+ * <li>{@link ContentInfo}</li>
+ * <li>{@link EncapsulatedContentInfo}</li>
+ * <li>{@link IssuerAndSerialNumber}</li>
+ * <li>{@link CMSUtil}</li>
+ * <li>{@link Attribute}</li>
+ * <li>{@link ContentType}</li>
+ * <li>{@link MessageDigest}</li>
+ * <li>{@link SigningTime}</li>
+ * <li>{@link SigningCertificate}</li>
+ * <li>{@link SigningCertificateV2}</li>
  * </ul>
  * NOTE: Please ignore method summary and document of this namespace. 
  * This caused by a bug of jsdoc2.
  * </p>
- * @name KJUR.asn1.cms
- * @namespace
  */
-if (typeof KJUR.asn1.cms == "undefined" || !KJUR.asn1.cms) KJUR.asn1.cms = {};
 
 /**
  * Attribute class for base of CMS attribute
- * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * Attributes ::= SET OF Attribute
@@ -95,39 +71,44 @@ if (typeof KJUR.asn1.cms == "undefined" || !KJUR.asn1.cms) KJUR.asn1.cms = {};
  * AttributeSetValue ::= SET OF ANY
  * </pre>
  */
-KJUR.asn1.cms.Attribute = function(params) {
-    let valueList = [], // array of values
-	KJUR = KJUR,
-	KJUR.asn1 = KJUR.asn1;
+export class Attribute extends ASN1Object {
+	/**
+	 * @param {Dictionary} params dictionary of parameters
+	 */
+	constructor(params) {
+		super();
 
-    KJUR.asn1.cms.Attribute.superclass.constructor.call(this);
+		/** @type {Array<Dictionary>} */ this.valueList = []; // array of values
+	}
 
-    this.getEncodedHex = function() {
-        let attrTypeASN1, attrValueASN1, seq;
-        attrTypeASN1 = new KJUR.asn1.DERObjectIdentifier({"oid": this.attrTypeOid});
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
+		let attrTypeASN1, attrValueASN1, seq;
+		attrTypeASN1 = new DERObjectIdentifier({ "oid": this.attrTypeOid });
 
-        attrValueASN1 = new KJUR.asn1.DERSet({"array": this.valueList});
-        try {
-            attrValueASN1.getEncodedHex();
-        } catch (ex) {
-            throw "fail valueSet.getEncodedHex in Attribute(1)/" + ex;
-        }
+		attrValueASN1 = new DERSet({ "array": this.valueList });
+		try {
+			attrValueASN1.getEncodedHex();
+		} catch (ex) {
+			throw "fail valueSet.getEncodedHex in Attribute(1)/" + ex;
+		}
 
-        seq = new KJUR.asn1.DERSequence({"array": [attrTypeASN1, attrValueASN1]});
-        try {
-            this.hTLV = seq.getEncodedHex();
-        } catch (ex) {
-            throw "failed seq.getEncodedHex in Attribute(2)/" + ex;
-        }
+		seq = new DERSequence({ "array": [attrTypeASN1, attrValueASN1] });
+		try {
+			this.hTLV = seq.getEncodedHex();
+		} catch (ex) {
+			throw "failed seq.getEncodedHex in Attribute(2)/" + ex;
+		}
 
-        return this.hTLV;
-    };
-};
-YAHOO.lang.extend(KJUR.asn1.cms.Attribute, KJUR.asn1.ASN1Object);
+		return this.hTLV;
+	}
+}
 
 /**
  * class for CMS ContentType attribute
- * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * Attribute ::= SEQUENCE {
@@ -137,28 +118,28 @@ YAHOO.lang.extend(KJUR.asn1.cms.Attribute, KJUR.asn1.ASN1Object);
  * ContentType ::= OBJECT IDENTIFIER
  * </pre>
  * @example
- * o = new KJUR.asn1.cms.ContentType({name: 'data'});
- * o = new KJUR.asn1.cms.ContentType({oid: '1.2.840.113549.1.9.16.1.4'});
+ * o = new ContentType({name: 'data'});
+ * o = new ContentType({oid: '1.2.840.113549.1.9.16.1.4'});
  */
-KJUR.asn1.cms.ContentType = function(params) {
+export class ContentType extends Attribute {
+	/**
+	 * @param {Dictionary} params dictionary of parameters
+	 */
+	constructor(params) {
+		super(params);
 
-	KJUR.asn1 = KJUR.asn1;
+    	/** @type {string} */ this.attrTypeOid = "1.2.840.113549.1.9.3";
+		/** @type {DERObjectIdentifier | null} */ let contentTypeASN1 = null;
 
-    KJUR.asn1.cms.ContentType.superclass.constructor.call(this);
-
-    this.attrTypeOid = "1.2.840.113549.1.9.3";
-    let contentTypeASN1 = null;
-
-    if (typeof params != "undefined") {
-        let contentTypeASN1 = new KJUR.asn1.DERObjectIdentifier(params);
-        this.valueList = [contentTypeASN1];
-    }
-};
-YAHOO.lang.extend(KJUR.asn1.cms.ContentType, KJUR.asn1.cms.Attribute);
+		if (typeof params != "undefined") {
+			let contentTypeASN1 = new DERObjectIdentifier(params);
+			this.valueList = [contentTypeASN1];
+		}
+	}
+}
 
 /**
  * class for CMS MessageDigest attribute
- * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * Attribute ::= SEQUENCE {
@@ -168,38 +149,37 @@ YAHOO.lang.extend(KJUR.asn1.cms.ContentType, KJUR.asn1.cms.Attribute);
  * MessageDigest ::= OCTET STRING
  * </pre>
  * @example
- * o = new KJUR.asn1.cms.MessageDigest({hex: 'a1a2a3a4...'});
+ * o = new MessageDigest({hex: 'a1a2a3a4...'});
  */
-KJUR.asn1.cms.MessageDigest = function(params) {
+export class MessageDigest extends Attribute {
+	/**
+	 * @param {Dictionary} params dictionary of parameters
+	 */
+	constructor(params) {
+		super(params);
 
+		/** @type {string} */ this.attrTypeOid = "1.2.840.113549.1.9.4";
 
-
-	KJUR.asn1.cms = KJUR.asn1.cms;
-
-    KJUR.asn1.cms.MessageDigest.superclass.constructor.call(this);
-    this.attrTypeOid = "1.2.840.113549.1.9.4";
-
-    if (params !== undefined) {
-        if (params['eciObj'] instanceof KJUR.asn1.cms.EncapsulatedContentInfo &&
-            typeof params['hashAlg'] === "string") {
-            let dataHex = params.eciObj.eContentValueHex;
-            let hashAlg = params['hashAlg'];
-            let hashValueHex = hashHex(dataHex, hashAlg);
-            let dAttrValue1 = new DEROctetString({hex: hashValueHex});
-            dAttrValue1.getEncodedHex();
-            this.valueList = [dAttrValue1];
-        } else {
-            let dAttrValue1 = new DEROctetString(params);
-            dAttrValue1.getEncodedHex();
-            this.valueList = [dAttrValue1];
-        }
-    }
-};
-YAHOO.lang.extend(KJUR.asn1.cms.MessageDigest, KJUR.asn1.cms.Attribute);
+		if (params !== undefined) {
+			if (params['eciObj'] instanceof EncapsulatedContentInfo &&
+				typeof params['hashAlg'] === "string") {
+				let dataHex = params.eciObj.eContentValueHex;
+				let hashAlg = params['hashAlg'];
+				let hashValueHex = hashHex(dataHex, hashAlg);
+				let dAttrValue1 = new DEROctetString({ hex: hashValueHex });
+				dAttrValue1.getEncodedHex();
+				this.valueList = [dAttrValue1];
+			} else {
+				let dAttrValue1 = new DEROctetString(params);
+				dAttrValue1.getEncodedHex();
+				this.valueList = [dAttrValue1];
+			}
+		}
+	}
+}
 
 /**
  * class for CMS SigningTime attribute
- * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * Attribute ::= SEQUENCE {
@@ -212,33 +192,34 @@ YAHOO.lang.extend(KJUR.asn1.cms.MessageDigest, KJUR.asn1.cms.Attribute);
  *    generalTime GeneralizedTime }
  * </pre>
  * @example
- * o = new KJUR.asn1.cms.SigningTime(); // current time UTCTime by default
- * o = new KJUR.asn1.cms.SigningTime({type: 'gen'}); // current time GeneralizedTime
- * o = new KJUR.asn1.cms.SigningTime({str: '20140517093800Z'}); // specified GeneralizedTime
- * o = new KJUR.asn1.cms.SigningTime({str: '140517093800Z'}); // specified UTCTime
+ * o = new SigningTime(); // current time UTCTime by default
+ * o = new SigningTime({type: 'gen'}); // current time GeneralizedTime
+ * o = new SigningTime({str: '20140517093800Z'}); // specified GeneralizedTime
+ * o = new SigningTime({str: '140517093800Z'}); // specified UTCTime
  */
-KJUR.asn1.cms.SigningTime = function(params) {
+export class SigningTime extends Attribute {
+	/**
+	 * @param {Dictionary} params dictionary of parameters
+	 */
+	constructor(params) {
+		super(params);
 
-	KJUR.asn1 = KJUR.asn1;
+		/** @type {string} */ this.attrTypeOid = "1.2.840.113549.1.9.5";
 
-    KJUR.asn1.cms.SigningTime.superclass.constructor.call(this);
-    this.attrTypeOid = "1.2.840.113549.1.9.5";
-
-    if (params !== undefined) {
-        let asn1 = new Time(params);
-        try {
-            asn1.getEncodedHex();
-        } catch (ex) {
-            throw "SigningTime.getEncodedHex() failed/" + ex;
-        }
-        this.valueList = [asn1];
-    }
-};
-YAHOO.lang.extend(KJUR.asn1.cms.SigningTime, KJUR.asn1.cms.Attribute);
+		if (params !== undefined) {
+			let asn1 = new Time(params);
+			try {
+				asn1.getEncodedHex();
+			} catch (ex) {
+				throw "SigningTime.getEncodedHex() failed/" + ex;
+			}
+			this.valueList = [asn1];
+		}
+	}
+}
 
 /**
  * class for CMS SigningCertificate attribute
- * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * Attribute ::= SEQUENCE {
@@ -256,51 +237,52 @@ YAHOO.lang.extend(KJUR.asn1.cms.SigningTime, KJUR.asn1.cms.Attribute);
  *    serialNumber CertificateSerialNumber }
  * </pre>
  * @example
- * o = new KJUR.asn1.cms.SigningCertificate({array: [certPEM]});
+ * o = new SigningCertificate({array: [certPEM]});
  */
-KJUR.asn1.cms.SigningCertificate = function(params) {
+export class SigningCertificate {
+	/**
+	 * @param {Dictionary} params dictionary of parameters
+	 */
+	constructor(params) {
+		super(params);
 
+		/** @type {string} */ this.attrTypeOid = "1.2.840.113549.1.9.16.2.12";
 
+		if (params !== undefined) {
+			if (typeof params['array'] == "object") {
+				this.setCerts(params['array']);
+			}
+		}
+	}
 
-	KJUR.asn1.cms = KJUR.asn1.cms,
-	KJUR.crypto = KJUR.crypto;
+	/**
+	 * @param {Array<string>} listPEM 
+	 */
+	setCerts(listPEM) {
+        /** @type {Array<DERSequence>} */ let list = [];
+		for (let i = 0; i < listPEM.length; i++) {
+			let hex = pemtohex(listPEM[i]);
+			let certHashHex = hashHex(hex, 'sha1');
+			let dCertHash =
+				new DEROctetString({ 'hex': certHashHex });
+			dCertHash.getEncodedHex();
+			let dIssuerSerial =
+				new IssuerAndSerialNumber({ 'cert': listPEM[i] });
+			dIssuerSerial.getEncodedHex();
+			let dESSCertID =
+				new DERSequence({ 'array': [dCertHash, dIssuerSerial] });
+			dESSCertID.getEncodedHex();
+			list.push(dESSCertID);
+		}
 
-    KJUR.asn1.cms.SigningCertificate.superclass.constructor.call(this);
-    this.attrTypeOid = "1.2.840.113549.1.9.16.2.12";
-
-    this.setCerts = function(listPEM) {
-        let list = [];
-        for (let i = 0; i < listPEM.length; i++) {
-            let hex = pemtohex(listPEM[i]);
-            let certHashHex = hashHex(hex, 'sha1');
-            let dCertHash = 
-		new KJUR.asn1.DEROctetString({hex: certHashHex});
-            dCertHash.getEncodedHex();
-            let dIssuerSerial =
-                new KJUR.asn1.cms.IssuerAndSerialNumber({cert: listPEM[i]});
-            dIssuerSerial.getEncodedHex();
-            let dESSCertID =
-                new DERSequence({array: [dCertHash, dIssuerSerial]});
-            dESSCertID.getEncodedHex();
-            list.push(dESSCertID);
-        }
-
-        let dValue = new DERSequence({array: list});
-        dValue.getEncodedHex();
-        this.valueList = [dValue];
-    };
-
-    if (params !== undefined) {
-        if (typeof params['array'] == "object") {
-            this.setCerts(params['array']);
-        }
-    }
-};
-YAHOO.lang.extend(KJUR.asn1.cms.SigningCertificate, KJUR.asn1.cms.Attribute);
+		let dValue = new DERSequence({ array: list });
+		dValue.getEncodedHex();
+		this.valueList = [dValue];
+	}
+}
 
 /**
  * class for CMS SigningCertificateV2 attribute
- * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * oid-signingCertificateV2 = 1.2.840.113549.1.9.16.2.47 
@@ -323,64 +305,65 @@ YAHOO.lang.extend(KJUR.asn1.cms.SigningCertificate, KJUR.asn1.cms.Attribute);
  * </pre>
  * @example
  * // hash algorithm is sha256 by default:
- * o = new KJUR.asn1.cms.SigningCertificateV2({array: [certPEM]});
- * o = new KJUR.asn1.cms.SigningCertificateV2({array: [certPEM],
+ * o = new SigningCertificateV2({array: [certPEM]});
+ * o = new SigningCertificateV2({array: [certPEM],
  *                                             hashAlg: 'sha512'});
  */
-KJUR.asn1.cms.SigningCertificateV2 = function(params) {
+export class SigningCertificateV2 extends Attribute {
+	/**
+	 * @param {Dictionary} params dictionary of parameters
+	 */
+	constructor(params) {
+		super(params);
 
+		/** @type {string} */ this.attrTypeOid = "1.2.840.113549.1.9.16.2.47";
 
+		if (params !== undefined) {
+			if (typeof params['array'] == "object") {
+				let hashAlg = "sha256"; // sha2 default
+				if (typeof params['hashAlg'] == "string")
+					hashAlg = params['hashAlg'];
+				this.setCerts(params.array, hashAlg);
+			}
+		}
+	}
 
-	KJUR.asn1.x509 = KJUR.asn1.x509,
-	KJUR.asn1.cms = KJUR.asn1.cms,
-	KJUR.crypto = KJUR.crypto;
+	/**
+	 * @param {Array<string>} listPEM 
+	 * @param {string} hashAlg 
+	 */
+	setCerts(listPEM, hashAlg) {
+		let list = [];
+		for (let i = 0; i < listPEM.length; i++) {
+			let hex = pemtohex(listPEM[i]);
 
-    KJUR.asn1.cms.SigningCertificateV2.superclass.constructor.call(this);
-    this.attrTypeOid = "1.2.840.113549.1.9.16.2.47";
+			let a = [];
+			if (hashAlg !== "sha256")
+				a.push(new AlgorithmIdentifier({ name: hashAlg }));
 
-    this.setCerts = function(listPEM, hashAlg) {
-        let list = [];
-        for (let i = 0; i < listPEM.length; i++) {
-            let hex = pemtohex(listPEM[i]);
+			let certHashHex = hashHex(hex, hashAlg);
+			let dCertHash = new DEROctetString({ hex: certHashHex });
+			dCertHash.getEncodedHex();
+			a.push(dCertHash);
 
-            let a = [];
-            if (hashAlg !== "sha256")
-                a.push(new AlgorithmIdentifier({name: hashAlg}));
+			let dIssuerSerial =
+				new IssuerAndSerialNumber({ cert: listPEM[i] });
+			dIssuerSerial.getEncodedHex();
+			a.push(dIssuerSerial);
 
-            let certHashHex = hashHex(hex, hashAlg);
-            let dCertHash = new KJUR.asn1.DEROctetString({hex: certHashHex});
-            dCertHash.getEncodedHex();
-            a.push(dCertHash);
+			let dESSCertIDv2 = new DERSequence({ array: a });
+			dESSCertIDv2.getEncodedHex();
+			list.push(dESSCertIDv2);
+		}
 
-            let dIssuerSerial =
-                new KJUR.asn1.cms.IssuerAndSerialNumber({cert: listPEM[i]});
-            dIssuerSerial.getEncodedHex();
-            a.push(dIssuerSerial);
-
-            let dESSCertIDv2 = new DERSequence({array: a});
-            dESSCertIDv2.getEncodedHex();
-            list.push(dESSCertIDv2);
-        }
-
-        let dValue = new DERSequence({array: list});
-        dValue.getEncodedHex();
-        this.valueList = [dValue];
-    };
-
-    if (params !== undefined) {
-        if (typeof params['array'] == "object") {
-            let hashAlg = "sha256"; // sha2 default
-            if (typeof params['hashAlg'] == "string") 
-                hashAlg = params['hashAlg'];
-            this.setCerts(params.array, hashAlg);
-        }
-    }
-};
-YAHOO.lang.extend(KJUR.asn1.cms.SigningCertificateV2, KJUR.asn1.cms.Attribute);
+		let dValue = new DERSequence({ array: list });
+		dValue.getEncodedHex();
+		this.valueList = [dValue];
+	}
+}
 
 /**
  * class for IssuerAndSerialNumber ASN.1 structure for CMS
- * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * IssuerAndSerialNumber ::= SEQUENCE {
@@ -390,72 +373,75 @@ YAHOO.lang.extend(KJUR.asn1.cms.SigningCertificateV2, KJUR.asn1.cms.Attribute);
  * </pre>
  * @example
  * // specify by X500Name and DERInteger
- * o = new KJUR.asn1.cms.IssuerAndSerialNumber(
+ * o = new IssuerAndSerialNumber(
  *      {issuer: {str: '/C=US/O=T1'}, serial {int: 3}});
  * // specify by PEM certificate
- * o = new KJUR.asn1.cms.IssuerAndSerialNumber({cert: certPEM});
- * o = new KJUR.asn1.cms.IssuerAndSerialNumber(certPEM); // since 1.0.3
+ * o = new IssuerAndSerialNumber({cert: certPEM});
+ * o = new IssuerAndSerialNumber(certPEM); // since 1.0.3
  */
-KJUR.asn1.cms.IssuerAndSerialNumber = function(params) {
+export class IssuerAndSerialNumber extends ASN1Object {
+	/**
+	 * @param {Dictionary} params dictionary of parameters
+	 */
+	constructor(params) {
+		super();
 
+		/** @type {X500Name | null} */ this.dIssuer = null;
+		/** @type {DERInteger | null} */ this.dSerial = null;
 
+		if (params !== undefined) {
+			if (typeof params == "string" &&
+				params.indexOf("-----BEGIN ") != -1) {
+				this.setByCertPEM(params);
+			}
+			if (params['issuer'] && params['serial']) {
+				if (params['issuer'] instanceof X500Name) {
+					this.dIssuer = params['issuer'];
+				} else {
+					this.dIssuer = new X500Name(params['issuer']);
+				}
+				if (params['serial'] instanceof DERInteger) {
+					this.dSerial = params['serial'];
+				} else {
+					this.dSerial = new DERInteger(params['serial']);
+				}
+			}
+			if (typeof params['cert'] == "string") {
+				this.setByCertPEM(params['cert']);
+			}
+		}
+	}
 
-	KJUR.asn1.cms = KJUR.asn1.cms,
-	KJUR.asn1.x509 = KJUR.asn1.x509,
-	_X500Name = X500Name,
-	_X509 = X509;
+	/**
+	 * @param {string} certPEM 
+	 */
+	setByCertPEM(certPEM) {
+		let certHex = pemtohex(certPEM);
+		let x = new X509();
+		x.hex = certHex;
+		let issuerTLVHex = x.getIssuerHex();
+		this.dIssuer = new X500Name();
+		this.dIssuer.hTLV = issuerTLVHex;
+		let serialVHex = x.getSerialNumberHex();
+		this.dSerial = new DERInteger({ hex: serialVHex });
+	}
 
-    KJUR.asn1.cms.IssuerAndSerialNumber.superclass.constructor.call(this);
-    let dIssuer = null;
-    let dSerial = null;
-
-    /*
-     */
-    this.setByCertPEM = function(certPEM) {
-        let certHex = pemtohex(certPEM);
-        let x = new _X509();
-        x.hex = certHex;
-        let issuerTLVHex = x.getIssuerHex();
-        this.dIssuer = new _X500Name();
-        this.dIssuer.hTLV = issuerTLVHex;
-        let serialVHex = x.getSerialNumberHex();
-        this.dSerial = new DERInteger({hex: serialVHex});
-    };
-
-    this.getEncodedHex = function() {
-        let seq = new KJUR.asn1.DERSequence({"array": [this.dIssuer,
-							this.dSerial]});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
-
-    if (params !== undefined) {
-        if (typeof params == "string" &&
-            params.indexOf("-----BEGIN ") != -1) {
-            this.setByCertPEM(params);
-        }
-        if (params['issuer'] && params['serial']) {
-            if (params['issuer'] instanceof _X500Name) {
-                this.dIssuer = params['issuer'];
-            } else {
-                this.dIssuer = new _X500Name(params['issuer']);
-            }
-            if (params['serial'] instanceof DERInteger) {
-                this.dSerial = params['serial'];
-            } else {
-                this.dSerial = new DERInteger(params['serial']);
-            }
-        }
-        if (typeof params['cert'] == "string") {
-            this.setByCertPEM(params['cert']);
-        }
-    }
-};
-YAHOO.lang.extend(KJUR.asn1.cms.IssuerAndSerialNumber, KJUR.asn1.ASN1Object);
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
+		let seq = new DERSequence({
+			"array": [this.dIssuer,
+			this.dSerial]
+		});
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	}
+}
 
 /**
  * class for Attributes ASN.1 structure for CMS
- * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * Attributes ::= SET OF Attribute
@@ -465,57 +451,64 @@ YAHOO.lang.extend(KJUR.asn1.cms.IssuerAndSerialNumber, KJUR.asn1.ASN1Object);
  * </pre>
  * @example
  * // specify by X500Name and DERInteger
- * o = new KJUR.asn1.cms.AttributeList({sorted: false}); // ASN.1 BER unsorted SET OF
- * o = new KJUR.asn1.cms.AttributeList();  // ASN.1 DER sorted by default
+ * o = new AttributeList({sorted: false}); // ASN.1 BER unsorted SET OF
+ * o = new AttributeList();  // ASN.1 DER sorted by default
  * o.clear();                              // clear list of Attributes
  * n = o.length();                         // get number of Attribute
- * o.add(new KJUR.asn1.cms.SigningTime()); // add SigningTime attribute
+ * o.add(new SigningTime()); // add SigningTime attribute
  * hex = o.getEncodedHex();                // get hex encoded ASN.1 data
  */
-KJUR.asn1.cms.AttributeList = function(params) {
+export class AttributeList extends ASN1Object {
+	/**
+	 * @param {Dictionary} params dictionary of parameters
+	 */
+	constructor(params) {
+		super();
 
+		/** @type {Array<Attribute>} */ this.list = new Array();
+		/** @type {boolean} */ this.sortFlag = true;
 
-	KJUR.asn1.cms = KJUR.asn1.cms;
+		if (params !== undefined) {
+			if (typeof params['sortflag'] != "undefined" &&
+				params['sortflag'] == false)
+				this.sortFlag = false;
+		}
+	}
 
-    KJUR.asn1.cms.AttributeList.superclass.constructor.call(this);
-    this.list = new Array();
-    this.sortFlag = true;
+	/**
+	 * @param {Attribute} item 
+	 */
+	add(item) {
+		this.list.push(item);
+	}
 
-    this.add = function(item) {
-        if (item instanceof KJUR.asn1.cms.Attribute) {
-            this.list.push(item);
-        }
-    };
+	length() {
+		return this.list.length;
+	}
 
-    this.length = function() {
-        return this.list.length;
-    };
+	clear() {
+		this.list = new Array();
+		this.hTLV = null;
+		this.hV = null;
+	}
 
-    this.clear = function() {
-        this.list = new Array();
-        this.hTLV = null;
-        this.hV = null;
-    };
-
-    this.getEncodedHex = function() {
-        if (typeof this.hTLV == "string") return this.hTLV;
-        let set = new KJUR.asn1.DERSet({array: this.list, 
-                                         sortflag: this.sortFlag});
-        this.hTLV = set.getEncodedHex();
-        return this.hTLV;
-    };
-
-    if (params !== undefined) {
-        if (typeof params['sortflag'] != "undefined" &&
-            params['sortflag'] == false)
-            this.sortFlag = false;
-    }
-};
-YAHOO.lang.extend(KJUR.asn1.cms.AttributeList, KJUR.asn1.ASN1Object);
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
+		if (typeof this.hTLV == "string") return this.hTLV;
+		let set = new DERSet({
+			array: this.list,
+			sortflag: this.sortFlag
+		});
+		this.hTLV = set.getEncodedHex();
+		return this.hTLV;
+	}
+}
 
 /**
  * class for SignerInfo ASN.1 structure of CMS SignedData
- * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * SignerInfo ::= SEQUENCE {
@@ -528,149 +521,156 @@ YAHOO.lang.extend(KJUR.asn1.cms.AttributeList, KJUR.asn1.ASN1Object);
  *    unsignedAttrs [1] IMPLICIT UnsignedAttributes OPTIONAL }
  * </pre>
  * @example
- * o = new KJUR.asn1.cms.SignerInfo();
+ * o = new SignerInfo();
  * o.setSignerIdentifier(certPEMstring);
- * o.dSignedAttrs.add(new KJUR.asn1.cms.ContentType({name: 'data'}));
- * o.dSignedAttrs.add(new KJUR.asn1.cms.MessageDigest({hex: 'a1b2...'}));
- * o.dSignedAttrs.add(new KJUR.asn1.cms.SigningTime());
+ * o.dSignedAttrs.add(new ContentType({name: 'data'}));
+ * o.dSignedAttrs.add(new MessageDigest({hex: 'a1b2...'}));
+ * o.dSignedAttrs.add(new SigningTime());
  * o.sign(privteKeyParam, "SHA1withRSA");
  */
-KJUR.asn1.cms.SignerInfo = function(params) {
+export class SignerInfo extends ASN1Object {
+	/**
+	 * @param {Dictionary} params dictionary of parameters
+	 */
+	constructor(params) {
+		super()
 
+		/** @type {DERInteger} */ this.dCMSVersion = new DERInteger({ 'int': 1 });
+		/** @type {IssuerAndSerialNumber | null} */ this.dSignerIdentifier = null;
+		/** @type {AlgorithmIdentifier | null} */ this.dDigestAlgorithm = null;
+		/** @type {AttributeList} */ this.dSignedAttrs = new AttributeList();
+		/** @type {AlgorithmIdentifier | null} */ this.dSigAlg = null;
+		/** @type {DEROctetString | null} */ this.dSig = null;
+		/** @type {AttributeList} */ this.dUnsignedAttrs = new AttributeList();
+	}
 
+	/**
+	 * @param {string} params 
+	 */
+	setSignerIdentifier(params) {
+		if (params.indexOf("CERTIFICATE") != -1 &&
+			params.indexOf("BEGIN") != -1 &&
+			params.indexOf("END") != -1) {
 
-	KJUR.asn1.cms = KJUR.asn1.cms,
-	_AttributeList = KJUR.asn1.cms.AttributeList,
-	_ContentType = KJUR.asn1.cms.ContentType,
-	_EncapsulatedContentInfo = KJUR.asn1.cms.EncapsulatedContentInfo,
-	_MessageDigest = KJUR.asn1.cms.MessageDigest,
-	_SignedData = KJUR.asn1.cms.SignedData,
-	KJUR.asn1.x509 = KJUR.asn1.x509,
-	AlgorithmIdentifier = AlgorithmIdentifier,
-	KJUR.crypto = KJUR.crypto;
+			let certPEM = params;
+			this.dSignerIdentifier =
+				new IssuerAndSerialNumber({ cert: params });
+		}
+	}
 
-    KJUR.asn1.cms.SignerInfo.superclass.constructor.call(this);
+	/**
+	 * set ContentType/MessageDigest/DigestAlgorithms for SignerInfo/SignedData
+	 * @name setForContentAndHash
+	 * @param {Dictionary} params JSON parameter to set content related field
+	 * @description
+	 * This method will specify following fields by a parameters:
+	 * <ul>
+	 * <li>add ContentType signed attribute by encapContentInfo</li>
+	 * <li>add MessageDigest signed attribute by encapContentInfo and hashAlg</li>
+	 * <li>add a hash algorithm used in MessageDigest to digestAlgorithms field of SignedData</li>
+	 * <li>set a hash algorithm used in MessageDigest to digestAlgorithm field of SignerInfo</li>
+	 * </ul>
+	 * Argument 'params' is an associative array having following elements:
+	 * <ul>
+	 * <li>eciObj - {@link EncapsulatedContentInfo} object</li>
+	 * <li>sdObj - {@link SignedData} object (Option) to set DigestAlgorithms</li>
+	 * <li>hashAlg - string of hash algorithm name which is used for MessageDigest attribute</li>
+	 * </ul>
+	 * some of elements can be omited.
+	 * @example
+	 * sd = new SignedData();
+	 * signerInfo.setForContentAndHash({sdObj: sd,
+	 *                                  eciObj: sd.dEncapContentInfo,
+	 *                                  hashAlg: 'sha256'});
+	 */
+	setForContentAndHash(params) {
+		if (params !== undefined) {
+			if (params['eciObj'] instanceof EncapsulatedContentInfo) {
+				this.dSignedAttrs.add(new ContentType({ oid: '1.2.840.113549.1.7.1' }));
+				this.dSignedAttrs.add(new MessageDigest({
+					eciObj: params.eciObj,
+					hashAlg: params.hashAlg
+				}));
+			}
+			if (params['sdObj'] !== undefined &&
+				params['sdObj'] instanceof SignedData) {
+				if (params.sdObj.digestAlgNameList.join(":").indexOf(params['hashAlg']) == -1) {
+					params.sdObj.digestAlgNameList.push(params['hashAlg']);
+				}
+			}
+			if (typeof params['hashAlg'] == "string") {
+				this.dDigestAlgorithm = new AlgorithmIdentifier({ name: params.hashAlg });
+			}
+		}
+	}
 
-    this.dCMSVersion = new KJUR.asn1.DERInteger({'int': 1});
-    this.dSignerIdentifier = null;
-    this.dDigestAlgorithm = null;
-    this.dSignedAttrs = new _AttributeList();
-    this.dSigAlg = null;
-    this.dSig = null;
-    this.dUnsignedAttrs = new _AttributeList();
+	/**
+	 * @param {string | RSAKeyEx | DSA | ECDSA | Dictionary} keyParam 
+	 * @param {string} sigAlg 
+	 */
+	sign(keyParam, sigAlg) {
+		// set algorithm
+		this.dSigAlg = new AlgorithmIdentifier({ name: sigAlg });
 
-    this.setSignerIdentifier = function(params) {
-        if (typeof params == "string" &&
-            params.indexOf("CERTIFICATE") != -1 &&
-            params.indexOf("BEGIN") != -1 &&
-            params.indexOf("END") != -1) {
+		// set signature
+		let data = this.dSignedAttrs.getEncodedHex();
+		let prvKey = getKey(keyParam);
+		let sig = new Signature({ 'alg': sigAlg });
+		sig.init(prvKey);
+		sig.updateHex(data);
+		let sigValHex = sig.sign();
+		this.dSig = new DEROctetString({ 'hex': sigValHex });
+	};
 
-            let certPEM = params;
-            this.dSignerIdentifier = 
-                new KJUR.asn1.cms.IssuerAndSerialNumber({cert: params});
-        }
-    };
+	/**
+	 * @param {Attribute} attr 
+	 */
+	addUnsigned(attr) {
+		this.hTLV = null;
+		this.dUnsignedAttrs.hTLV = null;
+		this.dUnsignedAttrs.add(attr);
+	};
 
-    /**
-     * set ContentType/MessageDigest/DigestAlgorithms for SignerInfo/SignedData
-     * @name setForContentAndHash
-     * @param {Array} params JSON parameter to set content related field
-     * @description
-     * This method will specify following fields by a parameters:
-     * <ul>
-     * <li>add ContentType signed attribute by encapContentInfo</li>
-     * <li>add MessageDigest signed attribute by encapContentInfo and hashAlg</li>
-     * <li>add a hash algorithm used in MessageDigest to digestAlgorithms field of SignedData</li>
-     * <li>set a hash algorithm used in MessageDigest to digestAlgorithm field of SignerInfo</li>
-     * </ul>
-     * Argument 'params' is an associative array having following elements:
-     * <ul>
-     * <li>eciObj - {@link KJUR.asn1.cms.EncapsulatedContentInfo} object</li>
-     * <li>sdObj - {@link KJUR.asn1.cms.SignedData} object (Option) to set DigestAlgorithms</li>
-     * <li>hashAlg - string of hash algorithm name which is used for MessageDigest attribute</li>
-     * </ul>
-     * some of elements can be omited.
-     * @example
-     * sd = new KJUR.asn1.cms.SignedData();
-     * signerInfo.setForContentAndHash({sdObj: sd,
-     *                                  eciObj: sd.dEncapContentInfo,
-     *                                  hashAlg: 'sha256'});
-     */
-    this.setForContentAndHash = function(params) {
-        if (params !== undefined) {
-            if (params['eciObj'] instanceof _EncapsulatedContentInfo) {
-                this.dSignedAttrs.add(new _ContentType({oid: '1.2.840.113549.1.7.1'}));
-                this.dSignedAttrs.add(new _MessageDigest({eciObj: params.eciObj,
-                                                          hashAlg: params.hashAlg}));
-            }
-            if (params['sdObj'] !== undefined &&
-                params['sdObj'] instanceof _SignedData) {
-                if (params.sdObj.digestAlgNameList.join(":").indexOf(params['hashAlg']) == -1) {
-                    params.sdObj.digestAlgNameList.push(params['hashAlg']);
-                }
-            }
-            if (typeof params['hashAlg'] == "string") {
-                this.dDigestAlgorithm = new AlgorithmIdentifier({name: params.hashAlg});
-            }
-        }
-    };
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
+		//alert("sattrs.hTLV=" + this.dSignedAttrs.hTLV);
+		if (this.dSignedAttrs instanceof AttributeList &&
+			this.dSignedAttrs.length() == 0) {
+			throw "SignedAttrs length = 0 (empty)";
+		}
+		let sa = new DERTaggedObject({
+			obj: this.dSignedAttrs,
+			tag: 'a0', explicit: false
+		});
+		let ua = null;;
+		if (this.dUnsignedAttrs.length() > 0) {
+			ua = new DERTaggedObject({
+				obj: this.dUnsignedAttrs,
+				tag: 'a1', explicit: false
+			});
+		}
 
-    this.sign = function(keyParam, sigAlg) {
-        // set algorithm
-        this.dSigAlg = new AlgorithmIdentifier({name: sigAlg});
+		let items = [
+			this.dCMSVersion,
+			this.dSignerIdentifier,
+			this.dDigestAlgorithm,
+			sa,
+			this.dSigAlg,
+			this.dSig,
+		];
+		if (ua != null) items.push(ua);
 
-        // set signature
-        let data = this.dSignedAttrs.getEncodedHex();
-        let prvKey = getKey(keyParam);
-        let sig = new Signature({'alg': sigAlg});
-        sig.init(prvKey);
-        sig.updateHex(data);
-        let sigValHex = sig.sign();
-        this.dSig = new KJUR.asn1.DEROctetString({'hex': sigValHex});
-    };
-
-    /*
-     */
-    this.addUnsigned = function(attr) {
-        this.hTLV = null;
-        this.dUnsignedAttrs.hTLV = null;
-        this.dUnsignedAttrs.add(attr);
-    };
-
-    this.getEncodedHex = function() {
-        //alert("sattrs.hTLV=" + this.dSignedAttrs.hTLV);
-        if (this.dSignedAttrs instanceof _AttributeList &&
-            this.dSignedAttrs.length() == 0) {
-            throw "SignedAttrs length = 0 (empty)";
-        }
-        let sa = new DERTaggedObject({obj: this.dSignedAttrs,
-                                       tag: 'a0', explicit: false});
-        let ua = null;;
-        if (this.dUnsignedAttrs.length() > 0) {
-            ua = new DERTaggedObject({obj: this.dUnsignedAttrs,
-                                       tag: 'a1', explicit: false});
-        }
-
-        let items = [
-            this.dCMSVersion,
-            this.dSignerIdentifier,
-            this.dDigestAlgorithm,
-            sa,
-            this.dSigAlg,
-            this.dSig,
-        ];
-        if (ua != null) items.push(ua);
-
-        let seq = new KJUR.asn1.DERSequence({array: items});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
-};
-YAHOO.lang.extend(KJUR.asn1.cms.SignerInfo, KJUR.asn1.ASN1Object);
+		let seq = new DERSequence({ array: items });
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	}
+}
 
 /**
  * class for EncapsulatedContentInfo ASN.1 structure for CMS
- * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * EncapsulatedContentInfo ::= SEQUENCE {
@@ -679,7 +679,7 @@ YAHOO.lang.extend(KJUR.asn1.cms.SignerInfo, KJUR.asn1.ASN1Object);
  * ContentType ::= OBJECT IDENTIFIER
  * </pre>
  * @example
- * o = new KJUR.asn1.cms.EncapsulatedContentInfo();
+ * o = new EncapsulatedContentInfo();
  * o.setContentType('1.2.3.4.5');     // specify eContentType by OID
  * o.setContentType('data');          // specify eContentType by name
  * o.setContentValueHex('a1a2a4...'); // specify eContent data by hex string
@@ -687,72 +687,83 @@ YAHOO.lang.extend(KJUR.asn1.cms.SignerInfo, KJUR.asn1.ASN1Object);
  * // for detached contents (i.e. data not concluded in eContent)
  * o.isDetached = true;               // false as default 
  */
-KJUR.asn1.cms.EncapsulatedContentInfo = function(params) {
+export class EncapsulatedContentInfo extends ASN1Object {
+	/**
+	 * @param {Dictionary} params dictionary of parameters
+	 */
+	constructor(params) {
+		super();
 
+		/** @type {DERObjectIdentifier} */ this.dEContentType = new DERObjectIdentifier({ name: 'data' });
+		/** @type {DERTaggedObject | null} */ this.dEContent = null;
+		/** @type {boolean} */ this.isDetached = false;
+		/** @type {string | null} */ this.eContentValueHex = null;
+	}
 
+	/**
+	 * @param {string} nameOrOid 
+	 */
+	setContentType(nameOrOid) {
+		if (nameOrOid.match(/^[0-2][.][0-9.]+$/)) {
+			this.dEContentType = new DERObjectIdentifier({ oid: nameOrOid });
+		} else {
+			this.dEContentType = new DERObjectIdentifier({ name: nameOrOid });
+		}
+	}
 
+	/**
+	 * @param {Dictionary} params 
+	 */
+	setContentValue(params) {
+		if (typeof params['hex'] == "string") {
+			this.eContentValueHex = params['hex'];
+		} else if (typeof params['str'] == "string") {
+			this.eContentValueHex = utf8tohex(params['str']);
+		}
+	}
 
+	/**
+	 * @param {string} valueHex 
+	 */
+	setContentValueHex(valueHex) {
+		this.eContentValueHex = valueHex;
+	}
 
+	/**
+	 * @param {string} valueStr 
+	 */
+	setContentValueStr(valueStr) {
+		this.eContentValueHex = utf8tohex(valueStr);
+	}
 
-	KJUR.asn1.cms = KJUR.asn1.cms;
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
+		if (typeof this.eContentValueHex != "string") {
+			throw "eContentValue not yet set";
+		}
 
-    KJUR.asn1.cms.EncapsulatedContentInfo.superclass.constructor.call(this);
+		let dValue = new DEROctetString({ hex: this.eContentValueHex });
+		this.dEContent = new DERTaggedObject({
+			obj: dValue,
+			tag: 'a0',
+			explicit: true
+		});
 
-    this.dEContentType = new DERObjectIdentifier({name: 'data'});
-    this.dEContent = null;
-    this.isDetached = false;
-    this.eContentValueHex = null;
-    
-    this.setContentType = function(nameOrOid) {
-        if (nameOrOid.match(/^[0-2][.][0-9.]+$/)) {
-            this.dEContentType = new DERObjectIdentifier({oid: nameOrOid});
-        } else {
-            this.dEContentType = new DERObjectIdentifier({name: nameOrOid});
-        }
-    };
-
-    this.setContentValue = function(params) {
-        if (params !== undefined) {
-            if (typeof params['hex'] == "string") {
-                this.eContentValueHex = params['hex'];
-            } else if (typeof params['str'] == "string") {
-                this.eContentValueHex = utf8tohex(params['str']);
-            }
-        }
-    };
-
-    this.setContentValueHex = function(valueHex) {
-        this.eContentValueHex = valueHex;
-    };
-
-    this.setContentValueStr = function(valueStr) {
-        this.eContentValueHex = utf8tohex(valueStr);
-    };
-
-    this.getEncodedHex = function() {
-        if (typeof this.eContentValueHex != "string") {
-            throw "eContentValue not yet set";
-        }
-
-        let dValue = new DEROctetString({hex: this.eContentValueHex});
-        this.dEContent = new DERTaggedObject({obj: dValue,
-                                               tag: 'a0',
-                                               explicit: true});
-
-        let a = [this.dEContentType];
-        if (! this.isDetached) a.push(this.dEContent);
-        let seq = new DERSequence({array: a});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
-};
-YAHOO.lang.extend(KJUR.asn1.cms.EncapsulatedContentInfo, KJUR.asn1.ASN1Object);
+		let a = [this.dEContentType];
+		if (!this.isDetached) a.push(this.dEContent);
+		let seq = new DERSequence({ array: a });
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	}
+}
 
 // - type
 // - obj
 /**
  * class for ContentInfo ASN.1 structure for CMS
- * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * ContentInfo ::= SEQUENCE {
@@ -764,48 +775,52 @@ YAHOO.lang.extend(KJUR.asn1.cms.EncapsulatedContentInfo, KJUR.asn1.ASN1Object);
  * a = [new DERInteger({int: 1}),
  *      new DERInteger({int: 2})];
  * seq = new DERSequence({array: a});
- * o = new KJUR.asn1.cms.ContentInfo({type: 'data', obj: seq});
+ * o = new ContentInfo({type: 'data', obj: seq});
  */
-KJUR.asn1.cms.ContentInfo = function(params) {
+export class ContentInfo extends ASN1Object {
+	/**
+	 * @param {Dictionary} params dictionary of parameters
+	 */
+	constructor(params) {
+		super();
 
+		this.dContentType = null;
+		this.dContent = null;
 
+		if (params !== undefined) {
+			if (params['type'])
+				this.setContentType(params['type']);
+			if (params['obj'] &&
+				params['obj'] instanceof ASN1Object)
+				this.dContent = params['obj'];
+		}
+	}
 
+	/**
+	 * @param {string} params 
+	 */
+	setContentType(params) {
+		this.dContentType = name2obj(params);
+	}
 
-	KJUR.asn1.x509 = KJUR.asn1.x509;
-
-    KJUR.asn1.cms.ContentInfo.superclass.constructor.call(this);
-
-    this.dContentType = null;
-    this.dContent = null;
-
-    this.setContentType = function(params) {
-        if (typeof params == "string") {
-            this.dContentType = name2obj(params);
-        }
-    };
-
-    this.getEncodedHex = function() {
-        let dContent0 = new DERTaggedObject({obj:      this.dContent,
-					      tag:      'a0',
-					      explicit: true});
-        let seq = new DERSequence({array: [this.dContentType, dContent0]});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
-
-    if (params !== undefined) {
-        if (params['type']) 
-	    this.setContentType(params['type']);
-        if (params['obj'] && 
-	    params['obj'] instanceof KJUR.asn1.ASN1Object)
-	    this.dContent = params['obj'];
-    }
-};
-YAHOO.lang.extend(KJUR.asn1.cms.ContentInfo, KJUR.asn1.ASN1Object);
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
+		let dContent0 = new DERTaggedObject({
+			obj: this.dContent,
+			tag: 'a0',
+			explicit: true
+		});
+		let seq = new DERSequence({ array: [this.dContentType, dContent0] });
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	}
+}
 
 /**
  * class for SignerInfo ASN.1 structure of CMS SignedData
- * @param {Dictionary} params dictionary of parameters
  *
  * @description
  * <pre>
@@ -824,117 +839,111 @@ YAHOO.lang.extend(KJUR.asn1.cms.ContentInfo, KJUR.asn1.ASN1Object);
  * </pre>
  *
  * @example
- * sd = new KJUR.asn1.cms.SignedData();
+ * sd = new SignedData();
  * sd.dEncapContentInfo.setContentValueStr("test string");
  * sd.signerInfoList[0].setForContentAndHash({sdObj: sd,
  *                                            eciObj: sd.dEncapContentInfo,
  *                                            hashAlg: 'sha256'});
- * sd.signerInfoList[0].dSignedAttrs.add(new KJUR.asn1.cms.SigningTime());
+ * sd.signerInfoList[0].dSignedAttrs.add(new SigningTime());
  * sd.signerInfoList[0].setSignerIdentifier(certPEM);
  * sd.signerInfoList[0].sign(prvP8PEM, "SHA256withRSA");
  * hex = sd.getContentInfoEncodedHex();
  */
-KJUR.asn1.cms.SignedData = function(params) {
+export class SignedData extends ASN1Object {
+	/**
+	 * @param {Dictionary} params dictionary of parameters
+	 */
+	constructor(params) {
+		super();
 
+		/** @type {DERInteger} */ this.dCMSVersion = new DERInteger({ 'int': 1 });
+		/** @type {DERSet | null} */ this.dDigestAlgs = null;
+		/** @type {Array<string>} */ this.digestAlgNameList = [];
+		/** @type {EncapsulatedContentInfo} */ this.dEncapContentInfo = new EncapsulatedContentInfo();
+		/** @type {DERTaggedObject | null} */ this.dCerts = null;
+		/** @type {Array<ASN1Object>} */ this.certificateList = [];
+		this.crlList = [];
+		/** @type {Array<SignerInfo>} */ this.signerInfoList = [new SignerInfo()];
+	}
 
-	_ASN1Object = KJUR.asn1.ASN1Object,
+	/**
+	 * @param {string} certPEM 
+	 */
+	addCertificatesByPEM(certPEM) {
+		let hex = pemtohex(certPEM);
+		let o = new ASN1Object();
+		o.hTLV = hex;
+		this.certificateList.push(o);
+	}
 
+	/**
+	 * @override
+	 * @returns {string}
+	 */
+	getEncodedHex() {
+		if (typeof this.hTLV == "string") return this.hTLV;
 
+		if (this.dDigestAlgs == null) {
+			let digestAlgList = [];
+			for (let i = 0; i < this.digestAlgNameList.length; i++) {
+				let name = this.digestAlgNameList[i];
+				let o = new AlgorithmIdentifier({ name: name });
+				digestAlgList.push(o);
+			}
+			this.dDigestAlgs = new DERSet({ array: digestAlgList });
+		}
 
+		let a = [this.dCMSVersion,
+		this.dDigestAlgs,
+		this.dEncapContentInfo];
 
-	KJUR.asn1.cms = KJUR.asn1.cms,
-	_EncapsulatedContentInfo = KJUR.asn1.cms.EncapsulatedContentInfo,
-	_SignerInfo = KJUR.asn1.cms.SignerInfo,
-	_ContentInfo = KJUR.asn1.cms.ContentInfo,
-	KJUR.asn1.x509 = KJUR.asn1.x509,
-	AlgorithmIdentifier = AlgorithmIdentifier;
+		if (this.dCerts == null) {
+			if (this.certificateList.length > 0) {
+				let o1 = new DERSet({ array: this.certificateList });
+				this.dCerts
+					= new DERTaggedObject({
+						obj: o1,
+						tag: 'a0',
+						explicit: false
+					});
+			}
+		}
+		if (this.dCerts != null) a.push(this.dCerts);
 
-    KJUR.asn1.cms.SignedData.superclass.constructor.call(this);
+		let dSignerInfos = new DERSet({ array: this.signerInfoList });
+		a.push(dSignerInfos);
 
-    this.dCMSVersion = new DERInteger({'int': 1});
-    this.dDigestAlgs = null;
-    this.digestAlgNameList = [];
-    this.dEncapContentInfo = new _EncapsulatedContentInfo();
-    this.dCerts = null;
-    this.certificateList = [];
-    this.crlList = [];
-    this.signerInfoList = [new _SignerInfo()];
+		let seq = new DERSequence({ array: a });
+		this.hTLV = seq.getEncodedHex();
+		return this.hTLV;
+	}
 
-    this.addCertificatesByPEM = function(certPEM) {
-        let hex = pemtohex(certPEM);
-        let o = new _ASN1Object();
-        o.hTLV = hex;
-        this.certificateList.push(o);
-    };
+	getContentInfo() {
+		this.getEncodedHex();
+		let ci = new ContentInfo({ type: 'signed-data', obj: this });
+		return ci;
+	}
 
-    this.getEncodedHex = function() {
-        if (typeof this.hTLV == "string") return this.hTLV;
-        
-        if (this.dDigestAlgs == null) {
-            let digestAlgList = [];
-            for (let i = 0; i < this.digestAlgNameList.length; i++) {
-                let name = this.digestAlgNameList[i];
-                let o = new AlgorithmIdentifier({name: name});
-                digestAlgList.push(o);
-            }
-            this.dDigestAlgs = new DERSet({array: digestAlgList});
-        }
+	getContentInfoEncodedHex() {
+		let ci = this.getContentInfo();
+		let ciHex = ci.getEncodedHex();
+		return ciHex;
+	}
 
-        let a = [this.dCMSVersion,
-                 this.dDigestAlgs,
-                 this.dEncapContentInfo];
-
-        if (this.dCerts == null) {
-            if (this.certificateList.length > 0) {
-                let o1 = new DERSet({array: this.certificateList});
-                this.dCerts
-                    = new DERTaggedObject({obj:      o1,
-                                            tag:      'a0',
-                                            explicit: false});
-            }
-        }
-        if (this.dCerts != null) a.push(this.dCerts);
-        
-        let dSignerInfos = new DERSet({array: this.signerInfoList});
-        a.push(dSignerInfos);
-
-        let seq = new DERSequence({array: a});
-        this.hTLV = seq.getEncodedHex();
-        return this.hTLV;
-    };
-
-    this.getContentInfo = function() {
-        this.getEncodedHex();
-        let ci = new _ContentInfo({type: 'signed-data', obj: this});
-        return ci;
-    };
-
-    this.getContentInfoEncodedHex = function() {
-        let ci = this.getContentInfo();
-        let ciHex = ci.getEncodedHex();
-        return ciHex;
-    };
-
-    this.getPEM = function() {
-        return hextopem(this.getContentInfoEncodedHex(), "CMS");
-    };
-};
-YAHOO.lang.extend(KJUR.asn1.cms.SignedData, KJUR.asn1.ASN1Object);
-
-/**
- * CMS utiliteis class */
-KJUR.asn1.cms.CMSUtil = new function() {
-};
+	getPEM() {
+		return hextopem(this.getContentInfoEncodedHex(), "CMS");
+	}
+}
 
 /**
  * generate SignedData object specified by JSON parameters
  * @param {Dictionary} param JSON parameter to generate CMS SignedData
- * @return {KJUR.asn1.cms.SignedData} object just generated
+ * @return {SignedData} object just generated
  * @description
  * This method provides more easy way to genereate
  * CMS SignedData ASN.1 structure by JSON data.
  * @example
- * let sd = KJUR.asn1.cms.CMSUtil.newSignedData({
+ * let sd = CMSUtil.newSignedData({
  *   content: {str: "jsrsasign"},
  *   certs: [certPEM],
  *   signerInfos: [{
@@ -949,64 +958,271 @@ KJUR.asn1.cms.CMSUtil = new function() {
  *   }]
  * });
  */
-KJUR.asn1.cms.CMSUtil.newSignedData = function(param) {
+export function newSignedData(param) {
+	let sd = new SignedData();
 
+	sd.dEncapContentInfo.setContentValue(param.content);
 
-	KJUR.asn1.cms = KJUR.asn1.cms,
-	_SignerInfo = KJUR.asn1.cms.SignerInfo,
-	_SignedData = KJUR.asn1.cms.SignedData,
-	_SigningTime = KJUR.asn1.cms.SigningTime,
-	_SigningCertificate = KJUR.asn1.cms.SigningCertificate,
-	_SigningCertificateV2 = KJUR.asn1.cms.SigningCertificateV2,
-	KJUR.asn1.cades = KJUR.asn1.cades,
-	_SignaturePolicyIdentifier = KJUR.asn1.cades.SignaturePolicyIdentifier;
+	if (typeof param.certs == "object") {
+		for (let i = 0; i < param.certs.length; i++) {
+			sd.addCertificatesByPEM(param.certs[i]);
+		}
+	}
 
-    let sd = new _SignedData();
+	sd.signerInfoList = [];
+	for (let i = 0; i < param.signerInfos.length; i++) {
+		let siParam = param.signerInfos[i];
+		let si = new SignerInfo();
+		si.setSignerIdentifier(siParam.signerCert);
 
-    sd.dEncapContentInfo.setContentValue(param.content);
+		si.setForContentAndHash({
+			sdObj: sd,
+			eciObj: sd.dEncapContentInfo,
+			hashAlg: siParam.hashAlg
+		});
 
-    if (typeof param.certs == "object") {
-        for (let i = 0; i < param.certs.length; i++) {
-            sd.addCertificatesByPEM(param.certs[i]);
-        }
-    }
-    
-    sd.signerInfoList = [];
-    for (let i = 0; i < param.signerInfos.length; i++) {
-        let siParam = param.signerInfos[i];
-        let si = new _SignerInfo();
-        si.setSignerIdentifier(siParam.signerCert);
+		for (attrName in siParam.sAttr) {
+			let attrParam = siParam.sAttr[attrName];
+			if (attrName == "SigningTime") {
+				let attr = new SigningTime(attrParam);
+				si.dSignedAttrs.add(attr);
+			}
+			if (attrName == "SigningCertificate") {
+				let attr = new SigningCertificate(attrParam);
+				si.dSignedAttrs.add(attr);
+			}
+			if (attrName == "SigningCertificateV2") {
+				let attr = new SigningCertificateV2(attrParam);
+				si.dSignedAttrs.add(attr);
+			}
+			if (attrName == "SignaturePolicyIdentifier") {
+				let attr = new SignaturePolicyIdentifier(attrParam);
+				si.dSignedAttrs.add(attr);
+			}
+		}
 
-        si.setForContentAndHash({sdObj:   sd,
-                                 eciObj:  sd.dEncapContentInfo,
-                                 hashAlg: siParam.hashAlg});
+		si.sign(siParam.signerPrvKey, siParam.sigAlg);
+		sd.signerInfoList.push(si);
+	}
 
-        for (attrName in siParam.sAttr) {
-            let attrParam = siParam.sAttr[attrName];
-            if (attrName == "SigningTime") {
-                let attr = new _SigningTime(attrParam);
-                si.dSignedAttrs.add(attr);
-            }
-            if (attrName == "SigningCertificate") {
-                let attr = new _SigningCertificate(attrParam);
-                si.dSignedAttrs.add(attr);
-            }
-            if (attrName == "SigningCertificateV2") {
-                let attr = new _SigningCertificateV2(attrParam);
-                si.dSignedAttrs.add(attr);
-            }
-            if (attrName == "SignaturePolicyIdentifier") {
-                let attr = new _SignaturePolicyIdentifier(attrParam);
-                si.dSignedAttrs.add(attr);
-            }
-        }
+	return sd;
+}
 
-        si.sign(siParam.signerPrvKey, siParam.sigAlg);
-        sd.signerInfoList.push(si);
-    }
+/**
+ * 
+ * @param {string} hCMS 
+ * @param {Dictionary} result 
+ */
+function findSignerInfos(hCMS, result) {
+	let idx;
+	for (let i = 3; i < 6; i++) {
+		idx = getIdxbyList(hCMS, 0, [1, 0, i]);
+		if (idx !== undefined) {
+			let tag = hCMS.substr(idx, 2);
+			if (tag === "a0") result.certsIdx = idx;
+			if (tag === "a1") result.revinfosIdx = idx;
+			if (tag === "31") result.signerinfosIdx = idx;
+		}
+	}
+}
 
-    return sd;
-};
+/**
+ * @param {string} hCMS 
+ * @param {Dictionary} result 
+ */
+function parseSignerInfos(hCMS, result) {
+	let idxSignerInfos = result.signerinfosIdx;
+	if (idxSignerInfos === undefined) return;
+	let idxList = getChildIdx(hCMS, idxSignerInfos);
+	result.signerInfoIdxList = idxList;
+	for (let i = 0; i < idxList.length; i++) {
+		let idxSI = idxList[i];
+		let info = { idx: idxSI };
+		parseSignerInfo(hCMS, info);
+		result.signerInfos.push(info);
+	};
+}
+
+/**
+ * @param {string} hCMS 
+ * @param {Dictionary} info 
+ */
+function parseSignerInfo(hCMS, info) {
+	let idx = info.idx;
+
+	// 1. signer identifier
+	info.signerid_issuer1 = getTLVbyList(hCMS, idx, [1, 0], "30");
+	info.signerid_serial1 = getVbyList(hCMS, idx, [1, 1], "02");
+
+	// 2. hash alg
+	info.hashalg = oidname(getVbyList(hCMS, idx, [2, 0], "06"));
+
+	// 3. [0] singedAtttrs
+	let idxSignedAttrs = getIdxbyList(hCMS, idx, [3], "a0");
+	info.idxSignedAttrs = idxSignedAttrs;
+	parseSignedAttrs(hCMS, info, idxSignedAttrs);
+
+	let aIdx = getChildIdx(hCMS, idx);
+	let n = aIdx.length;
+	if (n < 6) throw "malformed SignerInfo";
+
+	info.sigalg = oidname(getVbyList(hCMS, idx, [n - 2, 0], "06"));
+	info.sigval = getVbyList(hCMS, idx, [n - 1], "04");
+	//info.sigval = getVbyList(hCMS, 0, [1, 0, 4, 0, 5], "04");
+	//info.sigval = hCMS;
+}
+
+/**
+ * @param {string} hCMS 
+ * @param {Dictionary} info 
+ * @param {number} idx 
+ */
+function parseSignedAttrs(hCMS, info, idx) {
+	let aIdx = getChildIdx(hCMS, idx);
+	info.signedAttrIdxList = aIdx;
+	for (let i = 0; i < aIdx.length; i++) {
+		let idxAttr = aIdx[i];
+		let hAttrType = getVbyList(hCMS, idxAttr, [0], "06");
+		let v;
+
+		if (hAttrType === "2a864886f70d010905") { // siging time
+			v = hextoutf8(getVbyList(hCMS, idxAttr, [1, 0]));
+			info.saSigningTime = v;
+		} else if (hAttrType === "2a864886f70d010904") { // message digest
+			v = getVbyList(hCMS, idxAttr, [1, 0], "04");
+			info.saMessageDigest = v;
+		}
+	}
+}
+
+/**
+ * @param {string} hCMS 
+ * @param {Dictionary} result 
+ */
+function parseSignedData(hCMS, result) {
+	// check if signedData (1.2.840.113549.1.7.2) type
+	if (getVbyList(hCMS, 0, [0], "06") !== "2a864886f70d010702") {
+		return result;
+	}
+	result.cmsType = "signedData";
+
+	// find eContent data
+	result.econtent = getVbyList(hCMS, 0, [1, 0, 2, 1, 0]);
+
+	// find certificates,revInfos,signerInfos index
+	findSignerInfos(hCMS, result);
+
+	result.signerInfos = [];
+	parseSignerInfos(hCMS, result);
+}
+
+/**
+ * @param {string} hCMS 
+ * @param {Dictionary} result 
+ */
+function verify(hCMS, result) {
+	let aSI = result.parse.signerInfos;
+	let n = aSI.length;
+	let isValid = true;
+	for (let i = 0; i < n; i++) {
+		let si = aSI[i];
+		verifySignerInfo(hCMS, result, si, i);
+		if (!si.isValid)
+			isValid = false;
+	}
+	result.isValid = isValid;
+}
+
+/**
+ * @param {string} hCMS hexadecimal string of CMS signed data
+ * @param {Dictionary} result JSON object of validation result
+ * @param {Dictionary} si JSON object of signerInfo in the result above
+ * @param {number} idx index of signerInfo???
+ */
+function findCert(hCMS, result, si, idx) {
+	let certsIdx = result.parse.certsIdx;
+	let aCert;
+
+	if (result.certs === undefined) {
+		aCert = [];
+		result.certkeys = [];
+		let aIdx = getChildIdx(hCMS, certsIdx);
+		for (let i = 0; i < aIdx.length; i++) {
+			let hCert = getTLV(hCMS, aIdx[i]);
+			let x = new X509();
+			x.readCertHex(hCert);
+			aCert[i] = x;
+			result.certkeys[i] = x.getPublicKey();
+		}
+		result.certs = aCert;
+	} else {
+		aCert = result.certs;
+	}
+
+	result.cccc = aCert.length;
+	result.cccci = aIdx.length;
+
+	for (let i = 0; i < aCert.length; i++) {
+		let issuer2 = x.getIssuerHex();
+		let serial2 = x.getSerialNumberHex();
+		if (si.signerid_issuer1 === issuer2 &&
+			si.signerid_serial1 === serial2) {
+			si.certkey_idx = i;
+		}
+	}
+}
+
+/**
+ * @param {string} hCMS 
+ * @param {Dictionary} result 
+ * @param {Dictionary} si 
+ * @param {number} idx 
+ */
+function verifySignerInfo(hCMS, result, si, idx) {
+	si.verifyDetail = {};
+
+	let _detail = si.verifyDetail;
+
+	let econtent = result.parse.econtent;
+
+	// verify MessageDigest signed attribute
+	let hashalg = si.hashalg;
+	let saMessageDigest = si.saMessageDigest;
+
+	// verify messageDigest
+	_detail.validMessageDigest = false;
+	//_detail._econtent = econtent;
+	//_detail._hashalg = hashalg;
+	//_detail._saMD = saMessageDigest;
+	if (hashHex(econtent, hashalg) === saMessageDigest)
+		_detail.validMessageDigest = true;
+
+	// find signing certificate
+	findCert(hCMS, result, si, idx);
+	//if (si.signerid_cert === undefined)
+	//    throw Error("can't find signer certificate");
+
+	// verify signature value
+	_detail.validSignatureValue = false;
+	let sigalg = si.sigalg;
+	let hSignedAttr = "31" + getTLV(hCMS, si.idxSignedAttrs).substr(2);
+	si.signedattrshex = hSignedAttr;
+	let pubkey = result.certs[si.certkey_idx].getPublicKey();
+	let sig = new Signature({ 'alg': sigalg });
+	sig.init(pubkey);
+	sig.updateHex(hSignedAttr);
+	let isValid = sig.verify(si.sigval);
+	_detail.validSignatureValue_isValid = isValid;
+	if (isValid === true)
+		_detail.validSignatureValue = true;
+
+	// verify SignerInfo totally
+	si.isValid = false;
+	if (_detail.validMessageDigest &&
+		_detail.validSignatureValue) {
+		si.isValid = true;
+	}
+}
 
 /**
  * verify SignedData specified by JSON parameters
@@ -1021,7 +1237,7 @@ KJUR.asn1.cms.CMSUtil.newSignedData = function(param) {
  *     to verify (OPTION)</li>
  * </ul>
  * @example
- * KJUR.asn1.cms.CMSUtil.verifySignedData({ cms: "3082058a..." }) 
+ * CMSUtil.verifySignedData({ cms: "3082058a..." }) 
  * &rarr;
  * {
  *   isValid: true,
@@ -1032,217 +1248,17 @@ KJUR.asn1.cms.CMSUtil.newSignedData = function(param) {
  *   ]
  * }
  */
-KJUR.asn1.cms.CMSUtil.verifySignedData = function(param) {
-	KJUR.asn1.cms = KJUR.asn1.cms,
-	_SignerInfo = KJUR.asn1.cms.SignerInfo,
-	_SignedData = KJUR.asn1.cms.SignedData,
-	_SigningTime = KJUR.asn1.cms.SigningTime,
-	_SigningCertificate = KJUR.asn1.cms.SigningCertificate,
-	_SigningCertificateV2 = KJUR.asn1.cms.SigningCertificateV2,
-	KJUR.asn1.cades = KJUR.asn1.cades,
-	_SignaturePolicyIdentifier = KJUR.asn1.cades.SignaturePolicyIdentifier,
-
+export function verifySignedData(param) {
     if (param.cms === undefined &&
-        ! isHex(param.cms)) {
-    }
-
-    let hCMS = param.cms;
-
-    let _findSignerInfos = function(hCMS, result) {
-	let idx;
-	for (let i = 3; i < 6; i++) {
-	    idx = getIdxbyList(hCMS, 0, [1, 0, i]);
-	    if (idx !== undefined) {
-		let tag = hCMS.substr(idx, 2);
-		if (tag === "a0") result.certsIdx = idx;
-		if (tag === "a1") result.revinfosIdx = idx;
-		if (tag === "31") result.signerinfosIdx = idx;
-	    }
-	}
-    };
-
-    let _parseSignerInfos = function(hCMS, result) {
-	let idxSignerInfos = result.signerinfosIdx;
-	if (idxSignerInfos === undefined) return;
-	let idxList = getChildIdx(hCMS, idxSignerInfos);
-	result.signerInfoIdxList = idxList;
-	for (let i = 0; i < idxList.length; i++) {
-	    let idxSI = idxList[i];
-	    let info = { idx: idxSI };
-	    _parseSignerInfo(hCMS, info);
-	    result.signerInfos.push(info);
-	};
-    };
-
-    let _parseSignerInfo = function(hCMS, info) {
-	let idx = info.idx;
-
-	// 1. signer identifier
-	info.signerid_issuer1 = getTLVbyList(hCMS, idx, [1, 0], "30");
-	info.signerid_serial1 = getVbyList(hCMS, idx, [1, 1], "02");
-
-	// 2. hash alg
-	info.hashalg = oidname(getVbyList(hCMS, idx, [2, 0], "06"));
-
-	// 3. [0] singedAtttrs
-	let idxSignedAttrs = getIdxbyList(hCMS, idx, [3], "a0");
-	info.idxSignedAttrs = idxSignedAttrs;
-	_parseSignedAttrs(hCMS, info, idxSignedAttrs);
-
-	let aIdx = getChildIdx(hCMS, idx);
-	let n = aIdx.length;
-	if (n < 6) throw "malformed SignerInfo";
-	
-	info.sigalg = oidname(getVbyList(hCMS, idx, [n - 2, 0], "06"));
-	info.sigval = getVbyList(hCMS, idx, [n - 1], "04");
-	//info.sigval = getVbyList(hCMS, 0, [1, 0, 4, 0, 5], "04");
-	//info.sigval = hCMS;
-    };
-
-    let _parseSignedAttrs = function(hCMS, info, idx) {
-	let aIdx = getChildIdx(hCMS, idx);
-	info.signedAttrIdxList = aIdx;
-	for (let i = 0; i < aIdx.length; i++) {
-	    let idxAttr = aIdx[i];
-	    let hAttrType = getVbyList(hCMS, idxAttr, [0], "06");
-	    let v;
-
-	    if (hAttrType === "2a864886f70d010905") { // siging time
-		v = hextoutf8(getVbyList(hCMS, idxAttr, [1, 0]));
-		info.saSigningTime = v;
-	    } else if (hAttrType === "2a864886f70d010904") { // message digest
-		v = getVbyList(hCMS, idxAttr, [1, 0], "04");
-		info.saMessageDigest = v;
-	    }
-	}
-    };
-
-    let _parseSignedData = function(hCMS, result) {
-	// check if signedData (1.2.840.113549.1.7.2) type
-	if (getVbyList(hCMS, 0, [0], "06") !== "2a864886f70d010702") {
-	    return result;
-	}
-	result.cmsType = "signedData";
-
-	// find eContent data
-	result.econtent = getVbyList(hCMS, 0, [1, 0, 2, 1, 0]);
-
-	// find certificates,revInfos,signerInfos index
-	_findSignerInfos(hCMS, result);
-
-	result.signerInfos = [];
-	_parseSignerInfos(hCMS, result);
-    };
-
-    let _verify = function(hCMS, result) {
-	let aSI = result.parse.signerInfos;
-	let n = aSI.length;
-	let isValid = true;
-	for (let i = 0; i < n; i++) {
-	    let si = aSI[i];
-	    _verifySignerInfo(hCMS, result, si, i);
-	    if (! si.isValid)
-		isValid = false;
-	}
-	result.isValid = isValid;
-    };
-
-    /*
-     * _findCert
-     * 
-     * @param hCMS {string} hexadecimal string of CMS signed data
-     * @param result {Dictionary} JSON object of validation result
-     * @param si {Dictionary} JSON object of signerInfo in the result above
-     * @param idx {number} index of signerInfo???
-     */
-    let _findCert = function(hCMS, result, si, idx) {
-	let certsIdx = result.parse.certsIdx;
-	let aCert;
-
-	if (result.certs === undefined) {
-	    aCert = [];
-	    result.certkeys = [];
-	    let aIdx = getChildIdx(hCMS, certsIdx);
-	    for (let i = 0; i < aIdx.length; i++) {
-		let hCert = getTLV(hCMS, aIdx[i]);
-		let x = new X509();
-		x.readCertHex(hCert);
-		aCert[i] = x;
-		result.certkeys[i] = x.getPublicKey();
-	    }
-	    result.certs = aCert;
-	} else {
-	    aCert = result.certs;
+		!isHex(param.cms)) {
 	}
 
-	result.cccc = aCert.length;
-	result.cccci = aIdx.length;
+	let hCMS = param.cms;
 
-	for (let i = 0; i < aCert.length; i++) {
-	    let issuer2 = x.getIssuerHex();
-	    let serial2 = x.getSerialNumberHex();
-	    if (si.signerid_issuer1 === issuer2 &&
-		si.signerid_serial1 === serial2) {
-		si.certkey_idx = i;
-	    }
-	}
-    };
+	let result = { isValid: false, parse: {} };
+	parseSignedData(hCMS, result.parse);
 
-    let _verifySignerInfo = function(hCMS, result, si, idx) {
-	si.verifyDetail = {};
+	verify(hCMS, result);
 
-	let _detail = si.verifyDetail;
-
-	let econtent = result.parse.econtent;
-
-	// verify MessageDigest signed attribute
-	let hashalg = si.hashalg;
-	let saMessageDigest = si.saMessageDigest;
-	
-	// verify messageDigest
-	_detail.validMessageDigest = false;
-	//_detail._econtent = econtent;
-	//_detail._hashalg = hashalg;
-	//_detail._saMD = saMessageDigest;
-	if (hashHex(econtent, hashalg) === saMessageDigest)
-	    _detail.validMessageDigest = true;
-
-	// find signing certificate
-	_findCert(hCMS, result, si, idx);
-	//if (si.signerid_cert === undefined)
-	//    throw Error("can't find signer certificate");
-
-	// verify signature value
-	_detail.validSignatureValue = false;
-	let sigalg = si.sigalg;
-	let hSignedAttr = "31" + getTLV(hCMS, si.idxSignedAttrs).substr(2);
-	si.signedattrshex = hSignedAttr;
-	let pubkey = result.certs[si.certkey_idx].getPublicKey();
-	let sig = new Signature({'alg': sigalg});
-	sig.init(pubkey);
-	sig.updateHex(hSignedAttr);
-	let isValid = sig.verify(si.sigval);
-	_detail.validSignatureValue_isValid = isValid;
-	if (isValid === true)
-	    _detail.validSignatureValue = true;
-
-	// verify SignerInfo totally
-	si.isValid =false;
-	if (_detail.validMessageDigest &&
-	    _detail.validSignatureValue) {
-	    si.isValid = true;
-	}
-    };
-
-    let _findSignerCert = function() {
-    };
-
-    let result = { isValid: false, parse: {} };
-    _parseSignedData(hCMS, result.parse);
-
-    _verify(hCMS, result);
-    
-    return result;
-};
-
-
+	return result;
+}
