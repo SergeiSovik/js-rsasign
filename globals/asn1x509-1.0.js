@@ -300,7 +300,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set subject public key info by RSA/ECDSA/DSA key parameter
-     * @param {string | RSAKeyEx | DSA | ECDSA | Dictionary} keyParam public key parameter which passed to {@link getKey} argument
+     * @param {string | KeyObject | Dictionary} keyParam public key parameter which passed to {@link getKey} argument
      * @description
      * @example
      * tbsc.setSubjectPublicKeyByGetKeyParam(certPEMString); // or
@@ -1038,7 +1038,7 @@ export class CRL extends ASN1Object {
 		/** @type {AlgorithmIdentifier | null} */ this.asn1SignatureAlg = null;
 		/** @type {DERBitString | null} */ this.asn1Sig = null;
 		/** @type {string | null} */ this.hexSig = null;
-		/** @type {string | RSAKeyEx | DSA | ECDSA | null} */ this.prvKey = null;
+		/** @type {string | KeyObject | null} */ this.prvKey = null;
 
 		if (params !== undefined) {
 			if (params['tbsobj'] instanceof TBSCertList) {
@@ -1046,7 +1046,7 @@ export class CRL extends ASN1Object {
 			}
 			let prvkeyobj = params['prvkeyobj'];
 			if (isString(prvkeyobj) || prvkeyobj instanceof RSAKeyEx || prvkeyobj instanceof DSA || prvkeyobj instanceof ECDSA) {
-				this.prvKey = /** @type {string | RSAKeyEx | DSA | ECDSA} */ ( params['prvkeyobj'] );
+				this.prvKey = /** @type {string | KeyObject} */ ( params['prvkeyobj'] );
 			}
 		}
 	}

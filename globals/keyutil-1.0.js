@@ -850,7 +850,7 @@ export function parsePublicPKCS8Hex(pkcs8PubHex) {
 
 /**
  * get private or public key object from any arguments
- * @param {string | RSAKeyEx | DSA | ECDSA | Dictionary} param parameter to get key object. see description in detail.
+ * @param {string | KeyObject | Dictionary} param parameter to get key object. see description in detail.
  * @param {(string | null)=} passcode (OPTION) parameter to get key object. see description in detail.
  * @param {string=} hextype (OPTOIN) parameter to get key object. see description in detail.
  * @return {KeyObject} object {@link RSAKeyEx}, {@link ECDSA} or {@link ECDSA}
@@ -1742,7 +1742,7 @@ export function parseCSRHex(csrHex) {
  * jwkPub2 = getJWKFromKey(kp2.pubKeyObj);
  *
  * // if you need RFC 7638 JWK thumprint as kid do like this:
- * jwkPub2.kid = KJUR.jws.JWS.getJWKthumbprint(jwkPub2);
+ * jwkPub2.kid = getJWKthumbprint(jwkPub2);
  */
 export function getJWKFromKey(keyObj) {
 	let jwk = /** @type {Dictionary} */ ( {} );

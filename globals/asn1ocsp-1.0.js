@@ -13,11 +13,13 @@
 
 "use strict";
 
-import { DERInteger, DEROctetString, DERSequence } from "./asn1-1.0.js"
+import { ASN1Object, DERInteger, DEROctetString, DERSequence } from "./asn1-1.0.js"
 import { AlgorithmIdentifier } from "./asn1x509-1.0.js"
 import { hashHex } from "./crypto-1.1.js"
 import { getTLVbyList, getIdxbyList, getVbyList, getV } from "./asn1hex-1.1.js"
 import { Dictionary } from "./../../../include/type.js"
+import { X509 } from "./x509-1.1.js"
+import { hextoutf8 } from "./base64x-1.1.js"
 
 /**
  * ASN.1 module for OCSP protocol<br/>

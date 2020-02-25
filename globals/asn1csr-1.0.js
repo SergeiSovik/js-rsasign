@@ -13,15 +13,14 @@
 
 "use strict";
 
-import { DERInteger, DERBitString, DERNull, DERObjectIdentifier, DERSequence, DERSet, DERTaggedObject } from "./asn1-1.0.js"
+import { ASN1Object, DERInteger, DERBitString, DERNull, DERObjectIdentifier, DERSequence, DERSet, DERTaggedObject } from "./asn1-1.0.js"
 import { AlgorithmIdentifier, X500Name, X500Extension, SubjectPublicKeyInfo } from "./asn1x509-1.0.js"
 import { getTLVbyList } from "./asn1hex-1.1.js"
-import { getKey } from "./keyutil-1.0.js"
+import { KeyObject, getKey } from "./keyutil-1.0.js"
 import { Signature } from "./crypto-1.1.js"
 import { Dictionary } from "./../../../include/type.js"
-import { RSAKeyEx } from "./rsaex.js";
-import { DSA } from "./dsa-2.0.js";
-import { ECDSA } from "./ecdsa-modified-1.0.js";
+import { hextopem, pemtohex } from "./base64x-1.1.js"
+import { hex2dn } from "./x509-1.1.js"
 
 /**
  * ASN.1 module for CSR/PKCS#10
@@ -79,7 +78,7 @@ export class CertificationRequest extends ASN1Object {
 		/** @type {AlgorithmIdentifier | null} */ this.asn1SignatureAlg = null;
 		/** @type {DERBitString | null} */ this.asn1Sig = null;
 		/** @type {string | null} */ this.hexSig = null;
-		/** @type {string | RSAKeyEx | DSA | ECDSA | null} */ this.prvKey = null;
+		/** @type {string | KeyObject | null} */ this.prvKey = null;
 
 		if (params !== undefined && params['csrinfo'] !== undefined) {
 			this.asn1CSRInfo = params['csrinfo'];
@@ -89,7 +88,7 @@ export class CertificationRequest extends ASN1Object {
     /**
      * sign CertificationRequest and set signature value internally<br/>
 	 * @param {string} sigAlgName
-	 * @param {string | RSAKeyEx | DSA | ECDSA} prvKeyObj
+	 * @param {string | KeyObject} prvKeyObj
      * @description
      * This method self-signs CertificateRequestInfo with a subject's
      * private key and set signature value internally.
@@ -193,7 +192,7 @@ export class CertificationRequestInfo extends ASN1Object {
 
 	/**
 	 * set subject public key info by RSA/ECDSA/DSA key parameter
-	 * @param {string | RSAKeyEx | DSA | ECDSA | Dictionary} keyParam public key parameter which passed to {@link getKey} argument
+	 * @param {string | KeyObject | Dictionary} keyParam public key parameter which passed to {@link getKey} argument
 	 * @description
 	 * @example
 	 * csri.setSubjectPublicKeyByGetKeyParam(certPEMString); // or 
@@ -327,7 +326,7 @@ export function newCSRPEM(param) {
 
 	if (param.ext !== undefined && param.ext.length !== undefined) {
 		for (let i = 0; i < param.ext.length; i++) {
-			for (key in param.ext[i]) {
+			for (let key in param.ext[i]) {
 				csri.appendExtensionByName(key, param.ext[i][key]);
 			}
 		}
@@ -371,7 +370,7 @@ export function getInfo(sPEM) {
 	let hex = pemtohex(sPEM, "CERTIFICATE REQUEST");
 
 	result.subject.hex = getTLVbyList(hex, 0, [0, 1]);
-	result.subject.name = X509.hex2dn(result.subject.hex);
+	result.subject.name = hex2dn(result.subject.hex);
 
 	result.pubkey.hex = getTLVbyList(hex, 0, [0, 2]);
 	result.pubkey.obj = getKey(result.pubkey.hex, null, "pkcs8pub");

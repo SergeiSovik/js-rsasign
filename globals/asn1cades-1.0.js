@@ -13,12 +13,13 @@
 
 "use strict";
 
-import { DEROctetString, DERObjectIdentifier, DERSequence } from "./asn1-1.0.js"
+import { ASN1Object, DEROctetString, DERObjectIdentifier, DERSequence } from "./asn1-1.0.js"
 import { AlgorithmIdentifier } from "./asn1x509-1.0.js"
 import { hashHex } from "./crypto-1.1.js"
 import { getChildIdx, getTLV, getTLVbyList, getIdxbyList, getV } from "./asn1hex-1.1.js"
 import { Dictionary } from "./../../../include/type.js"
 import { Attribute, IssuerAndSerialNumber, SignedData, AttributeList, SignerInfo } from "./asn1cms-1.0.js"
+import { pemtohex } from "./base64x-1.1.js"
 
 /**
  * ASN.1 module for RFC 5126 CAdES long term signature
@@ -370,7 +371,6 @@ export class CompleteCertificateRefs extends Attribute {
 
 /**
  * class for OtherCertID ASN.1 object
- * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * OtherCertID ::= SEQUENCE {
@@ -433,7 +433,7 @@ export class OtherCertID extends ASN1Object {
 		let a = [this.dOtherCertHash];
 		if (this.dIssuerSerial != null)
 			a.push(this.dIssuerSerial);
-		let seq = new KJUR.asn1.DERSequence({ array: a });
+		let seq = new DERSequence({ array: a });
 		this.hTLV = seq.getEncodedHex();
 		return this.hTLV;
 	}
@@ -441,7 +441,6 @@ export class OtherCertID extends ASN1Object {
 
 /**
  * class for OtherHash ASN.1 object
- * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * OtherHash ::= CHOICE {

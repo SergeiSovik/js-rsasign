@@ -14,16 +14,15 @@
 "use strict";
 
 import { ASN1Object, DERInteger, DEROctetString, DERObjectIdentifier, DERSequence, DERSet, DERTaggedObject } from "./asn1-1.0.js"
-import { isHex, pemtohex, utf8tohex } from "./base64x-1.1.js"
-import { name2obj, Time, AlgorithmIdentifier, X500Name, } from "./asn1x509-1.0.js"
+import { isHex, pemtohex, utf8tohex, hextopem, hextoutf8 } from "./base64x-1.1.js"
+import { name2obj } from "./asn1oid.js"
+import { Time, AlgorithmIdentifier, X500Name, } from "./asn1x509-1.0.js"
 import { hashHex, Signature } from "./crypto-1.1.js"
 import { getVbyList, getTLVbyList, getIdxbyList, getChildIdx, getTLV, oidname } from "./asn1hex-1.1.js"
-import { getKey } from "./keyutil-1.0.js"
+import { KeyObject, getKey } from "./keyutil-1.0.js"
 import { Dictionary } from "./../../../include/type.js"
-import { RSAKeyEx } from "./rsaex.js";
-import { DSA } from "./dsa-2.0.js";
-import { ECDSA } from "./ecdsa-modified-1.0.js";
 import { SignaturePolicyIdentifier } from "./asn1cades-1.0.js"
+import { X509 } from "./x509-1.1.js"
 
 /**
  * ASN.1 module for Cryptographic Message Syntax(CMS)
@@ -244,8 +243,6 @@ export class SigningCertificate {
 	 * @param {Dictionary} params dictionary of parameters
 	 */
 	constructor(params) {
-		super(params);
-
 		/** @type {string} */ this.attrTypeOid = "1.2.840.113549.1.9.16.2.12";
 
 		if (params !== undefined) {
@@ -605,7 +602,7 @@ export class SignerInfo extends ASN1Object {
 	}
 
 	/**
-	 * @param {string | RSAKeyEx | DSA | ECDSA | Dictionary} keyParam 
+	 * @param {string | KeyObject | Dictionary} keyParam 
 	 * @param {string} sigAlg 
 	 */
 	sign(keyParam, sigAlg) {
@@ -981,7 +978,7 @@ export function newSignedData(param) {
 			hashAlg: siParam.hashAlg
 		});
 
-		for (attrName in siParam.sAttr) {
+		for (let attrName in siParam.sAttr) {
 			let attrParam = siParam.sAttr[attrName];
 			if (attrName == "SigningTime") {
 				let attr = new SigningTime(attrParam);
@@ -1143,13 +1140,15 @@ function findCert(hCMS, result, si, idx) {
 	let certsIdx = result.parse.certsIdx;
 	let aCert;
 
+	/** @type {Array<number>} */ let aIdx;
+	/** @type {X509} */ let x;
 	if (result.certs === undefined) {
 		aCert = [];
 		result.certkeys = [];
-		let aIdx = getChildIdx(hCMS, certsIdx);
+		aIdx = getChildIdx(hCMS, certsIdx);
 		for (let i = 0; i < aIdx.length; i++) {
 			let hCert = getTLV(hCMS, aIdx[i]);
-			let x = new X509();
+			x = new X509();
 			x.readCertHex(hCert);
 			aCert[i] = x;
 			result.certkeys[i] = x.getPublicKey();
