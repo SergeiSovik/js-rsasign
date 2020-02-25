@@ -16,7 +16,7 @@
 import { hashHex, Mac, Signature } from "./crypto-1.1.js"
 import { ECDSA } from "./ecdsa-modified-1.0.js"
 import { KeyObject, getKey } from "./keyutil-1.0.js"
-import { Dictionary } from "./../../../include/type.js"
+import { Dictionary, isDictionary } from "./../../../include/type.js"
 import { RSAKeyEx } from "./rsaex.js"
 import { b64utohex, b64utoutf8, utf8tob64u, hextob64u, rstrtohex, zulutosec } from "./base64x-1.1.js"
 import { parseBigInt } from "./../../js-bn/modules/rsa.js"
@@ -115,7 +115,7 @@ export class JWS {
      */
 	parseJWS(sJWS, sigValNotNeeded) {
 		if ((this.parsedJWS !== undefined) &&
-			(sigValNotNeeded || (this.parsedJWS.sigvalH !== undefined))) {
+			(sigValNotNeeded || (this.parsedJWS['sigvalH'] !== undefined))) {
 			return;
 		}
 		let matchResult = sJWS.match(/^([^.]+)\.([^.]+)\.([^.]+)$/);
@@ -126,23 +126,23 @@ export class JWS {
 		let b6Payload = matchResult[2];
 		let b6SigVal = matchResult[3];
 		let sSI = b6Head + "." + b6Payload;
-		this.parsedJWS = {};
-		this.parsedJWS.headB64U = b6Head;
-		this.parsedJWS.payloadB64U = b6Payload;
-		this.parsedJWS.sigvalB64U = b6SigVal;
-		this.parsedJWS.si = sSI;
+		this.parsedJWS = /** @type {Dictionary} */ ( {} );
+		this.parsedJWS['headB64U'] = b6Head;
+		this.parsedJWS['payloadB64U'] = b6Payload;
+		this.parsedJWS['sigvalB64U'] = b6SigVal;
+		this.parsedJWS['si'] = sSI;
 
 		if (!sigValNotNeeded) {
 			let hSigVal = b64utohex(b6SigVal);
 			let biSigVal = parseBigInt(hSigVal, 16);
-			this.parsedJWS.sigvalH = hSigVal;
-			this.parsedJWS.sigvalBI = biSigVal;
+			this.parsedJWS['sigvalH'] = hSigVal;
+			this.parsedJWS['sigvalBI'] = biSigVal;
 		}
 
 		let sHead = b64utoutf8(b6Head);
 		let sPayload = b64utoutf8(b6Payload);
-		this.parsedJWS.headS = sHead;
-		this.parsedJWS.payloadS = sPayload;
+		this.parsedJWS['headS'] = sHead;
+		this.parsedJWS['payloadS'] = sPayload;
 
 		if (!isSafeJSONString(sHead, this.parsedJWS, 'headP'))
 			throw "malformed JSON string for JWS Head: " + sHead;
@@ -245,8 +245,8 @@ export function sign(alg, spHeader, spPayload, key, pass) {
 	}
 
 	// 4. check explicit algorithm doesn't match with JWS header.
-	if (alg !== pHeader.alg)
-		throw "alg and sHeader.alg doesn't match: " + alg + "!=" + pHeader.alg;
+	if (alg !== pHeader['alg'])
+		throw "alg and sHeader.alg doesn't match: " + alg + "!=" + pHeader['alg'];
 
 	// 5. set signature algorithm like SHA1withRSA
 	let sigAlg = null;
@@ -255,6 +255,8 @@ export function sign(alg, spHeader, spPayload, key, pass) {
 	} else {
 		sigAlg = jwsalg2sigalg[alg];
 	}
+
+	if (sHeader === undefined) sHeader = '';
 
 	let uHeader = utf8tob64u(sHeader);
 	let uPayload = utf8tob64u(sPayload);
@@ -265,17 +267,17 @@ export function sign(alg, spHeader, spPayload, key, pass) {
 		if (key === undefined)
 			throw "mac key shall be specified for HS* alg";
 		//alert("sigAlg=" + sigAlg);
-		let mac = new Mac({ 'alg': sigAlg, 'prov': 'cryptojs', 'pass': key });
+		let mac = new Mac(/** @type {Dictionary} */ ( { 'alg': sigAlg, 'prov': 'cryptojs', 'pass': key } ));
 		mac.updateString(uSignatureInput);
 		hSig = mac.doFinal();
 	} else if (sigAlg.indexOf("withECDSA") != -1) {
-		let sig = new Signature({ 'alg': sigAlg });
+		let sig = new Signature(/** @type {Dictionary} */ ( { 'alg': sigAlg } ));
 		sig.init(key, pass);
 		sig.updateString(uSignatureInput);
 		let hASN1Sig = sig.sign();
 		hSig = ECDSA.asn1SigToConcatSig(hASN1Sig);
 	} else if (sigAlg != "none") {
-		let sig = new Signature({ 'alg': sigAlg });
+		let sig = new Signature(/** @type {Dictionary} */ ( { 'alg': sigAlg } ));
 		sig.init(key, pass);
 		sig.updateString(uSignatureInput);
 		hSig = sig.sign();
@@ -359,10 +361,10 @@ export function verify(sJWS, key, acceptAlgs) {
 	let pHeader = readSafeJSONString(b64utoutf8(a[0]));
 	let alg = null;
 	let algType = null; // HS|RS|PS|ES|no
-	if (pHeader.alg === undefined) {
+	if (pHeader['alg'] === undefined) {
 		throw "algorithm not specified in header";
 	} else {
-		alg = pHeader.alg;
+		alg = pHeader['alg'];
 		algType = alg.substr(0, 2);
 	}
 
@@ -405,12 +407,12 @@ export function verify(sJWS, key, acceptAlgs) {
 	}
 
 	// 3.5. check when alg is 'none'
-	if (alg == "none") {
-	}
+	//if (alg == "none") {
+	//}
 
 	// 4. check whether alg is supported alg in jsjws.
 	let sigAlg = null;
-	if (jwsalg2sigalg[pHeader.alg] === undefined) {
+	if (jwsalg2sigalg[pHeader['alg']] === undefined) {
 		throw "unsupported alg name: " + alg;
 	} else {
 		sigAlg = jwsalg2sigalg[alg];
@@ -424,7 +426,7 @@ export function verify(sJWS, key, acceptAlgs) {
 		if (key === undefined)
 			throw "hexadecimal key shall be specified for HMAC";
 		//try {
-		let mac = new Mac({ 'alg': sigAlg, 'pass': key });
+		let mac = new Mac(/** @type {Dictionary} */ ( { 'alg': sigAlg, 'pass': key } ));
 		mac.updateString(uSignatureInput);
 		hSig2 = mac.doFinal();
 		//} catch(ex) {};
@@ -436,12 +438,12 @@ export function verify(sJWS, key, acceptAlgs) {
 		} catch (ex) {
 			return false;
 		}
-		let sig = new Signature({ 'alg': sigAlg });
+		let sig = new Signature(/** @type {Dictionary} */ ( { 'alg': sigAlg } ));
 		sig.init(key)
 		sig.updateString(uSignatureInput);
 		return sig.verify(hASN1Sig);
 	} else {
-		let sig = new Signature({ 'alg': sigAlg });
+		let sig = new Signature(/** @type {Dictionary} */ ( { 'alg': sigAlg } ));
 		sig.init(key)
 		sig.updateString(uSignatureInput);
 		return sig.verify(hSig);
@@ -483,7 +485,7 @@ export function verify(sJWS, key, acceptAlgs) {
  */
 export function parse(sJWS) {
 	let a = sJWS.split(".");
-	let result = {};
+	let result = /** @type {Dictionary} */ ( {} );
 	let uHeader, uPayload, uSig;
 	if (a.length != 2 && a.length != 3)
 		throw "malformed sJWS: wrong number of '.' splitted elements";
@@ -492,18 +494,18 @@ export function parse(sJWS) {
 	uPayload = a[1];
 	if (a.length == 3) uSig = a[2];
 
-	result.headerObj = readSafeJSONString(b64utoutf8(uHeader));
-	result.payloadObj = readSafeJSONString(b64utoutf8(uPayload));
+	result['headerObj'] = readSafeJSONString(b64utoutf8(uHeader));
+	result['payloadObj'] = readSafeJSONString(b64utoutf8(uPayload));
 
-	result.headerPP = JSON.stringify(result.headerObj, null, "  ");
-	if (result.payloadObj == null) {
-		result.payloadPP = b64utoutf8(uPayload);
+	result['headerPP'] = JSON.stringify(result['headerObj'], null, "  ");
+	if (result['payloadObj'] == null) {
+		result['payloadPP'] = b64utoutf8(uPayload);
 	} else {
-		result.payloadPP = JSON.stringify(result.payloadObj, null, "  ");
+		result['payloadPP'] = JSON.stringify(result['payloadObj'], null, "  ");
 	}
 
 	if (uSig !== undefined) {
-		result.sigHex = b64utohex(uSig);
+		result['sigHex'] = b64utohex(uSig);
 	}
 
 	return result;
@@ -604,28 +606,28 @@ export function verifyJWT(sJWT, key, acceptField) {
 	let pPayload = readSafeJSONString(b64utoutf8(uPayload));
 
 	// 4. algorithm ('alg' in header) check
-	if (pHeader.alg === undefined) return false;
-	if (acceptField.alg === undefined)
+	if (pHeader['alg'] === undefined) return false;
+	if (acceptField['alg'] === undefined)
 		throw "acceptField.alg shall be specified";
-	if (!inArray(pHeader.alg, acceptField.alg)) return false;
+	if (!inArray(pHeader['alg'], acceptField['alg'])) return false;
 
 	// 5. issuer ('iss' in payload) check
-	if (pPayload.iss !== undefined && typeof acceptField.iss === "object") {
-		if (!inArray(pPayload.iss, acceptField.iss)) return false;
+	if (pPayload['iss'] !== undefined && typeof acceptField['iss'] === "object") {
+		if (!inArray(pPayload['iss'], acceptField['iss'])) return false;
 	}
 
 	// 6. subject ('sub' in payload) check
-	if (pPayload.sub !== undefined && typeof acceptField.sub === "object") {
-		if (!inArray(pPayload.sub, acceptField.sub)) return false;
+	if (pPayload['sub'] !== undefined && typeof acceptField['sub'] === "object") {
+		if (!inArray(pPayload['sub'], acceptField['sub'])) return false;
 	}
 
 	// 7. audience ('aud' in payload) check
-	if (pPayload.aud !== undefined && typeof acceptField.aud === "object") {
-		if (typeof pPayload.aud == "string") {
-			if (!inArray(pPayload.aud, acceptField.aud))
+	if (pPayload['aud'] !== undefined && typeof acceptField['aud'] === "object") {
+		if (typeof pPayload['aud'] == "string") {
+			if (!inArray(pPayload['aud'], acceptField['aud']))
 				return false;
-		} else if (typeof pPayload.aud == "object") {
-			if (!includedArray(pPayload.aud, acceptField.aud))
+		} else if (typeof pPayload['aud'] == "object") {
+			if (!includedArray(pPayload['aud'], acceptField['aud']))
 				return false;
 		}
 	}
@@ -633,36 +635,36 @@ export function verifyJWT(sJWT, key, acceptField) {
 	// 8. time validity 
 	//   (nbf - gracePeriod < now < exp + gracePeriod) && (iat - gracePeriod < now)
 	let now = getNow();
-	if (acceptField.verifyAt !== undefined && typeof acceptField.verifyAt === "number") {
-		now = acceptField.verifyAt;
+	if (acceptField['verifyAt'] !== undefined && typeof acceptField['verifyAt'] === "number") {
+		now = acceptField['verifyAt'];
 	}
-	if (acceptField.gracePeriod === undefined ||
-		typeof acceptField.gracePeriod !== "number") {
-		acceptField.gracePeriod = 0;
+	if (acceptField['gracePeriod'] === undefined ||
+		typeof acceptField['gracePeriod'] !== "number") {
+		acceptField['gracePeriod'] = 0;
 	}
 
 	// 8.1 expired time 'exp' check
-	if (pPayload.exp !== undefined && typeof pPayload.exp == "number") {
-		if (pPayload.exp + acceptField.gracePeriod < now) return false;
+	if (pPayload['exp'] !== undefined && typeof pPayload['exp'] == "number") {
+		if (pPayload['exp'] + acceptField['gracePeriod'] < now) return false;
 	}
 
 	// 8.2 not before time 'nbf' check
-	if (pPayload.nbf !== undefined && typeof pPayload.nbf == "number") {
-		if (now < pPayload.nbf - acceptField.gracePeriod) return false;
+	if (pPayload['nbf'] !== undefined && typeof pPayload['nbf'] == "number") {
+		if (now < pPayload['nbf'] - acceptField['gracePeriod']) return false;
 	}
 
 	// 8.3 issued at time 'iat' check
-	if (pPayload.iat !== undefined && typeof pPayload.iat == "number") {
-		if (now < pPayload.iat - acceptField.gracePeriod) return false;
+	if (pPayload['iat'] !== undefined && typeof pPayload['iat'] == "number") {
+		if (now < pPayload['iat'] - acceptField['gracePeriod']) return false;
 	}
 
 	// 9 JWT id 'jti' check
-	if (pPayload.jti !== undefined && acceptField.jti !== undefined) {
-		if (pPayload.jti !== acceptField.jti) return false;
+	if (pPayload['jti'] !== undefined && acceptField['jti'] !== undefined) {
+		if (pPayload['jti'] !== acceptField['jti']) return false;
 	}
 
 	// 10 JWS signature check
-	if (!verify(sJWT, key, acceptField.alg)) return false;
+	if (!verify(sJWT, key, acceptField['alg'])) return false;
 
 	// 11 passed all check
 	return true;
@@ -729,6 +731,8 @@ const jwsalg2sigalg = {
  * If a String "s" is a malformed JSON string or an other object type
  * this returns 0, otherwise this returns 1.
  * @param {string} s JSON string
+ * @param {Dictionary=} h
+ * @param {string=} p
  * @return {number} 1 or 0
  */
 export function isSafeJSONString(s, h, p) {
@@ -755,9 +759,8 @@ export function readSafeJSONString(s) {
 	let o = null;
 	try {
 		o = JSON.parse(s);
-		if (typeof o != "object") return null;
-		if (o.constructor === Array) return null;
-		return o;
+		if (!isDictionary(o)) return null;
+		return /** @type {Dictionary} */ ( o );
 	} catch (ex) {
 		return null;
 	}
@@ -794,33 +797,33 @@ export function getEncodedSignatureValueFromJWS(sJWS) {
  * thumbprint = getJWKthumbprint(jwk);
  */
 export function getJWKthumbprint(o) {
-	if (o.kty !== "RSA" &&
-		o.kty !== "EC" &&
-		o.kty !== "oct")
+	if (o['kty'] !== "RSA" &&
+		o['kty'] !== "EC" &&
+		o['kty'] !== "oct")
 		throw "unsupported algorithm for JWK Thumprint";
 
 	// 1. get canonically ordered json string
 	let s = '{';
-	if (o.kty === "RSA") {
-		if (typeof o.n != "string" || typeof o.e != "string")
+	if (o['kty'] === "RSA") {
+		if (typeof o['n'] != "string" || typeof o['e'] != "string")
 			throw "wrong n and e value for RSA key";
-		s += '"' + 'e' + '":"' + o.e + '",';
-		s += '"' + 'kty' + '":"' + o.kty + '",';
-		s += '"' + 'n' + '":"' + o.n + '"}';
-	} else if (o.kty === "EC") {
-		if (typeof o.crv != "string" ||
-			typeof o.x != "string" ||
-			typeof o.y != "string")
+		s += '"' + 'e' + '":"' + o['e'] + '",';
+		s += '"' + 'kty' + '":"' + o['kty'] + '",';
+		s += '"' + 'n' + '":"' + o['n'] + '"}';
+	} else if (o['kty'] === "EC") {
+		if (typeof o['crv'] != "string" ||
+			typeof o['x'] != "string" ||
+			typeof o['y'] != "string")
 			throw "wrong crv, x and y value for EC key";
-		s += '"' + 'crv' + '":"' + o.crv + '",';
-		s += '"' + 'kty' + '":"' + o.kty + '",';
-		s += '"' + 'x' + '":"' + o.x + '",';
-		s += '"' + 'y' + '":"' + o.y + '"}';
-	} else if (o.kty === "oct") {
-		if (typeof o.k != "string")
+		s += '"' + 'crv' + '":"' + o['crv'] + '",';
+		s += '"' + 'kty' + '":"' + o['kty'] + '",';
+		s += '"' + 'x' + '":"' + o['x'] + '",';
+		s += '"' + 'y' + '":"' + o['y'] + '"}';
+	} else if (o['kty'] === "oct") {
+		if (typeof o['k'] != "string")
 			throw "wrong k value for oct(symmetric) key";
-		s += '"' + 'kty' + '":"' + o.kty + '",';
-		s += '"' + 'k' + '":"' + o.k + '"}';
+		s += '"' + 'kty' + '":"' + o['kty'] + '",';
+		s += '"' + 'k' + '":"' + o['k'] + '"}';
 	}
 	//alert(s);
 
@@ -863,7 +866,7 @@ export function getIntDate(s) {
 	} else if (s.match(/Z$/)) {
 		return getZulu(s);
 	} else if (s.match(/^[0-9]+$/)) {
-		return parseInt(s);
+		return parseInt(s, 10);
 	}
 	throw "unsupported format: " + s;
 }

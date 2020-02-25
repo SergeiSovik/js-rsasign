@@ -226,16 +226,16 @@ export class SignaturePolicyIdentifier extends Attribute {
 	 * @param {Dictionary} params dictionary of parameters
 	 */
 	constructor(params) {
-		super(params);
+		super();
 
 	    /** @type {string} */ this.attrTypeOid = "1.2.840.113549.1.9.16.2.15";
 
 		if (params !== undefined) {
 			if (typeof params['oid'] == "string" &&
 				typeof params['hash'] == "object") {
-				let dOid = new DERObjectIdentifier({ oid: params.oid });
+				let dOid = new DERObjectIdentifier(/** @type {Dictionary} */ ( { 'oid': params['oid'] } ));
 				let dHash = new OtherHashAlgAndValue(params['hash']);
-				let seq = new DERSequence({ array: [dOid, dHash] });
+				let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': [dOid, dHash] } ));
 				this.valueList = [seq];
 			}
 		}
@@ -265,8 +265,8 @@ export class OtherHashAlgAndValue extends ASN1Object {
 		if (params !== undefined) {
 			if (typeof params['alg'] == "string" &&
 				typeof params['hash'] == "string") {
-				this.dAlg = new AlgorithmIdentifier({ name: params.alg });
-				this.dHash = new DEROctetString({ hex: params.hash });
+				this.dAlg = new AlgorithmIdentifier(/** @type {Dictionary} */ ( { 'name': params['alg'] } ));
+				this.dHash = new DEROctetString(/** @type {Dictionary} */ ( { 'hex': params['hash'] } ));
 			}
 		}
 	}
@@ -276,7 +276,7 @@ export class OtherHashAlgAndValue extends ASN1Object {
 	 * @returns {string}
 	 */
 	getEncodedHex() {
-		let seq = new DERSequence({ array: [this.dAlg, this.dHash] });
+		let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': [this.dAlg, this.dHash] } ));
 		this.hTLV = seq.getEncodedHex();
 		return this.hTLV;
 	}
@@ -296,7 +296,7 @@ export class SignatureTimeStamp extends Attribute {
 	 * @param {Dictionary} params dictionary of parameters
 	 */
 	constructor(params) {
-		super(params);
+		super();
 
 		/** @type {string} */ this.attrTypeOid = "1.2.840.113549.1.9.16.2.14";
 		/** @type {string | null} */ this.tstHex = null;
@@ -304,7 +304,7 @@ export class SignatureTimeStamp extends Attribute {
 		if (params !== undefined) {
 			if (params['res'] !== undefined) {
 				if (typeof params['res'] == "string" &&
-					params.res.match(/^[0-9A-Fa-f]+$/)) {
+					params['res'].match(/^[0-9A-Fa-f]+$/)) {
 				} else if (params['res'] instanceof ASN1Object) {
 				} else {
 					throw "res param shall be ASN1Object or hex string";
@@ -312,7 +312,7 @@ export class SignatureTimeStamp extends Attribute {
 			}
 			if (params['tst'] !== undefined) {
 				if (typeof params['tst'] == "string" &&
-					params.tst.match(/^[0-9A-Fa-f]+$/)) {
+					params['tst'].match(/^[0-9A-Fa-f]+$/)) {
 					let d = new ASN1Object();
 					this.tstHex = params['tst'];
 					d.hTLV = this.tstHex;
@@ -340,18 +340,15 @@ export class SignatureTimeStamp extends Attribute {
  */
 export class CompleteCertificateRefs extends Attribute {
 	/**
-	 * @param {Dictionary} params dictionary of parameters
+	 * @param {Array<Dictionary>=} params dictionary of parameters
 	 */
 	constructor(params) {
-		super(params);
+		super();
 
 		/** @type {string} */ this.attrTypeOid = "1.2.840.113549.1.9.16.2.21";
 
 		if (params !== undefined) {
-			if (typeof params == "object" &&
-				typeof params['length'] == "number") {
-				this.setByArray(params);
-			}
+			this.setByArray(params);
 		}
 	}
 
@@ -383,10 +380,10 @@ export class CompleteCertificateRefs extends Attribute {
  */
 export class OtherCertID extends ASN1Object {
 	/**
-	 * @param {Dictionary} params dictionary of parameters
+	 * @param {string | Dictionary} params dictionary of parameters
 	 */
 	constructor(params) {
-		super(params);
+		super();
 
 		/** @type {boolean} */ this.hasIssuerSerial = true;
 		/** @type {OtherHash | null} */ this.dOtherCertHash = null;
@@ -433,7 +430,7 @@ export class OtherCertID extends ASN1Object {
 		let a = [this.dOtherCertHash];
 		if (this.dIssuerSerial != null)
 			a.push(this.dIssuerSerial);
-		let seq = new DERSequence({ array: a });
+		let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': a } ));
 		this.hTLV = seq.getEncodedHex();
 		return this.hTLV;
 	}
@@ -457,10 +454,10 @@ export class OtherCertID extends ASN1Object {
  */
 export class OtherHash extends ASN1Object {
 	/**
-	 * @param {Dictionary} params dictionary of parameters
+	 * @param {string | Dictionary} params dictionary of parameters
 	 */
 	constructor(params) {
-		super(params);
+		super();
 
 		/** @type {string} */ this.alg = 'sha256';
 		/** @type {DEROctetString | OtherHashAlgAndValue | null} */ this.dOtherHash = null;
@@ -470,7 +467,7 @@ export class OtherHash extends ASN1Object {
 				if (params.indexOf("-----BEGIN ") != -1) {
 					this.setByCertPEM(params);
 				} else if (params.match(/^[0-9A-Fa-f]+$/)) {
-					this.dOtherHash = new DEROctetString({ hex: params });
+					this.dOtherHash = new DEROctetString(/** @type {Dictionary} */ ( { 'hex': params } ));
 				} else {
 					throw "unsupported string value for params";
 				}
@@ -501,7 +498,7 @@ export class OtherHash extends ASN1Object {
 		let hex = pemtohex(certPEM);
 		let hash = hashHex(hex, this.alg);
 		this.dOtherHash =
-			new OtherHashAlgAndValue({ alg: this.alg, hash: hash });
+			new OtherHashAlgAndValue(/** @type {Dictionary} */ ( { 'alg': this.alg, 'hash': hash } ));
 	}
 
 	/**
@@ -539,7 +536,7 @@ export class OtherHash extends ASN1Object {
  * sd = info.obj;
  */
 export function parseSignedDataForAddingUnsigned(hex) {
-	let r = {};
+	let r = /** @type {Dictionary} */ ( {} );
 
 	// 1. not oid signed-data then error
 	if (getTLVbyList(hex, 0, [0]) != "06092a864886f70d010702")
@@ -553,30 +550,30 @@ export function parseSignedDataForAddingUnsigned(hex) {
 	// 2. HEXs of SignedData children
 	// 2.1. SignedData.CMSVersion
 	let iVersion = aSDChildIdx.shift();
-	r.version = getTLV(hex, iVersion);
+	r['version'] = getTLV(hex, iVersion);
 
 	// 2.2. SignedData.DigestAlgorithms
 	let iAlgs = aSDChildIdx.shift();
-	r.algs = getTLV(hex, iAlgs);
+	r['algs'] = getTLV(hex, iAlgs);
 
 	// 2.3. SignedData.EncapContentInfo
 	let iEncapContent = aSDChildIdx.shift();
-	r.encapcontent = getTLV(hex, iEncapContent);
+	r['encapcontent'] = getTLV(hex, iEncapContent);
 
 	// 2.4. [0]Certs 
-	r.certs = null;
-	r.revs = null;
-	r.si = [];
+	r['certs'] = null;
+	r['revs'] = null;
+	r['si'] = [];
 
 	let iNext = aSDChildIdx.shift();
 	if (hex.substr(iNext, 2) == "a0") {
-		r.certs = getTLV(hex, iNext);
+		r['certs'] = getTLV(hex, iNext);
 		iNext = aSDChildIdx.shift();
 	}
 
 	// 2.5. [1]Revs
 	if (hex.substr(iNext, 2) == "a1") {
-		r.revs = getTLV(hex, iNext);
+		r['revs'] = getTLV(hex, iNext);
 		iNext = aSDChildIdx.shift();
 	}
 
@@ -591,32 +588,32 @@ export function parseSignedDataForAddingUnsigned(hex) {
 	for (let i = 0; i < aSIIndex.length; i++) {
 		let iSI = aSIIndex[i];
 		let pSI = parseSignerInfoForAddingUnsigned(hex, iSI, i);
-		r.si[i] = pSI;
+		r['si'][i] = pSI;
 	}
 
 	// x. obj(SignedData)
 	let tmp = null;
-	r.obj = new SignedData();
+	let obj = r['obj'] = new SignedData();
 
 	tmp = new ASN1Object();
-	tmp.hTLV = r.version;
-	r.obj.dCMSVersion = tmp;
+	tmp.hTLV = r['version'];
+	obj.dCMSVersion = tmp;
 
 	tmp = new ASN1Object();
-	tmp.hTLV = r.algs;
-	r.obj.dDigestAlgs = tmp;
+	tmp.hTLV = r['algs'];
+	obj.dDigestAlgs = tmp;
 
 	tmp = new ASN1Object();
-	tmp.hTLV = r.encapcontent;
-	r.obj.dEncapContentInfo = tmp;
+	tmp.hTLV = r['encapcontent'];
+	obj.dEncapContentInfo = tmp;
 
 	tmp = new ASN1Object();
-	tmp.hTLV = r.certs;
-	r.obj.dCerts = tmp;
+	tmp.hTLV = r['certs'];
+	obj.dCerts = tmp;
 
-	r.obj.signerInfoList = [];
-	for (let i = 0; i < r.si.length; i++) {
-		r.obj.signerInfoList.push(r.si[i].obj);
+	obj.signerInfoList = [];
+	for (let i = 0; i < r['si'].length; i++) {
+		obj.signerInfoList.push(r['si'][i].obj);
 	}
 
 	return r;
@@ -647,7 +644,7 @@ export function parseSignedDataForAddingUnsigned(hex) {
  * for CAdES-T and not for CAdES-C.
  */
 export function parseSignerInfoForAddingUnsigned(hex, iSI, nth) {
-	let r = {};
+	let r = /** @type {Dictionary} */ ( {} );
 	let aSIChildIdx = getChildIdx(hex, iSI);
 	//alert(aSIChildIdx.join("="));
 
@@ -656,58 +653,58 @@ export function parseSignerInfoForAddingUnsigned(hex, iSI, nth) {
 
 	// 1. SignerInfo.CMSVersion
 	let iVersion = aSIChildIdx.shift();
-	r.version = getTLV(hex, iVersion);
+	r['version'] = getTLV(hex, iVersion);
 
 	// 2. SignerIdentifier(IssuerAndSerialNumber)
 	let iIdentifier = aSIChildIdx.shift();
-	r.si = getTLV(hex, iIdentifier);
+	r['si'] = getTLV(hex, iIdentifier);
 
 	// 3. DigestAlgorithm
 	let iDigestAlg = aSIChildIdx.shift();
-	r.digalg = getTLV(hex, iDigestAlg);
+	r['digalg'] = getTLV(hex, iDigestAlg);
 
 	// 4. SignedAttrs
 	let iSignedAttrs = aSIChildIdx.shift();
-	r.sattrs = getTLV(hex, iSignedAttrs);
+	r['sattrs'] = getTLV(hex, iSignedAttrs);
 
 	// 5. SigAlg
 	let iSigAlg = aSIChildIdx.shift();
-	r.sigalg = getTLV(hex, iSigAlg);
+	r['sigalg'] = getTLV(hex, iSigAlg);
 
 	// 6. Signature
 	let iSig = aSIChildIdx.shift();
-	r.sig = getTLV(hex, iSig);
-	r.sigval = getV(hex, iSig);
+	r['sig'] = getTLV(hex, iSig);
+	r['sigval'] = getV(hex, iSig);
 
 	// 7. obj(SignerInfo)
 	let tmp = null;
-	r.obj = new SignerInfo();
+	r['obj'] = new SignerInfo();
 
 	tmp = new ASN1Object();
-	tmp.hTLV = r.version;
-	r.obj.dCMSVersion = tmp;
+	tmp.hTLV = r['version'];
+	r['obj'].dCMSVersion = tmp;
 
 	tmp = new ASN1Object();
-	tmp.hTLV = r.si;
-	r.obj.dSignerIdentifier = tmp;
+	tmp.hTLV = r['si'];
+	r['obj'].dSignerIdentifier = tmp;
 
 	tmp = new ASN1Object();
-	tmp.hTLV = r.digalg;
-	r.obj.dDigestAlgorithm = tmp;
+	tmp.hTLV = r['digalg'];
+	r['obj'].dDigestAlgorithm = tmp;
 
 	tmp = new ASN1Object();
-	tmp.hTLV = r.sattrs;
-	r.obj.dSignedAttrs = tmp;
+	tmp.hTLV = r['sattrs'];
+	r['obj'].dSignedAttrs = tmp;
 
 	tmp = new ASN1Object();
-	tmp.hTLV = r.sigalg;
-	r.obj.dSigAlg = tmp;
+	tmp.hTLV = r['sigalg'];
+	r['obj'].dSigAlg = tmp;
 
 	tmp = new ASN1Object();
-	tmp.hTLV = r.sig;
-	r.obj.dSig = tmp;
+	tmp.hTLV = r['sig'];
+	r['obj'].dSig = tmp;
 
-	r.obj.dUnsignedAttrs = new AttributeList();
+	r['obj'].dUnsignedAttrs = new AttributeList();
 
 	return r;
 };

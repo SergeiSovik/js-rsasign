@@ -72,7 +72,7 @@ export class CertificationRequest extends ASN1Object {
 	 * @param {Dictionary} params dictionary of parameters (ex. {})
 	 */
 	constructor(params) {
-		super(params);
+		super();
 
 		/** @type {CertificationRequestInfo | null} */ this.asn1CSRInfo = null;
 		/** @type {AlgorithmIdentifier | null} */ this.asn1SignatureAlg = null;
@@ -101,19 +101,19 @@ export class CertificationRequest extends ASN1Object {
 		if (this.prvKey == null) this.prvKey = prvKeyObj;
 
 		this.asn1SignatureAlg =
-			new AlgorithmIdentifier({ 'name': sigAlgName });
+			new AlgorithmIdentifier(/** @type {Dictionary} */ ( { 'name': sigAlgName } ));
 
-		let sig = new Signature({ 'alg': sigAlgName });
+		let sig = new Signature(/** @type {Dictionary} */ ( { 'alg': sigAlgName } ));
 		sig.init(this.prvKey);
 		sig.updateHex(this.asn1CSRInfo.getEncodedHex());
 		this.hexSig = sig.sign();
 
-		this.asn1Sig = new DERBitString({ 'hex': '00' + this.hexSig });
-		let seq = new DERSequence({
+		this.asn1Sig = new DERBitString(/** @type {Dictionary} */ ( { 'hex': '00' + this.hexSig } ));
+		let seq = new DERSequence(/** @type {Dictionary} */ ( {
 			'array': [this.asn1CSRInfo,
 			this.asn1SignatureAlg,
 			this.asn1Sig]
-		});
+		} ));
 		this.hTLV = seq.getEncodedHex();
 		this.isModified = false;
 	}
@@ -165,15 +165,12 @@ export class CertificationRequest extends ASN1Object {
  * csri.setSubjectPublicKeyByGetKey(pubKeyObj);
  */
 export class CertificationRequestInfo extends ASN1Object {
-	/**
-	 * @param {Dictionary} params dictionary of parameters (ex. {})
-	 */
-	constructor(params) {
-		super(params);
+	constructor() {
+		super();
 
 		/** @type {Array<ASN1Object>} */ this.asn1Array = new Array();
 
-		/** @type {DERInteger} */ this.asn1Version = new DERInteger({ 'int': 0 });
+		/** @type {DERInteger} */ this.asn1Version = new DERInteger(/** @type {Dictionary} */ ( { 'int': 0 } ));
 		/** @type {X500Name | null} */ this.asn1Subject = null;
 		/** @type {SubjectPublicKeyInfo | null} */ this.asn1SubjPKey = null;
 		/** @type {Array<ASN1Object>} */ this.extensionsArray = new Array();
@@ -181,7 +178,7 @@ export class CertificationRequestInfo extends ASN1Object {
 
 	/**
 	 * set subject name field by parameter
-	 * @param {Array} x500NameParam X500Name parameter
+	 * @param {Dictionary} x500NameParam X500Name parameter
 	 * @description
 	 * @example
 	 * csri.setSubjectByParam({'str': '/C=US/CN=b'});
@@ -201,13 +198,12 @@ export class CertificationRequestInfo extends ASN1Object {
 	 */
 	setSubjectPublicKeyByGetKey(keyParam) {
 		let keyObj = getKey(keyParam);
-		this.asn1SubjPKey =
-			new SubjectPublicKeyInfo(keyObj);
+		this.asn1SubjPKey = new SubjectPublicKeyInfo(keyObj);
 	}
 
 	/**
 	 * append X.509v3 extension to this object by name and parameters
-	 * @param {name} name name of X.509v3 Extension object
+	 * @param {string} name name of X.509v3 Extension object
 	 * @param {Dictionary} extParams parameters as argument of Extension constructor.
 	 * @description
 	 * @example
@@ -234,30 +230,30 @@ export class CertificationRequestInfo extends ASN1Object {
 
 		// extensionRequest
 		if (this.extensionsArray.length > 0) {
-			let extSeq = new DERSequence({ array: this.extensionsArray });
-			let extSet = new DERSet({ array: [extSeq] });
-			let extSeq2 = new DERSequence({
-				array: [
-					new DERObjectIdentifier({ oid: "1.2.840.113549.1.9.14" }),
+			let extSeq = new DERSequence(/** @type {Dictionary} */ ( { 'array': this.extensionsArray } ));
+			let extSet = new DERSet(/** @type {Dictionary} */ ( { 'array': [extSeq] } ));
+			let extSeq2 = new DERSequence(/** @type {Dictionary} */ ( {
+				'array': [
+					new DERObjectIdentifier(/** @type {Dictionary} */ ( { 'oid': "1.2.840.113549.1.9.14" } )),
 					extSet
 				]
-			});
-			let extTagObj = new DERTaggedObject({
-				explicit: true,
-				tag: 'a0',
-				obj: extSeq2
-			});
+			} ));
+			let extTagObj = new DERTaggedObject(/** @type {Dictionary} */ ( {
+				'explicit': true,
+				'tag': 'a0',
+				'obj': extSeq2
+			} ));
 			this.asn1Array.push(extTagObj);
 		} else {
-			let extTagObj = new DERTaggedObject({
-				explicit: false,
-				tag: 'a0',
-				obj: new DERNull()
-			});
+			let extTagObj = new DERTaggedObject(/** @type {Dictionary} */ ( {
+				'explicit': false,
+				'tag': 'a0',
+				'obj': new DERNull()
+			} ));
 			this.asn1Array.push(extTagObj);
 		}
 
-		let o = new DERSequence({ "array": this.asn1Array });
+		let o = new DERSequence(/** @type {Dictionary} */ ( { "array": this.asn1Array } ));
 		this.hTLV = o.getEncodedHex();
 		this.isModified = false;
 		return this.hTLV;
@@ -315,26 +311,26 @@ export class CertificationRequestInfo extends ASN1Object {
  * });
  */
 export function newCSRPEM(param) {
-	if (param.subject === undefined) throw "parameter subject undefined";
-	if (param.sbjpubkey === undefined) throw "parameter sbjpubkey undefined";
-	if (param.sigalg === undefined) throw "parameter sigalg undefined";
-	if (param.sbjprvkey === undefined) throw "parameter sbjpubkey undefined";
+	if (param['subject'] === undefined) throw "parameter subject undefined";
+	if (param['sbjpubkey'] === undefined) throw "parameter sbjpubkey undefined";
+	if (param['sigalg'] === undefined) throw "parameter sigalg undefined";
+	if (param['sbjprvkey'] === undefined) throw "parameter sbjpubkey undefined";
 
 	let csri = new CertificationRequestInfo();
-	csri.setSubjectByParam(param.subject);
-	csri.setSubjectPublicKeyByGetKey(param.sbjpubkey);
+	csri.setSubjectByParam(param['subject']);
+	csri.setSubjectPublicKeyByGetKey(param['sbjpubkey']);
 
-	if (param.ext !== undefined && param.ext.length !== undefined) {
-		for (let i = 0; i < param.ext.length; i++) {
-			for (let key in param.ext[i]) {
-				csri.appendExtensionByName(key, param.ext[i][key]);
+	if (param['ext'] !== undefined && param['ext'].length !== undefined) {
+		for (let i = 0; i < param['ext'].length; i++) {
+			for (let key in param['ext'][i]) {
+				csri.appendExtensionByName(key, param['ext'][i][key]);
 			}
 		}
 	}
 
-	let csr = new CertificationRequest({ 'csrinfo': csri });
-	let prvKey = getKey(param.sbjprvkey);
-	csr.sign(param.sigalg, prvKey);
+	let csr = new CertificationRequest(/** @type {Dictionary} */ ( { 'csrinfo': csri } ));
+	let prvKey = getKey(param['sbjprvkey']);
+	csr.sign(param['sigalg'], prvKey);
 
 	let pem = csr.getPEMString();
 	return pem;
@@ -360,20 +356,20 @@ export function newCSRPEM(param) {
  * console.log(o.subject.name) &rarr; "/C=US/O=Test"
  */
 export function getInfo(sPEM) {
-	let result = {};
-	result.subject = {};
-	result.pubkey = {};
+	let result = /** @type {Dictionary} */ ( {} );
+	result['subject'] = /** @type {Dictionary} */ ( {} );
+	result['pubkey'] = /** @type {Dictionary} */ ( {} );
 
 	if (sPEM.indexOf("-----BEGIN CERTIFICATE REQUEST") == -1)
 		throw "argument is not PEM file";
 
 	let hex = pemtohex(sPEM, "CERTIFICATE REQUEST");
 
-	result.subject.hex = getTLVbyList(hex, 0, [0, 1]);
-	result.subject.name = hex2dn(result.subject.hex);
+	result['subject']['hex'] = getTLVbyList(hex, 0, [0, 1]);
+	result['subject']['name'] = hex2dn(result['subject']['hex']);
 
-	result.pubkey.hex = getTLVbyList(hex, 0, [0, 2]);
-	result.pubkey.obj = getKey(result.pubkey.hex, null, "pkcs8pub");
+	result['pubkey']['hex'] = getTLVbyList(hex, 0, [0, 2]);
+	result['pubkey']['obj'] = getKey(result['pubkey']['hex'], null, "pkcs8pub");
 
 	return result;
 }

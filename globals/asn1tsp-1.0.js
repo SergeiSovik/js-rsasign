@@ -19,7 +19,7 @@ import { AlgorithmIdentifier, X500Name } from "./asn1x509-1.0.js"
 import { hashHex } from "./crypto-1.1.js"
 import { getChildIdx, getV, getTLV, hextooidstr, getIdxbyList } from "./asn1hex-1.1.js"
 import { Dictionary } from "./../../../include/type.js"
-import { SignedData, SigningCertificate } from "./asn1cms-1.0.js"
+import { SignedData, SigningCertificate, ContentInfo, EncapsulatedContentInfo } from "./asn1cms-1.0.js"
 
 /**
  * ASN.1 module for RFC 3161 Time Stamp Protocol
@@ -84,28 +84,28 @@ export class Accuracy extends ASN1Object {
 
 		let a = [];
 		if (this.seconds != null) {
-			dSeconds = new DERInteger({ 'int': this.seconds });
+			dSeconds = new DERInteger(/** @type {Dictionary} */ ( { 'int': this.seconds } ));
 			a.push(dSeconds);
 		}
 		if (this.millis != null) {
-			let dMillis = new DERInteger({ 'int': this.millis });
-			dTagMillis = new DERTaggedObject({
-				obj: dMillis,
-				tag: '80',
-				explicit: false
-			});
+			let dMillis = new DERInteger(/** @type {Dictionary} */ ( { 'int': this.millis } ));
+			dTagMillis = new DERTaggedObject(/** @type {Dictionary} */ ( {
+				'obj': dMillis,
+				'tag': '80',
+				'explicit': false
+			} ));
 			a.push(dTagMillis);
 		}
 		if (this.micros != null) {
-			let dMicros = new DERInteger({ 'int': this.micros });
-			dTagMicros = new DERTaggedObject({
-				obj: dMicros,
-				tag: '81',
-				explicit: false
-			});
+			let dMicros = new DERInteger(/** @type {Dictionary} */ ( { 'int': this.micros } ));
+			dTagMicros = new DERTaggedObject(/** @type {Dictionary} */ ( {
+				'obj': dMicros,
+				'tag': '81',
+				'explicit': false
+			} ));
 			a.push(dTagMicros);
 		}
-		let seq = new DERSequence({ array: a });
+		let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': a } ));
 		this.hTLV = seq.getEncodedHex();
 		return this.hTLV;
 	}
@@ -135,10 +135,10 @@ export class MessageImprint extends ASN1Object {
 
 		if (params !== undefined) {
 			if (typeof params['hashAlg'] == "string") {
-				this.dHashAlg = new AlgorithmIdentifier({ name: params.hashAlg });
+				this.dHashAlg = new AlgorithmIdentifier(/** @type {Dictionary} */ ( { 'name': params['hashAlg'] } ));
 			}
 			if (typeof params['hashValue'] == "string") {
-				this.dHashValue = new DEROctetString({ hex: params.hashValue });
+				this.dHashValue = new DEROctetString(/** @type {Dictionary} */ ( { 'hex': params['hashValue'] } ));
 			}
 		}
 	}
@@ -150,7 +150,7 @@ export class MessageImprint extends ASN1Object {
 	getEncodedHex() {
 		if (typeof this.hTLV == "string") return this.hTLV;
 		let seq =
-			new DERSequence({ array: [this.dHashAlg, this.dHashValue] });
+			new DERSequence(/** @type {Dictionary} */ ( { 'array': [this.dHashAlg, this.dHashValue] } ));
 		return seq.getEncodedHex();
 	}
 }
@@ -173,9 +173,9 @@ export class TimeStampReq extends ASN1Object {
 	 * @param {Dictionary} params dictionary of parameters
 	 */
 	constructor(params) {
-		super(params);
+		super();
 
-		this.dVersion = new DERInteger({ 'int': 1 });
+		this.dVersion = new DERInteger(/** @type {Dictionary} */ ( { 'int': 1 } ));
 		this.dMessageImprint = null;
 		this.dPolicy = null;
 		this.dNonce = null;
@@ -223,7 +223,7 @@ export class TimeStampReq extends ASN1Object {
 		if (this.dNonce != null) a.push(this.dNonce);
 		if (this.certReq) a.push(new DERBoolean());
 
-		let seq = new DERSequence({ array: a });
+		let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': a } ));
 		this.hTLV = seq.getEncodedHex();
 		return this.hTLV;
 	}
@@ -263,7 +263,7 @@ export class TSTInfo extends ASN1Object {
 	constructor(params) {
 		super();
 
-		this.dVersion = new DERInteger({ 'int': 1 });
+		this.dVersion = new DERInteger(/** @type {Dictionary} */ ( { 'int': 1 } ));
 		/** @type {DERObjectIdentifier | null} */ this.dPolicy = null;
 		/** @type {MessageImprint | null} */ this.dMessageImprint = null;
 		/** @type {DERInteger | null} */ this.dSerialNumber = null;
@@ -275,9 +275,9 @@ export class TSTInfo extends ASN1Object {
 
 		if (params !== undefined) {
 			if (typeof params['policy'] == "string") {
-				if (!params.policy.match(/^[0-9.]+$/))
+				if (!params['policy'].match(/^[0-9.]+$/))
 					throw "policy shall be oid like 0.1.4.134";
-				this.dPolicy = new DERObjectIdentifier({ oid: params.policy });
+				this.dPolicy = new DERObjectIdentifier(/** @type {Dictionary} */ ( { 'oid': params['policy'] } ));
 			}
 			if (params['messageImprint'] !== undefined) {
 				this.dMessageImprint = new MessageImprint(params['messageImprint']);
@@ -331,7 +331,7 @@ export class TSTInfo extends ASN1Object {
 		if (this.dNonce != null) a.push(this.dNonce);
 		if (this.dTsa != null) a.push(this.dTsa);
 
-		let seq = new DERSequence({ array: a });
+		let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': a } ));
 		this.hTLV = seq.getEncodedHex();
 		return this.hTLV;
 	}
@@ -351,7 +351,7 @@ export class TimeStampResp extends ASN1Object {
 	 * @param {Dictionary} params dictionary of parameters
 	 */
 	constructor(params) {
-		super(params);
+		super();
 
 		/** @type {PKIStatusInfo | null} */ this.dStatus = null;
 		/** @type {ContentInfo | null} */ this.dTST = null;
@@ -362,7 +362,7 @@ export class TimeStampResp extends ASN1Object {
 			}
 			if (params['tst'] !== undefined &&
 				params['tst'] instanceof SignedData) {
-				this.dTST = params.tst.getContentInfo();
+				this.dTST = params['tst'].getContentInfo();
 			}
 		}
 	}
@@ -376,7 +376,7 @@ export class TimeStampResp extends ASN1Object {
 			throw "status shall be specified";
 		let a = [this.dStatus];
 		if (this.dTST != null) a.push(this.dTST);
-		let seq = new DERSequence({ array: a });
+		let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': a } ));
 		this.hTLV = seq.getEncodedHex();
 		return this.hTLV;
 	}
@@ -399,7 +399,7 @@ export class PKIStatusInfo extends ASN1Object {
 	 * @param {Dictionary} params dictionary of parameters
 	 */
 	constructor(params) {
-		super(params);
+		super();
 
 		/** @type {PKIStatus | null} */ this.dStatus = null;
 		/** @type {PKIFreeText | null} */ this.dStatusString = null;
@@ -411,7 +411,7 @@ export class PKIStatusInfo extends ASN1Object {
 			}
 			if (typeof params['statstr'] == "object") { // array of str
 				this.dStatusString =
-					new PKIFreeText({ array: params.statstr });
+					new PKIFreeText(/** @type {Dictionary} */ ( { 'array': params['statstr'] } ));
 			}
 			if (typeof params['failinfo'] == "object") {
 				this.dFailureInfo =
@@ -430,7 +430,7 @@ export class PKIStatusInfo extends ASN1Object {
 		let a = [this.dStatus];
 		if (this.dStatusString != null) a.push(this.dStatusString);
 		if (this.dFailureInfo != null) a.push(this.dFailureInfo);
-		let seq = new DERSequence({ array: a });
+		let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': a } ));
 		this.hTLV = seq.getEncodedHex();
 		return this.hTLV;
 	}
@@ -474,7 +474,7 @@ export class PKIStatus extends ASN1Object {
 				if (list[params['name']] === undefined)
 					throw "name undefined: " + params['name'];
 				this.dStatus =
-					new DERInteger({ 'int': list[params['name']] });
+					new DERInteger(/** @type {Dictionary} */ ( { 'int': list[params['name']] } ));
 			} else {
 				this.dStatus = new DERInteger(params);
 			}
@@ -504,7 +504,7 @@ export class PKIFreeText extends ASN1Object {
 	 * @param {Dictionary} params dictionary of parameters
 	 */
 	constructor(params) {
-		super(params);
+		super();
 
 		/** @type {Array<string>} */ this.textList = [];
 
@@ -522,9 +522,9 @@ export class PKIFreeText extends ASN1Object {
 	getEncodedHex() {
 		let a = [];
 		for (let i = 0; i < this.textList.length; i++) {
-			a.push(new DERUTF8String({ str: this.textList[i] }));
+			a.push(new DERUTF8String(/** @type {Dictionary} */ ( { 'str': this.textList[i] } )));
 		}
-		let seq = new DERSequence({ array: a });
+		let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': a } ));
 		this.hTLV = seq.getEncodedHex();
 		return this.hTLV;
 	}
@@ -637,15 +637,14 @@ export class SimpleTSAAdapter extends AbstractTSAAdapter {
 	getTSTHex(msgHex, hashAlg) {
 		// messageImprint
 		let sHashHex = hashHex(msgHex, hashAlg);
-		this.params.tstInfo.messageImprint =
-			{ hashAlg: hashAlg, hashValue: sHashHex };
+		this.params['tstInfo']['messageImprint'] = /** @type {Dictionary} */ ( { 'hashAlg': hashAlg, 'hashValue': sHashHex } );
 
 		// serial
-		this.params.tstInfo.serialNumber = { 'int': this.serial++ };
+		this.params['tstInfo']['serialNumber'] = /** @type {Dictionary} */ ( { 'int': this.serial++ } );
 
 		// nonce
 		let nonceValue = Math.floor(Math.random() * 1000000000);
-		this.params.tstInfo.nonce = { 'int': nonceValue };
+		this.params['tstInfo']['nonce'] = /** @type {Dictionary} */ ( { 'int': nonceValue } );
 
 		let obj = newTimeStampToken(this.params);
 		return obj.getContentInfoEncodedHex();
@@ -672,7 +671,7 @@ export class FixedTSAAdapter extends AbstractTSAAdapter {
 	 */
 	constructor(initParams) {
 		super();
-		
+
 		/** @type {Dictionary | null} */ this.params = null;
 
 		if (initParams !== undefined) {
@@ -689,7 +688,7 @@ export class FixedTSAAdapter extends AbstractTSAAdapter {
 		// fixed serialNumber
 		// fixed nonce        
 		let sHashHex = hashHex(msgHex, hashAlg);
-		this.params.tstInfo.messageImprint = { hashAlg: hashAlg, hashValue: sHashHex };
+		this.params['tstInfo']['messageImprint'] = /** @type {Dictionary} */ ( { 'hashAlg': hashAlg, 'hashValue': sHashHex } );
 		let obj = newTimeStampToken(this.params);
 		return obj.getContentInfoEncodedHex();
 	}
@@ -700,16 +699,17 @@ export class FixedTSAAdapter extends AbstractTSAAdapter {
 /**
  * generate TimeStampToken ASN.1 object specified by JSON parameters
  * @param {Dictionary} param JSON parameter to generate TimeStampToken
- * @return {SignedData} object just generated
+ * @return {SignedData | null} object just generated
  * @description
  * @example
  */
 export function newTimeStampToken(param) {
 	let sd = new SignedData();
 
-	let dTSTInfo = new TSTInfo(param.tstInfo);
+	let dTSTInfo = new TSTInfo(param['tstInfo']);
 	let tstInfoHex = dTSTInfo.getEncodedHex();
-	sd.dEncapContentInfo.setContentValue({ 'hex': tstInfoHex });
+	if (!(sd.dEncapContentInfo instanceof EncapsulatedContentInfo)) return null;
+	sd.dEncapContentInfo.setContentValue(/** @type {Dictionary} */ ( { 'hex': tstInfoHex } ));
 	sd.dEncapContentInfo.setContentType('tstinfo');
 
 	if (typeof param['certs'] == "object") {
@@ -719,24 +719,24 @@ export function newTimeStampToken(param) {
 	}
 
 	let si = sd.signerInfoList[0];
-	si.setSignerIdentifier(param.signerCert);
-	si.setForContentAndHash({
-		sdObj: sd,
-		eciObj: sd.dEncapContentInfo,
-		hashAlg: param.hashAlg
-	});
+	si.setSignerIdentifier(param['signerCert']);
+	si.setForContentAndHash(/** @type {Dictionary} */ ( {
+		'sdObj': sd,
+		'eciObj': sd.dEncapContentInfo,
+		'hashAlg': param['hashAlg']
+	} ));
 	let signingCertificate =
-		new SigningCertificate({ array: [param.signerCert] });
+		new SigningCertificate(/** @type {Dictionary} */ ( { 'array': [param['signerCert']] } ));
 	si.dSignedAttrs.add(signingCertificate);
 
-	si.sign(param.signerPrvKey, param.sigAlg);
+	si.sign(param['signerPrvKey'], param['sigAlg']);
 
 	return sd;
 }
 
 /**
  * parse hexadecimal string of TimeStampReq
- * @param {string} hexadecimal string of TimeStampReq
+ * @param {string} reqHex hexadecimal string of TimeStampReq
  * @return {Dictionary} JSON object of parsed parameters
  * @description
  * This method parses a hexadecimal string of TimeStampReq
@@ -752,7 +752,7 @@ export function newTimeStampToken(param) {
  */
 export function parseTimeStampReq(reqHex) {
 	let json = /** @type {Dictionary} */ ( {} );
-	json.certreq = false;
+	json['certreq'] = false;
 
 	let idxList = getChildIdx(reqHex, 0);
 
@@ -760,20 +760,20 @@ export function parseTimeStampReq(reqHex) {
 		throw "TimeStampReq must have at least 2 items";
 
 	let miHex = getTLV(reqHex, idxList[1]);
-	json.mi = parseMessageImprint(miHex);
+	json['mi'] = parseMessageImprint(miHex);
 
 	for (let i = 2; i < idxList.length; i++) {
 		let idx = idxList[i];
 		let tag = reqHex.substr(idx, 2);
 		if (tag == "06") { // case OID
 			let policyHex = getV(reqHex, idx);
-			json.policy = hextooidstr(policyHex);
+			json['policy'] = hextooidstr(policyHex);
 		}
 		if (tag == "02") { // case INTEGER
-			json.nonce = getV(reqHex, idx);
+			json['nonce'] = getV(reqHex, idx);
 		}
 		if (tag == "01") { // case BOOLEAN
-			json.certreq = true;
+			json['certreq'] = true;
 		}
 	}
 
@@ -782,7 +782,7 @@ export function parseTimeStampReq(reqHex) {
 
 /**
  * parse hexadecimal string of MessageImprint
- * @param {string} hexadecimal string of MessageImprint
+ * @param {string} miHex hexadecimal string of MessageImprint
  * @return {Dictionary} JSON object of parsed parameters
  * @description
  * This method parses a hexadecimal string of MessageImprint
@@ -809,8 +809,8 @@ export function parseMessageImprint(miHex) {
 	let hashAlg = hashAlgName;
 	let hashValueIdx = getIdxbyList(miHex, 0, [1]);
 
-	json.hashAlg = hashAlg;
-	json.hashValue = getV(miHex, hashValueIdx);
+	json['hashAlg'] = hashAlg;
+	json['hashValue'] = getV(miHex, hashValueIdx);
 
 	return json;
 }

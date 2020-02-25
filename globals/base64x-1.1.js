@@ -172,9 +172,18 @@ export function b64utohex(s) {
  * @return {string} Base64URL encoded string
  */
 export let utf8tob64u = (typeof Buffer === 'function') ?
+	/**
+	 * @param {string} s UTF-8 encoded string
+	 * @return {string} Base64URL encoded string
+	 */
 	function (s) {
 		return b64tob64u(new Buffer(s, 'utf8').toString('base64'));
-	} : function (s) {
+	} :
+	/**
+	 * @param {string} s UTF-8 encoded string
+	 * @return {string} Base64URL encoded string
+	 */
+	function (s) {
 		return hextob64u(uricmptohex(encodeURIComponentAll(s)));
 	};
 
@@ -184,9 +193,18 @@ export let utf8tob64u = (typeof Buffer === 'function') ?
  * @return {string} UTF-8 encoded string
  */
 export let b64utoutf8 = (typeof Buffer === 'function') ?
+	/**
+	 * @param {string} s Base64URL encoded string
+	 * @return {string} UTF-8 encoded string
+	 */
 	function (s) {
 		return new Buffer(b64utob64(s), 'base64').toString('utf8');
-	} : function (s) {
+	} :
+	/**
+	 * @param {string} s Base64URL encoded string
+	 * @return {string} UTF-8 encoded string
+	 */
+	function (s) {
 		return decodeURIComponent(hextouricmp(b64utohex(s)));
 	};
 

@@ -378,7 +378,7 @@ export function oidIntToHex(oidString) {
 export class ASN1Object {
 	constructor() {
 		/** @protected */ this.isModified = true;
-		/** @protected @type {string | null} */ this.hTLV = null;
+		/** @type {string | null} */ this.hTLV = null;
 		/** @protected @type {string} */ this.hT = '00';
 		/** @protected @type {string} */ this.hL = '00';
 		/** @protected @type {string} */ this.hV = '';

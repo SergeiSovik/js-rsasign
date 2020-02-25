@@ -55,6 +55,7 @@ export class JWSJS {
 		/** @type {Array<string>} */ this.aHeader = [];
 		/** @type {string | null} */ this.sPayload = null;
 		/** @type {Array<string>} */ this.aSignature = [];
+		/** @type {Dictionary | null} */ this.aSignatures = null;
 	}
 
     /**
@@ -203,23 +204,23 @@ export class JWSJS {
 			let oJWSJS = readSafeJSONString(spJWSJS);
 			if (oJWSJS == null) throw "argument is not safe JSON object string";
 
-			this.aHeader = oJWSJS.headers;
-			this.sPayload = oJWSJS.payload;
-			this.aSignature = oJWSJS.signatures;
+			this.aHeader = oJWSJS['headers'];
+			this.sPayload = oJWSJS['payload'];
+			this.aSignature = oJWSJS['signatures'];
 		} else {
 			try {
-				if (spJWSJS.headers.length > 0) {
-					this.aHeader = spJWSJS.headers;
+				if (spJWSJS['headers'].length > 0) {
+					this.aHeader = spJWSJS['headers'];
 				} else {
 					throw "malformed header";
 				}
-				if (typeof spJWSJS.payload === "string") {
-					this.sPayload = spJWSJS.payload;
+				if (typeof spJWSJS['payload'] === "string") {
+					this.sPayload = spJWSJS['payload'];
 				} else {
 					throw "malformed signatures";
 				}
-				if (spJWSJS.signatures.length > 0) {
-					this.aSignatures = spJWSJS.signatures;
+				if (spJWSJS['signatures'].length > 0) {
+					this.aSignatures = spJWSJS['signatures'];
 				} else {
 					throw "malformed signatures";
 				}

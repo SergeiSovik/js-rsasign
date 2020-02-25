@@ -77,26 +77,27 @@ export class CertID extends ASN1Object {
 	 * @param {Dictionary} params dictionary of parameters
 	 */
 	constructor(params) {
-		super(params);
+		super();
 
 		/** @type {AlgorithmIdentifier | null} */ this.dHashAlg = null;
 		/** @type {DEROctetString | null} */ this.dIssuerNameHash = null;
 		/** @type {DEROctetString | null} */ this.dIssuerKeyHash = null;
 		/** @type {DERInteger | null} */ this.dSerialNumber = null;
+		/** @type {string | null} */ this.hoge = null;
 
 		if (params !== undefined) {
 			let p = params;
-			if (p.issuerCert !== undefined &&
-				p.subjectCert !== undefined) {
+			if (p['issuerCert'] !== undefined &&
+				p['subjectCert'] !== undefined) {
 				let alg = DEFAULT_HASH;
-				if (p.alg === undefined) alg = undefined;
-				this.setByCert(p.issuerCert, p.subjectCert, alg);
-			} else if (p.namehash !== undefined &&
-				p.keyhash !== undefined &&
-				p.serial !== undefined) {
+				if (p['alg'] === undefined) alg = undefined;
+				this.setByCert(p['issuerCert'], p['subjectCert'], alg);
+			} else if (p['namehash'] !== undefined &&
+				p['keyhash'] !== undefined &&
+				p['serial'] !== undefined) {
 				let alg = DEFAULT_HASH;
-				if (p.alg === undefined) alg = undefined;
-				this.setByValue(p.namehash, p.keyhash, p.serial, alg);
+				if (p['alg'] === undefined) alg = undefined;
+				this.setByValue(p['namehash'], p['keyhash'], p['serial'], alg);
 			} else {
 				throw "invalid constructor arguments";
 			}
@@ -108,7 +109,7 @@ export class CertID extends ASN1Object {
      * @param {string} issuerNameHashHex hexadecimal string of hash value of issuer name
      * @param {string} issuerKeyHashHex hexadecimal string of hash value of issuer public key
      * @param {string} serialNumberHex hexadecimal string of certificate serial number to be verified
-     * @param {string} algName hash algorithm name used for above arguments (ex. "sha1") DEFAULT: sha1
+     * @param {string=} algName hash algorithm name used for above arguments (ex. "sha1") DEFAULT: sha1
      * @example
      * o = new CertID();
      * o.setByValue("1fac...", "fd3a...", "1234"); // sha1 is used by default
@@ -117,17 +118,17 @@ export class CertID extends ASN1Object {
 	setByValue(issuerNameHashHex, issuerKeyHashHex,
 		serialNumberHex, algName) {
 		if (algName === undefined) algName = DEFAULT_HASH;
-		this.dHashAlg = new AlgorithmIdentifier({ name: algName });
-		this.dIssuerNameHash = new DEROctetString({ hex: issuerNameHashHex });
-		this.dIssuerKeyHash = new DEROctetString({ hex: issuerKeyHashHex });
-		this.dSerialNumber = new DERInteger({ hex: serialNumberHex });
+		this.dHashAlg = new AlgorithmIdentifier(/** @type {Dictionary} */ ( { 'name': algName } ));
+		this.dIssuerNameHash = new DEROctetString(/** @type {Dictionary} */ ( { 'hex': issuerNameHashHex } ));
+		this.dIssuerKeyHash = new DEROctetString(/** @type {Dictionary} */ ( { 'hex': issuerKeyHashHex } ));
+		this.dSerialNumber = new DERInteger(/** @type {Dictionary} */ ( { 'hex': serialNumberHex } ));
 	}
 
     /**
      * set CertID ASN.1 object by PEM certificates.<br/>
      * @param {string} issuerCert string of PEM issuer certificate
      * @param {string} subjectCert string of PEM subject certificate to be verified by OCSP
-     * @param {string} algName hash algorithm name used for above arguments (ex. "sha1") DEFAULT: sha1
+     * @param {string=} algName hash algorithm name used for above arguments (ex. "sha1") DEFAULT: sha1
      * @example
      * o = new CertID();
      * o.setByCert("-----BEGIN...", "-----BEGIN..."); // sha1 is used by default
@@ -142,10 +143,14 @@ export class CertID extends ASN1Object {
 		xIss.readCertPEM(issuerCert);
 
 		let hISS_SPKI = xIss.getPublicKeyHex();
+		if (hISS_SPKI === null) return;
 		let issuerKeyHex = getTLVbyList(hISS_SPKI, 0, [1, 0], "30");
 
 		let serialNumberHex = xSbj.getSerialNumberHex();
-		let issuerNameHashHex = hashHex(xIss.getSubjectHex(), algName);
+		if (serialNumberHex === null) return;
+		let sSubjectHex = xIss.getSubjectHex();
+		if (sSubjectHex === null) return;
+		let issuerNameHashHex = hashHex(sSubjectHex, algName);
 		let issuerKeyHashHex = hashHex(issuerKeyHex, algName);
 		this.setByValue(issuerNameHashHex, issuerKeyHashHex,
 			serialNumberHex, algName);
@@ -165,7 +170,7 @@ export class CertID extends ASN1Object {
 
 		let a = [this.dHashAlg, this.dIssuerNameHash,
 		this.dIssuerKeyHash, this.dSerialNumber];
-		let seq = new DERSequence({ array: a });
+		let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': a } ));
 		this.hTLV = seq.getEncodedHex();
 		return this.hTLV;
 	}
@@ -223,7 +228,7 @@ export class Request extends ASN1Object {
 		// 2. singleRequestExtensions (not supported yet)
 
 		// 3. construct SEQUENCE
-		let seq = new DERSequence({ array: a });
+		let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': a } ));
 		this.hTLV = seq.getEncodedHex();
 		return this.hTLV;
 	}
@@ -255,7 +260,7 @@ export class TBSRequest extends ASN1Object {
 	 * @param {Dictionary} params dictionary of parameters
 	 */
 	constructor(params) {
-		super(params);
+		super();
 
 		/** @type {number} */ this.version = 0;
 		/** @type {string | null} */ this.dRequestorName = null;
@@ -304,7 +309,7 @@ export class TBSRequest extends ASN1Object {
 
 		// 3. requestList
 		let seqRequestList =
-			new DERSequence({ array: this.dRequestList });
+			new DERSequence(/** @type {Dictionary} */ ( { 'array': this.dRequestList } ));
 		a.push(seqRequestList);
 
 		// 4. requestExtensions
@@ -312,7 +317,7 @@ export class TBSRequest extends ASN1Object {
 			throw "requestExtensions not supported";
 
 		// 5. construct SEQUENCE
-		let seq = new DERSequence({ array: a });
+		let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': a } ));
 		this.hTLV = seq.getEncodedHex();
 		return this.hTLV;
 	}
@@ -343,7 +348,7 @@ export class OCSPRequest extends ASN1Object {
 	 * @param {Dictionary} params dictionary of parameters
 	 */
 	constructor(params) {
-		super(params);
+		super();
 
 		/** @type {TBSRequest | null} */ this.dTbsRequest = null;
 		/** @type {null} */ this.dOptionalSignature = null;
@@ -375,7 +380,7 @@ export class OCSPRequest extends ASN1Object {
 			throw "optionalSignature not supported";
 
 		// 3. construct SEQUENCE
-		let seq = new DERSequence({ array: a });
+		let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': a } ));
 		this.hTLV = seq.getEncodedHex();
 		return this.hTLV;
 	}
@@ -385,7 +390,7 @@ export class OCSPRequest extends ASN1Object {
  * generates hexadecimal string of OCSP request<br/>
  * @param {string} issuerCert string of PEM issuer certificate
  * @param {string} subjectCert string of PEM subject certificate to be verified by OCSP
- * @param {string} algName hash algorithm name used for above arguments (ex. "sha1") DEFAULT: sha1
+ * @param {string=} alg hash algorithm name used for above arguments (ex. "sha1") DEFAULT: sha1
  * @return {string} hexadecimal string of generated OCSP request
  * @description
  * This static method generates hexadecimal string of OCSP request.
@@ -395,8 +400,8 @@ export class OCSPRequest extends ASN1Object {
  */
 export function getRequestHex(issuerCert, subjectCert, alg) {
 	if (alg === undefined) alg = DEFAULT_HASH;
-	let param = { alg: alg, issuerCert: issuerCert, subjectCert: subjectCert };
-	let o = new OCSPRequest({ reqList: [param] });
+	let param = /** @type {Dictionary} */ ( { 'alg': alg, 'issuerCert': issuerCert, 'subjectCert': subjectCert } );
+	let o = new OCSPRequest(/** @type {Dictionary} */ ( { 'reqList': [param] } ));
 	return o.getEncodedHex();
 }
 
@@ -421,36 +426,34 @@ export function getOCSPResponseInfo(h) {
 	let result = /** @type {Dictionary} */ ( {} );
 	try {
 		let v = getVbyList(h, 0, [0], "0a");
-		result.responseStatus = parseInt(v, 16);
+		result['responseStatus'] = parseInt(v, 16);
 	} catch (ex) { };
-	if (result.responseStatus !== 0) return result;
+	if (result['responseStatus'] !== 0) return result;
 
 	try {
 		// certStatus
 		let idxCertStatus = getIdxbyList(h, 0, [1, 0, 1, 0, 0, 2, 0, 1]);
 		if (h.substr(idxCertStatus, 2) === "80") {
-			result.certStatus = "good";
+			result['certStatus'] = "good";
 		} else if (h.substr(idxCertStatus, 2) === "a1") {
-			result.certStatus = "revoked";
-			result.revocationTime =
-				hextoutf8(getVbyList(h, idxCertStatus, [0]));
+			result['certStatus'] = "revoked";
+			result['revocationTime'] = hextoutf8(getVbyList(h, idxCertStatus, [0]));
 		} else if (h.substr(idxCertStatus, 2) === "82") {
-			result.certStatus = "unknown";
+			result['certStatus'] = "unknown";
 		}
 	} catch (ex) { };
 
 	// thisUpdate
 	try {
 		let idxThisUpdate = getIdxbyList(h, 0, [1, 0, 1, 0, 0, 2, 0, 2]);
-		result.thisUpdate = hextoutf8(getV(h, idxThisUpdate));
+		result['thisUpdate'] = hextoutf8(getV(h, idxThisUpdate));
 	} catch (ex) { };
 
 	// nextUpdate
 	try {
 		let idxEncapNextUpdate = getIdxbyList(h, 0, [1, 0, 1, 0, 0, 2, 0, 3]);
 		if (h.substr(idxEncapNextUpdate, 2) === "a0") {
-			result.nextUpdate =
-				hextoutf8(getVbyList(h, idxEncapNextUpdate, [0]));
+			result['nextUpdate'] = hextoutf8(getVbyList(h, idxEncapNextUpdate, [0]));
 		}
 	} catch (ex) { };
 

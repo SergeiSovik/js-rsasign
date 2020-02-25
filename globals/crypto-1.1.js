@@ -968,7 +968,7 @@ export class Signature {
 
     /**
      * Initialize this object for signing or verifying depends on key
-     * @param {KeyObject | string} key specifying public or private key as plain/encrypted PKCS#5/8 PEM file, certificate PEM or {@link RSAKeyEx}, {@link DSA} or {@link ECDSA} object
+     * @param {KeyObject | string | Dictionary} key specifying public or private key as plain/encrypted PKCS#5/8 PEM file, certificate PEM or {@link RSAKeyEx}, {@link DSA} or {@link ECDSA} object
      * @param {string=} pass (OPTION) passcode for encrypted private key
      * @description
      * This method is very useful initialize method for Signature class since
