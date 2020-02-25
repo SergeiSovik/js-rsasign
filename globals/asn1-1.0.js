@@ -16,7 +16,7 @@
 import { BigInteger } from "./../../js-bn/modules/jsbn.js"
 import { hextopem, utf8tohex, stohex } from "./base64x-1.1.js"
 import { name2oid } from "./asn1oid.js"
-import { isString, isDictionary, isListOfDictionaries } from "./../../../include/type.js"
+import { Dictionary, isString, isDictionary, isListOfDictionaries } from "./../../../include/type.js"
 
 /** 
  * <p>
@@ -145,7 +145,7 @@ export function getPEMStringFromHex(dataHex, pemHeader) {
 
 /**
  * generate ASN1Object specifed by JSON parameters
- * @param {Object<string,*> | null} param JSON parameter to generate ASN1Object
+ * @param {Dictionary | null} param JSON parameter to generate ASN1Object
  * @return {ASN1Object} generated object
  * @description
  * generate any ASN1Object specified by JSON param
@@ -201,39 +201,39 @@ export function newObject(param) {
 
 	let val = param[key];
 
-	if ((key == "bool") && (typeof val === 'boolean' || isDictionary(val))) return new DERBoolean(/** @type {Object<string,*> | boolean} */ ( val ));
-	if ((key == "int") && (typeof val === 'number' || isDictionary(val))) return new DERInteger(/** @type {Object<string,*> | number} */ ( val ));
-	if ((key == "bitstr") && (typeof val === 'string' || isDictionary(val))) return new DERBitString(/** @type {Object<string,*> | string} */ ( val ));
-	if ((key == "octstr") && (typeof val === 'string' || isDictionary(val))) return new DEROctetString(/** @type {Object<string,*> | string} */ ( val ));
+	if ((key == "bool") && (typeof val === 'boolean' || isDictionary(val))) return new DERBoolean(/** @type {Dictionary | boolean} */ ( val ));
+	if ((key == "int") && (typeof val === 'number' || isDictionary(val))) return new DERInteger(/** @type {Dictionary | number} */ ( val ));
+	if ((key == "bitstr") && (typeof val === 'string' || isDictionary(val))) return new DERBitString(/** @type {Dictionary | string} */ ( val ));
+	if ((key == "octstr") && (typeof val === 'string' || isDictionary(val))) return new DEROctetString(/** @type {Dictionary | string} */ ( val ));
 	if ((key == "null")) return new DERNull();
-	if ((key == "oid") && (typeof val === 'string' || isDictionary(val))) return new DERObjectIdentifier(/** @type {Object<string,*> | string} */ ( val ));
-	if ((key == "enum") && (typeof val === 'number' || isDictionary(val))) return new DEREnumerated(/** @type {Object<string,*> | number} */ ( val ));
-	if ((key == "utf8str") && (typeof val === 'string' || isDictionary(val))) return new DERUTF8String(/** @type {Object<string,*> | string} */ ( val ));
-	if ((key == "numstr") && (typeof val === 'string' || isDictionary(val))) return new DERNumericString(/** @type {Object<string,*> | string} */ ( val ));
-	if ((key == "prnstr") && (typeof val === 'string' || isDictionary(val))) return new DERPrintableString(/** @type {Object<string,*> | string} */ ( val ));
-	if ((key == "telstr") && (typeof val === 'string' || isDictionary(val))) return new DERTeletexString(/** @type {Object<string,*> | string} */ ( val ));
-	if ((key == "ia5str") && (typeof val === 'string' || isDictionary(val))) return new DERIA5String(/** @type {Object<string,*> | string} */ ( val ));
-	if ((key == "utctime") && (typeof val === 'string' || isDictionary(val))) return new DERUTCTime(/** @type {Object<string,*> | string} */ ( val ));
-	if ((key == "gentime") && (typeof val === 'string' || isDictionary(val))) return new DERGeneralizedTime(/** @type {Object<string,*> | string} */ ( val ));
+	if ((key == "oid") && (typeof val === 'string' || isDictionary(val))) return new DERObjectIdentifier(/** @type {Dictionary | string} */ ( val ));
+	if ((key == "enum") && (typeof val === 'number' || isDictionary(val))) return new DEREnumerated(/** @type {Dictionary | number} */ ( val ));
+	if ((key == "utf8str") && (typeof val === 'string' || isDictionary(val))) return new DERUTF8String(/** @type {Dictionary | string} */ ( val ));
+	if ((key == "numstr") && (typeof val === 'string' || isDictionary(val))) return new DERNumericString(/** @type {Dictionary | string} */ ( val ));
+	if ((key == "prnstr") && (typeof val === 'string' || isDictionary(val))) return new DERPrintableString(/** @type {Dictionary | string} */ ( val ));
+	if ((key == "telstr") && (typeof val === 'string' || isDictionary(val))) return new DERTeletexString(/** @type {Dictionary | string} */ ( val ));
+	if ((key == "ia5str") && (typeof val === 'string' || isDictionary(val))) return new DERIA5String(/** @type {Dictionary | string} */ ( val ));
+	if ((key == "utctime") && (typeof val === 'string' || isDictionary(val))) return new DERUTCTime(/** @type {Dictionary | string} */ ( val ));
+	if ((key == "gentime") && (typeof val === 'string' || isDictionary(val))) return new DERGeneralizedTime(/** @type {Dictionary | string} */ ( val ));
 
 	if ((key == "seq") && isListOfDictionaries(val)) {
-		let paramList = /** @type {Array<Object<string,*>>} */ ( param[key] );
+		let paramList = /** @type {Array<Dictionary>} */ ( param[key] );
 		/** @type {Array<ASN1Object>} */ let a = [];
 		for (let i = 0; i < paramList.length; i++) {
 			let asn1Obj = newObject(paramList[i]);
 			a.push(asn1Obj);
 		}
-		return new DERSequence({ 'array': a });
+		return new DERSequence(/** @type {Dictionary} */ ( { 'array': a } ));
 	}
 
 	if ((key == "set") && isListOfDictionaries(val)) {
-		let paramList = /** @type {Array<Object<string,*>>} */ ( param[key] );
+		let paramList = /** @type {Array<Dictionary>} */ ( param[key] );
 		/** @type {Array<ASN1Object>} */ let a = [];
 		for (let i = 0; i < paramList.length; i++) {
 			let asn1Obj = newObject(paramList[i]);
 			a.push(asn1Obj);
 		}
-		return new DERSet({ 'array': a });
+		return new DERSet(/** @type {Dictionary} */ ( { 'array': a } ));
 	}
 
 	if (key == "tag") {
@@ -241,22 +241,22 @@ export function newObject(param) {
 		if (Object.prototype.toString.call(tagParam) === '[object Array]' && tagParam.length == 3) {
 			let aTagParam = /** @type {Array} */ ( tagParam );
 			if (isDictionary(aTagParam[2])) {
-				let obj = newObject(/** @type {Object<string,*>} */ ( aTagParam[2] ));
-				return new DERTaggedObject({
+				let obj = newObject(/** @type {Dictionary} */ ( aTagParam[2] ));
+				return new DERTaggedObject(/** @type {Dictionary} */ ( {
 					'tag': aTagParam[0],
 					'explicit': aTagParam[1],
 					'obj': obj
-				});
+				} ));
 			}
 		} else {
-			/** @type {Object<string,*>} */ let newParam = {};
+			let newParam = /** @type {Dictionary} */ ( {} );
 			if (tagParam['explicit'] !== undefined)
 				newParam['explicit'] = tagParam['explicit'];
 			if (tagParam['tag'] !== undefined)
 				newParam['tag'] = tagParam['tag'];
 			if (!isDictionary(tagParam['obj']))
 				throw "obj shall be specified for 'tag'.";
-			newParam['obj'] = newObject(/** @type {Object<string,*>} */ ( tagParam['obj'] ));
+			newParam['obj'] = newObject(/** @type {Dictionary} */ ( tagParam['obj'] ));
 			return new DERTaggedObject(newParam);
 		}
 	}
@@ -266,7 +266,7 @@ export function newObject(param) {
 
 /**
  * get encoded hexadecimal string of ASN1Object specifed by JSON parameters
- * @param {Object<string,*>} param JSON parameter to generate ASN1Object
+ * @param {Dictionary} param JSON parameter to generate ASN1Object
  * @return {string} hexadecimal string of ASN1Object
  * @description
  * As for ASN.1 object representation of JSON object,
@@ -457,7 +457,7 @@ export class ASN1Object {
  */
 export class DERAbstractString extends ASN1Object {
 	/**
-	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 * @param {(Dictionary | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
 	 */
 	constructor(params) {
 		super();
@@ -638,7 +638,7 @@ export class DERAbstractTime extends ASN1Object {
  */
 export class DERAbstractStructured extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params
+	 * @param {Dictionary=} params
 	 */
 	constructor(params) {
 		super();
@@ -678,7 +678,7 @@ export class DERAbstractStructured extends ASN1Object {
  */
 export class DERBoolean extends ASN1Object {
 	/**
-	 * @param {(Object<string,*> | boolean)=} params
+	 * @param {(Dictionary | boolean)=} params
 	 */
 	constructor(params) {
 		super();
@@ -745,7 +745,7 @@ export class DERBoolean extends ASN1Object {
  */
 export class DERInteger extends ASN1Object {
 	/**
-	 * @param {(Object<string,*> | number)=} params
+	 * @param {(Dictionary | number)=} params
 	 */
 	constructor(params) {
 		super();
@@ -845,7 +845,7 @@ export class DERInteger extends ASN1Object {
  */
 export class DERBitString extends ASN1Object {
 	/**
-	 * @param {(Object<string,*> | string)=} params
+	 * @param {(Dictionary | string)=} params
 	 */
 	constructor(params) {
 		if (params !== undefined && typeof params['obj'] !== "undefined") {
@@ -1003,7 +1003,7 @@ export class DERBitString extends ASN1Object {
  */
 export class DEROctetString extends DERAbstractString {
 	/**
-	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 * @param {(Dictionary | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
 	 */
 	constructor(params) {
 		if (params !== undefined && typeof params['obj'] !== "undefined") {
@@ -1043,7 +1043,7 @@ export class DERNull extends ASN1Object {
  */
 export class DERObjectIdentifier extends ASN1Object {
 	/**
-	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'oid': '2.5.4.5'})
+	 * @param {(Dictionary | string)=} params dictionary of parameters (ex. {'oid': '2.5.4.5'})
 	 */
 	constructor(params) {
 		super();
@@ -1146,7 +1146,7 @@ export class DERObjectIdentifier extends ASN1Object {
  */
 export class DEREnumerated extends ASN1Object {
 	/**
-	 * @param {(Object<string,*> | number)=} params 
+	 * @param {(Dictionary | number)=} params 
 	 */
 	constructor(params) {
 		super();
@@ -1207,7 +1207,7 @@ export class DEREnumerated extends ASN1Object {
  */
 export class DERUTF8String extends DERAbstractString {
 	/**
-	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 * @param {(Dictionary | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
 	 */
 	constructor(params) {
 		super(params);
@@ -1222,7 +1222,7 @@ export class DERUTF8String extends DERAbstractString {
  */
 export class DERNumericString extends DERAbstractString {
 	/**
-	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 * @param {(Dictionary | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
 	 */
 	constructor(params) {
 		super(params);
@@ -1237,7 +1237,7 @@ export class DERNumericString extends DERAbstractString {
  */
 export class DERPrintableString extends DERAbstractString {
 	/**
-	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 * @param {(Dictionary | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
 	 */
 	constructor(params) {
 		super(params);
@@ -1252,7 +1252,7 @@ export class DERPrintableString extends DERAbstractString {
  */
 export class DERTeletexString extends DERAbstractString {
 	/**
-	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 * @param {(Dictionary | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
 	 */
 	constructor(params) {
 		super(params);
@@ -1267,7 +1267,7 @@ export class DERTeletexString extends DERAbstractString {
  */
 export class DERIA5String extends DERAbstractString {
 	/**
-	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
+	 * @param {(Dictionary | string)=} params dictionary of parameters (ex. {'str': 'aaa'})
 	 */
 	constructor(params) {
 		super(params);
@@ -1299,7 +1299,7 @@ export class DERIA5String extends DERAbstractString {
  */
 export class DERUTCTime extends DERAbstractTime {
 	/**
-	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': '130430235959Z'})
+	 * @param {(Dictionary | string)=} params dictionary of parameters (ex. {'str': '130430235959Z'})
 	 */
 	constructor(params) {
 		super();
@@ -1364,7 +1364,7 @@ export class DERUTCTime extends DERAbstractTime {
  */
 export class DERGeneralizedTime extends DERAbstractTime {
 	/**
-	 * @param {(Object<string,*> | string)=} params dictionary of parameters (ex. {'str': '20130430235959Z'})
+	 * @param {(Dictionary | string)=} params dictionary of parameters (ex. {'str': '20130430235959Z'})
 	 */
 	constructor(params) {
 		super();
@@ -1431,7 +1431,7 @@ export class DERGeneralizedTime extends DERAbstractTime {
  */
 export class DERSequence extends DERAbstractStructured {
 	/**
-	 * @param {Object<string,*>=} params
+	 * @param {Dictionary=} params
 	 */
 	constructor(params) {
 		super(params);
@@ -1466,7 +1466,7 @@ export class DERSequence extends DERAbstractStructured {
  */
 export class DERSet extends DERAbstractStructured {
 	/**
-	 * @param {Object<string,*>=} params
+	 * @param {Dictionary=} params
 	 */
 	constructor(params) {
 		super(params);
@@ -1517,7 +1517,7 @@ export class DERSet extends DERAbstractStructured {
  */
 export class DERTaggedObject extends ASN1Object {
 	/**
-	 * @param {Object<string,*>} params 
+	 * @param {Dictionary} params 
 	 */
 	constructor(params) {
 		super();

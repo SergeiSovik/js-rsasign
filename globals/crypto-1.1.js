@@ -32,7 +32,7 @@ import { b64tohex } from "./../../js-bn/modules/base64.js"
 import { KeyObject, getKey } from "./keyutil-1.0.js"
 import { ECDSA } from "./ecdsa-modified-1.0.js"
 import { RSAKeyEx } from "./rsaex.js"
-import { isString, isDictionary, isNumber } from "./../../../include/type.js"
+import { Dictionary, isString, isDictionary, isNumber } from "./../../../include/type.js"
 
 /**
  * Cryptographic algorithm provider library module
@@ -173,7 +173,7 @@ export function getPaddedDigestInfoHex(hHash, alg, keySize) {
  * @return {string} hexadecimal string of hash value
  */
 export function hashString(s, alg) {
-	let md = new MessageDigest({ 'alg': alg });
+	let md = new MessageDigest(/** @type {Dictionary} */ ( { 'alg': alg } ));
 	return md.digestString(s);
 }
 
@@ -184,7 +184,7 @@ export function hashString(s, alg) {
  * @return {string} hexadecimal string of hash value
  */
 export function hashHex(sHex, alg) {
-	let md = new MessageDigest({ 'alg': alg });
+	let md = new MessageDigest(/** @type {Dictionary} */ ( { 'alg': alg } ));
 	return md.digestHex(sHex);
 }
 
@@ -194,7 +194,7 @@ export function hashHex(sHex, alg) {
  * @return {string} hexadecimal string of hash value
  */
 export function sha1(s) {
-	let md = new MessageDigest({ 'alg': 'sha1', 'prov': 'cryptojs' });
+	let md = new MessageDigest(/** @type {Dictionary} */ ( { 'alg': 'sha1', 'prov': 'cryptojs' } ));
 	return md.digestString(s);
 }
 
@@ -204,12 +204,12 @@ export function sha1(s) {
  * @return {string} hexadecimal string of hash value
  */
 export function sha256(s) {
-	let md = new MessageDigest({ 'alg': 'sha256', 'prov': 'cryptojs' });
+	let md = new MessageDigest(/** @type {Dictionary} */ ( { 'alg': 'sha256', 'prov': 'cryptojs' } ));
 	return md.digestString(s);
 }
 
 export function sha256Hex(s) {
-	let md = new MessageDigest({ 'alg': 'sha256', 'prov': 'cryptojs' });
+	let md = new MessageDigest(/** @type {Dictionary} */ ( { 'alg': 'sha256', 'prov': 'cryptojs' } ));
 	return md.digestHex(s);
 }
 
@@ -219,12 +219,12 @@ export function sha256Hex(s) {
  * @return {string} hexadecimal string of hash value
  */
 export function sha512(s) {
-	let md = new MessageDigest({ 'alg': 'sha512', 'prov': 'cryptojs' });
+	let md = new MessageDigest(/** @type {Dictionary} */ ( { 'alg': 'sha512', 'prov': 'cryptojs' } ));
 	return md.digestString(s);
 }
 
 export function sha512Hex(s) {
-	let md = new MessageDigest({ 'alg': 'sha512', 'prov': 'cryptojs' });
+	let md = new MessageDigest(/** @type {Dictionary} */ ( { 'alg': 'sha512', 'prov': 'cryptojs' } ));
 	return md.digestHex(s);
 }
 
@@ -236,7 +236,7 @@ export function sha512Hex(s) {
  * md5('aaa') &rarr; 47bce5c74f589f4867dbd57e9ca9f808
  */
 export function md5(s) {
-	let md = new MessageDigest({ 'alg': 'md5', 'prov': 'cryptojs' });
+	let md = new MessageDigest(/** @type {Dictionary} */ ( { 'alg': 'md5', 'prov': 'cryptojs' } ));
 	return md.digestString(s);
 }
 
@@ -248,7 +248,7 @@ export function md5(s) {
  * ripemd160("aaa") &rarr; 08889bd7b151aa174c21f33f59147fa65381edea
  */
 export function ripemd160(s) {
-	let md = new MessageDigest({ 'alg': 'ripemd160', 'prov': 'cryptojs' });
+	let md = new MessageDigest(/** @type {Dictionary} */ ( { 'alg': 'ripemd160', 'prov': 'cryptojs' } ));
 	return md.digestString(s);
 }
 
@@ -395,7 +395,7 @@ export const HASHLENGTH = {
  */
 export class MessageDigest {
 	/**
-	 * @param {Object<string,*>=} params 
+	 * @param {Dictionary=} params 
 	 */
 	constructor(params) {
 		/** @type {Hasher | null} */ this.md = null;
@@ -597,7 +597,7 @@ export class MessageDigest {
  */
 export class Mac {
 	/**
-	 * @param {Object<string,*>=} params 
+	 * @param {Dictionary=} params 
 	 */
 	constructor(params) {
 		/** @type {HMAC | null} */ this.mac = null;
@@ -608,7 +608,7 @@ export class Mac {
 
 		if (params !== undefined) {
 			if (isString(params['pass']) || isDictionary(params['pass'])) {
-				this.setPassword(/** @type {string | Object<string,*>} */ ( params['pass'] ));
+				this.setPassword(/** @type {string | Dictionary} */ ( params['pass'] ));
 			}
 			if (isString(params['alg'])) {
 				this.algName = /** @type {string} */ ( params['alg'] );
@@ -867,7 +867,7 @@ export class Mac {
  */
 export class Signature {
 	/**
- 	 * @param {Object<string,*>=} params parameters for constructor
+ 	 * @param {Dictionary=} params parameters for constructor
 	 */
 	constructor(params) {
 		/** @type {KeyObject | null} */ this.prvKey = null; // RSAKeyEx/ECDSA/DSA object for signing
@@ -887,7 +887,7 @@ export class Signature {
 		/** @type {string | null} */ this.hPaddedDigestInfo = null;
 		/** @type {string | null} */ this.hSign = null;
 
-		/** @type {Object<string,*> | undefined} */ this.initParams = params;
+		/** @type {Dictionary | undefined} */ this.initParams = params;
 
 		if (params !== undefined) {
 			if (isString(params['alg'])) {
@@ -910,7 +910,7 @@ export class Signature {
 					throw "both prvkeypem and prvkeypas parameters not supported";
 				} else {
 					try {
-						let prvKey = getKey(/** @type {string | KeyObject | Object<string,*>} */ ( params['prvkeypem'] ));
+						let prvKey = getKey(/** @type {string | KeyObject | Dictionary} */ ( params['prvkeypem'] ));
 						this.init(prvKey);
 					} catch (ex) {
 						throw "fatal error to load pem private key: " + ex;
@@ -958,7 +958,7 @@ export class Signature {
 
 		if (':md5:sha1:sha224:sha256:sha384:sha512:ripemd160:'.indexOf(this.mdAlgName) != -1) {
 			try {
-				this.md = new MessageDigest({ 'alg': this.mdAlgName });
+				this.md = new MessageDigest(/** @type {Dictionary} */ ( { 'alg': this.mdAlgName } ));
 			} catch (ex) {
 				throw "setAlgAndProvider hash alg set fail alg=" +
 				this.mdAlgName + "/" + ex;
@@ -1065,7 +1065,7 @@ export class Signature {
 		this.sHashHex = /** @type {string} */ ( this.md.digest() );
 		if (typeof this.ecprvhex != "undefined" &&
 			typeof this.eccurvename != "undefined") {
-			let ec = new ECDSA({ 'curve': this.eccurvename });
+			let ec = new ECDSA(/** @type {Dictionary} */ ( { 'curve': this.eccurvename } ));
 			this.hSign = ec.signHex(this.sHashHex, this.ecprvhex);
 		} else if (this.prvKey instanceof RSAKeyEx &&
 			this.pubkeyAlgName === "rsaandmgf1") {
@@ -1133,7 +1133,7 @@ export class Signature {
 		this.sHashHex = /** @type {string} */ ( this.md.digest() );
 		if (typeof this.ecpubhex != "undefined" &&
 			typeof this.eccurvename != "undefined") {
-			let ec = new ECDSA({ curve: this.eccurvename });
+			let ec = new ECDSA(/** @type {Dictionary} */ ( { 'curve': this.eccurvename } ));
 			return ec.verifyHex(this.sHashHex, hSigVal, this.ecpubhex);
 		} else if (this.pubKey instanceof RSAKeyEx &&
 			this.pubkeyAlgName === "rsaandmgf1") {

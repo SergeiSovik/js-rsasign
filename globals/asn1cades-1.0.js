@@ -17,6 +17,7 @@ import { DEROctetString, DERObjectIdentifier, DERSequence } from "./asn1-1.0.js"
 import { AlgorithmIdentifier } from "./asn1x509-1.0.js"
 import { hashHex } from "./crypto-1.1.js"
 import { getChildIdx, getTLV, getTLVbyList, getIdxbyList, getV } from "./asn1hex-1.1.js"
+import { Dictionary } from "./../../../include/type.js"
 
 /**
  * @fileOverview
@@ -188,7 +189,7 @@ if (typeof KJUR.asn1.cades == "undefined" || !KJUR.asn1.cades) KJUR.asn1.cades =
 
 /**
  * class for RFC 5126 CAdES SignaturePolicyIdentifier attribute
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * SignaturePolicyIdentifier ::= CHOICE {
@@ -273,7 +274,7 @@ YAHOO.lang.extend(KJUR.asn1.cades.SignaturePolicyIdentifier,
 
 /**
  * class for OtherHashAlgAndValue ASN.1 object
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * OtherHashAlgAndValue ::= SEQUENCE {
@@ -315,7 +316,7 @@ YAHOO.lang.extend(KJUR.asn1.cades.OtherHashAlgAndValue, KJUR.asn1.ASN1Object);
 
 /**
  * class for RFC 5126 CAdES SignatureTimeStamp attribute
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * id-aa-signatureTimeStampToken OBJECT IDENTIFIER ::=
@@ -363,7 +364,7 @@ YAHOO.lang.extend(KJUR.asn1.cades.SignatureTimeStamp,
 
 /**
  * class for RFC 5126 CAdES CompleteCertificateRefs attribute
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * id-aa-ets-certificateRefs OBJECT IDENTIFIER = 
@@ -407,7 +408,7 @@ YAHOO.lang.extend(KJUR.asn1.cades.CompleteCertificateRefs,
 
 /**
  * class for OtherCertID ASN.1 object
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * OtherCertID ::= SEQUENCE {
@@ -475,7 +476,7 @@ YAHOO.lang.extend(KJUR.asn1.cades.OtherCertID, KJUR.asn1.ASN1Object);
 
 /**
  * class for OtherHash ASN.1 object
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * OtherHash ::= CHOICE {
@@ -564,7 +565,7 @@ KJUR.asn1.cades.CAdESUtil.addSigTS = function(dCMS, siIdx, sigTSHex) {
 /**
  * parse CMS SignedData to add unsigned attributes
  * @param {string} hex hexadecimal string of ContentInfo of CMS SignedData
- * @return {Object<string,*>} associative array of parsed data
+ * @return {Dictionary} associative array of parsed data
  * @description
  * This method will parse a hexadecimal string of 
  * ContentInfo with CMS SignedData to add a attribute
@@ -677,7 +678,7 @@ KJUR.asn1.cades.CAdESUtil.parseSignedDataForAddingUnsigned = function(hex) {
 /**
  * parse SignerInfo to add unsigned attributes
  * @param {string} hex hexadecimal string of SignerInfo
- * @return {Object<string,*>} associative array of parsed data
+ * @return {Dictionary} associative array of parsed data
  * @description
  * This method will parse a hexadecimal string of 
  * SignerInfo to add a attribute

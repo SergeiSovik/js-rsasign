@@ -16,7 +16,7 @@ import { ECPointFp } from "./../../js-bn/modules/ec.js"
 import { SecureRandom } from "./../../js-bn/modules/rng.js"
 import { ECParams, getByName } from "./ecparam-1.0.js"
 import { DERInteger, DERSequence } from "./asn1-1.0.js"
-import { isArray } from "./../../../include/type.js"
+import { Dictionary, isArray } from "./../../../include/type.js"
 
 /** @typedef {{
 	x: string,
@@ -65,6 +65,9 @@ const rng = new SecureRandom();
  * </p>
  */
 export class ECDSA {
+	/**
+	 * @param {Dictionary=} params 
+	 */
 	constructor(params) {
 		/** @type {string | null} */ this.curveName = "secp256r1";	// curve name default
 		/** @type {ECParams | null} */ this.ecparams = null;
@@ -804,9 +807,9 @@ export class ECDSA {
 	 * @return {string} hexadecimal string of ASN.1 encoded ECDSA signature value
 	 */
 	static biRSSigToASN1Sig(biR, biS) {
-		let derR = new DERInteger({ 'bigint': biR });
-		let derS = new DERInteger({ 'bigint': biS });
-		let derSeq = new DERSequence({ 'array': [derR, derS] });
+		let derR = new DERInteger(/** @type {Dictionary} */ ( { 'bigint': biR } ));
+		let derS = new DERInteger(/** @type {Dictionary} */ ( { 'bigint': biS } ));
+		let derSeq = new DERSequence(/** @type {Dictionary} */ ( { 'array': [derR, derS] } ));
 		return derSeq.getEncodedHex();
 	}
 

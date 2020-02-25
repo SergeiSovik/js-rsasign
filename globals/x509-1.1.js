@@ -19,6 +19,7 @@ import { getChildIdx, getV, getTLV, getVbyList, getTLVbyList, getIdxbyList, getV
 import { pemtohex, hextoutf8, hextoip, hextoposhex, hextorstr } from "./base64x-1.1.js"
 import { KeyObject, getKey } from "./keyutil-1.0.js"
 import { Signature } from "./crypto-1.1.js"
+import { Dictionary } from "./../../../include/type.js"
 
 /** @typedef {{
 	critical: boolean,
@@ -149,19 +150,20 @@ export class X509 {
 
     /**
      * get hexadecimal string of serialNumber field of certificate.<br/>
-     * @return {string} hexadecimal string of certificate serial number
+     * @return {string | null} hexadecimal string of certificate serial number
      * @example
      * let x = new X509();
      * x.readCertPEM(sCertPEM);
      * let sn = x.getSerialNumberHex(); // return string like "01ad..."
      */
 	getSerialNumberHex() {
+		if (this.hex === null) return null;
 		return getVbyList(this.hex, 0, [0, 1 + this.foffset], "02");
 	}
 
     /**
      * get signature algorithm name in basic field
-     * @return {string} signature algorithm name (ex. SHA1withRSA, SHA256withECDSA)
+     * @return {string | null} signature algorithm name (ex. SHA1withRSA, SHA256withECDSA)
      * @description
      * This method will get a name of signature algorithm field of certificate:
      * @example
@@ -170,66 +172,74 @@ export class X509 {
      * algName = x.getSignatureAlgorithmField();
      */
 	getSignatureAlgorithmField() {
+		if (this.hex === null) return null;
 		return oidname(getVbyList(this.hex, 0, [0, 2 + this.foffset, 0], "06"));
 	}
 
     /**
      * get hexadecimal string of issuer field TLV of certificate.<br/>
-     * @return {string} hexadecial string of issuer DN ASN.1
+     * @return {string | null} hexadecial string of issuer DN ASN.1
      * @example
      * let x = new X509();
      * x.readCertPEM(sCertPEM);
      * let issuer = x.getIssuerHex(); // return string like "3013..."
      */
 	getIssuerHex() {
+		if (this.hex === null) return null;
 		return getTLVbyList(this.hex, 0, [0, 3 + this.foffset], "30");
 	}
 
     /**
      * get string of issuer field of certificate.<br/>
-     * @return {string} issuer DN string
+     * @return {string | null} issuer DN string
      * @example
      * let x = new X509();
      * x.readCertPEM(sCertPEM);
      * let issuer = x.getIssuerString(); // return string like "/C=US/O=TEST"
      */
 	getIssuerString() {
-		return hex2dn(this.getIssuerHex());
+		let sIssuerHex = this.getIssuerHex();
+		if (sIssuerHex === null) return null;
+		return hex2dn(sIssuerHex);
 	}
 
     /**
      * get hexadecimal string of subject field of certificate.<br/>
-     * @return {string} hexadecial string of subject DN ASN.1
+     * @return {string | null} hexadecial string of subject DN ASN.1
      * @example
      * let x = new X509();
      * x.readCertPEM(sCertPEM);
      * let subject = x.getSubjectHex(); // return string like "3013..."
      */
 	getSubjectHex() {
+		if (this.hex === null) return null;
 		return getTLVbyList(this.hex, 0, [0, 5 + this.foffset], "30");
 	}
 
     /**
      * get string of subject field of certificate.<br/>
-     * @return {string} subject DN string
+     * @return {string | null} subject DN string
      * @example
      * let x = new X509();
      * x.readCertPEM(sCertPEM);
      * let subject = x.getSubjectString(); // return string like "/C=US/O=TEST"
      */
 	getSubjectString() {
-		return hex2dn(this.getSubjectHex());
+		let sSubjectHex = this.getSubjectHex();
+		if (sSubjectHex === null) return null;
+		return hex2dn(sSubjectHex);
 	}
 
     /**
      * get notBefore field string of certificate.<br/>
-     * @return {string} not before time value (ex. "151231235959Z")
+     * @return {string | null} not before time value (ex. "151231235959Z")
      * @example
      * let x = new X509();
      * x.readCertPEM(sCertPEM);
      * let notBefore = x.getNotBefore(); // return string like "151231235959Z"
      */
 	getNotBefore() {
+		if (this.hex === null) return null;
 		let s = getVbyList(this.hex, 0, [0, 4 + this.foffset, 0]);
 		s = s.replace(/(..)/g, "%$1");
 		s = decodeURIComponent(s);
@@ -238,13 +248,14 @@ export class X509 {
 
     /**
      * get notAfter field string of certificate.<br/>
-     * @return {string} not after time value (ex. "151231235959Z")
+     * @return {string | null} not after time value (ex. "151231235959Z")
      * @example
      * let x = new X509();
      * x.readCertPEM(sCertPEM);
      * let notAfter = x.getNotAfter(); // return string like "151231235959Z"
      */
 	getNotAfter() {
+		if (this.hex === null) return null;
 		let s = getVbyList(this.hex, 0, [0, 4 + this.foffset, 1]);
 		s = s.replace(/(..)/g, "%$1");
 		s = decodeURIComponent(s);
@@ -253,31 +264,33 @@ export class X509 {
 
     /**
      * get a hexadecimal string of subjectPublicKeyInfo field.<br/>
-     * @return {string} ASN.1 SEQUENCE hexadecimal string of subjectPublicKeyInfo field
+     * @return {string | null} ASN.1 SEQUENCE hexadecimal string of subjectPublicKeyInfo field
      * @example
      * x = new X509();
      * x.readCertPEM(sCertPEM);
      * hSPKI = x.getPublicKeyHex(); // return string like "30820122..."
      */
 	getPublicKeyHex() {
+		if (this.hex === null) return null;
 		return getTLVbyList(this.hex, 0, [0, 6 + this.foffset], "30");
 	}
 
     /**
      * get a string index of subjectPublicKeyInfo field for hexadecimal string certificate.<br/>
-     * @return {number} string index of subjectPublicKeyInfo field for hexadecimal string certificate.
+     * @return {number | null} string index of subjectPublicKeyInfo field for hexadecimal string certificate.
      * @example
      * x = new X509();
      * x.readCertPEM(sCertPEM);
      * idx = x.getPublicKeyIdx(); // return string index in x.hex parameter
      */
 	getPublicKeyIdx() {
+		if (this.hex === null) return null;
 		return getIdxbyList(this.hex, 0, [0, 6 + this.foffset], "30");
 	}
 
     /**
      * get a string index of contents of subjectPublicKeyInfo BITSTRING value from hexadecimal certificate<br/>
-     * @return {number} string index of key contents
+     * @return {number | null} string index of key contents
      * @example
      * x = new X509();
      * x.readCertPEM(sCertPEM);
@@ -285,26 +298,28 @@ export class X509 {
      */
 	// NOTE: Without BITSTRING encapsulation.
 	getPublicKeyContentIdx() {
-		let idx = this.getPublicKeyIdx();
+		if (this.hex === null) return null;
+		let idx = /** @type {!number} */ ( this.getPublicKeyIdx() );
 		return getIdxbyList(this.hex, idx, [1, 0], "30");
 	}
 
     /**
      * get a RSAKeyEx/ECDSA/DSA public key object of subjectPublicKeyInfo field.<br/>
-     * @return {KeyObject} RSAKeyEx/ECDSA/DSA public key object of subjectPublicKeyInfo field
+     * @return {KeyObject | null} RSAKeyEx/ECDSA/DSA public key object of subjectPublicKeyInfo field
      * @example
      * x = new X509();
      * x.readCertPEM(sCertPEM);
      * pubkey= x.getPublicKey();
      */
 	getPublicKey() {
-		return getKey(this.getPublicKeyHex(), null, "pkcs8pub");
+		let sPublicKeyHex = this.getPublicKeyHex();
+		if (sPublicKeyHex === null) return null;
+		return getKey(sPublicKeyHex, null, "pkcs8pub");
 	}
 
     /**
      * get signature algorithm name from hexadecimal certificate data
-     * @param {string} hCert hexadecimal string of X.509 certificate binary
-     * @return {string} signature algorithm name (ex. SHA1withRSA, SHA256withECDSA)
+     * @return {string | null} signature algorithm name (ex. SHA1withRSA, SHA256withECDSA)
      * @description
      * This method will get signature algorithm name of certificate:
      * @example
@@ -313,12 +328,13 @@ export class X509 {
      * x.getSignatureAlgorithmName() &rarr; "SHA256withRSA"
      */
 	getSignatureAlgorithmName() {
+		if (this.hex === null) return null;
 		return oidname(getVbyList(this.hex, 0, [1, 0], "06"));
 	}
 
     /**
      * get signature value in hexadecimal string<br/>
-     * @return {string} signature value hexadecimal string without BitString unused bits
+     * @return {string | null} signature value hexadecimal string without BitString unused bits
      * @description
      * This method will get signature value of certificate:
      * @example
@@ -327,13 +343,14 @@ export class X509 {
      * x.getSignatureValueHex() &rarr "8a4c47913..."
      */
 	getSignatureValueHex() {
+		if (this.hex === null) return null;
 		return getVbyList(this.hex, 0, [2], "03", true);
 	}
 
     /**
      * verifies signature value by public key<br/>
      * @param {KeyObject} pubKey public key object
-     * @return {boolean} true if signature value is valid otherwise false
+     * @return {boolean | null} true if signature value is valid otherwise false
      * @description
      * This method verifies signature value of hexadecimal string of 
      * X.509 certificate by specified public key object.
@@ -344,11 +361,12 @@ export class X509 {
      * x.verifySignature(pubKey) &rarr; true, false or raising exception
      */
 	verifySignature(pubKey) {
-		let algName = this.getSignatureAlgorithmName();
-		let hSigVal = this.getSignatureValueHex();
+		if (this.hex === null) return null;
+		let algName = /** @type {!string} */ ( this.getSignatureAlgorithmName() );
+		let hSigVal = /** @type {!string} */ ( this.getSignatureValueHex() );
 		let hTbsCert = getTLVbyList(this.hex, 0, [0], "30");
 
-		let sig = new Signature({ 'alg': algName });
+		let sig = new Signature(/** @type {Dictionary} */ ( { 'alg': algName } ));
 		sig.init(pubKey);
 		sig.updateHex(hTbsCert);
 		return sig.verify(hSigVal);
@@ -357,6 +375,7 @@ export class X509 {
 	// ===== parse extension ======================================
     /**
      * set array of X.509v3 extesion information such as extension OID, criticality and value index.<br/>
+	 * @returns {boolean | null}
      * @description
      * This method will set an array of X.509v3 extension information having 
      * following parameters:
@@ -372,7 +391,8 @@ export class X509 {
      * [ { oid: "2.5.29,19", critical: true, vidx: 2504 }, ... ]
      */
 	parseExt() {
-		if (this.version !== 3) return -1;
+		if (this.hex === null) return null;
+		if (this.version !== 3) return false;
 		let iExtSeq = getIdxbyList(this.hex, 0, [0, 7, 0], "30");
 		let aExtIdx = getChildIdx(this.hex, iExtSeq);
 
@@ -392,6 +412,7 @@ export class X509 {
 			let vidx = getVidx(this.hex, octidx);
 			this.aExtInfo.push({critical: critical, oid: oid, vidx: vidx});
 		}
+		return true;
 	}
 
     /**
@@ -426,7 +447,7 @@ export class X509 {
 
     /**
      * get BasicConstraints extension value as object in the certificate
-     * @return {ExtBasicConstraints} associative array which may have "cA" and "pathLen" parameters
+     * @return {ExtBasicConstraints | null} associative array which may have "cA" and "pathLen" parameters
      * @description
      * This method will get basic constraints extension value as object with following paramters.
      * <ul>
@@ -446,8 +467,9 @@ export class X509 {
      * x.getExtBasicConstraints() &rarr; { cA: true, pathLen: 3 };
      */
 	getExtBasicConstraints() {
+		if (this.hex === null) return null;
 		let info = this.getExtInfo("basicConstraints");
-		if (info === undefined) return undefined;
+		if (info === undefined) return null;
 
 		let hBC = getV(this.hex, info.vidx);
 		if (hBC === '') return {};
@@ -462,7 +484,7 @@ export class X509 {
 
     /**
      * get KeyUsage extension value as binary string in the certificate<br/>
-     * @return {string} binary string of key usage bits (ex. '101')
+     * @return {string | null} binary string of key usage bits (ex. '101')
      * @description
      * This method will get key usage extension value
      * as binary string such like '101'.
@@ -478,13 +500,14 @@ export class X509 {
      * // 1 - keyEncipherment
      */
 	getExtKeyUsageBin() {
+		if (this.hex === null) return null;
 		let info = this.getExtInfo("keyUsage");
 		if (info === undefined) return '';
 
 		let hKeyUsage = getV(this.hex, info.vidx);
 		if (hKeyUsage.length % 2 != 0 || hKeyUsage.length <= 2)
 			throw "malformed key usage value";
-		let unusedBits = parseInt(hKeyUsage.substr(0, 2));
+		let unusedBits = parseInt(hKeyUsage.substr(0, 2), 10);
 		let bKeyUsage = parseInt(hKeyUsage.substr(2), 16).toString(2);
 		return bKeyUsage.substr(0, bKeyUsage.length - unusedBits);
 	}
@@ -513,7 +536,7 @@ export class X509 {
 
     /**
      * get subjectKeyIdentifier value as hexadecimal string in the certificate<br/>
-     * @return {string} hexadecimal string of subject key identifier or null
+     * @return {string | null} hexadecimal string of subject key identifier or null
      * @description
      * This method will get subject key identifier extension value
      * as hexadecimal string.
@@ -524,15 +547,16 @@ export class X509 {
      * x.getExtSubjectKeyIdentifier() &rarr; "1b3347ab...";
      */
 	getExtSubjectKeyIdentifier() {
+		if (this.hex === null) return null;
 		let info = this.getExtInfo("subjectKeyIdentifier");
-		if (info === undefined) return undefined;
+		if (info === undefined) return null;
 
 		return getV(this.hex, info.vidx);
 	}
 
     /**
      * get authorityKeyIdentifier value as JSON object in the certificate<br/>
-     * @return {ExtAuthorityKeyIdentifier} JSON object of authority key identifier or null
+     * @return {ExtAuthorityKeyIdentifier | null} JSON object of authority key identifier or null
      * @description
      * This method will get authority key identifier extension value
      * as JSON object.
@@ -547,8 +571,9 @@ export class X509 {
      * x.getExtAuthorityKeyIdentifier() &rarr; { kid: "1234abcd..." }
      */
 	getExtAuthorityKeyIdentifier() {
+		if (this.hex === null) return null;
 		let info = this.getExtInfo("authorityKeyIdentifier");
-		if (info === undefined) return undefined;
+		if (info === undefined) return null;
 
 		/** @type {ExtAuthorityKeyIdentifier} */ let result = {};
 		let hAKID = getTLV(this.hex, info.vidx);
@@ -562,7 +587,7 @@ export class X509 {
 
     /**
      * get extKeyUsage value as array of name string in the certificate<br/>
-     * @return {Array<string>} array of extended key usage ID name or oid
+     * @return {Array<string> | null} array of extended key usage ID name or oid
      * @description
      * This method will get extended key usage extension value
      * as array of name or OID string.
@@ -576,8 +601,9 @@ export class X509 {
      * x.getExtExtKeyUsageName() &rarr; ["serverAuth", "clientAuth", "0.1.2.3.4.5"]
      */
 	getExtExtKeyUsageName() {
+		if (this.hex === null) return null;
 		let info = this.getExtInfo("extKeyUsage");
-		if (info === undefined) return info;
+		if (info === undefined) return null;
 
 		/** @type {Array<string>} */ let result = new Array();
 
@@ -620,7 +646,7 @@ export class X509 {
 
     /**
      * get subjectAltName value as array of string in the certificate
-     * @return {Array<Array<string>>} array of alt name array
+     * @return {Array<Array<string>> | null} array of alt name array
      * @description
      * This method will get subject alt name extension value
      * as array of type and name.
@@ -645,11 +671,13 @@ export class X509 {
      *  ["DN",   "/C=US/O=TEST1"]]
      */
 	getExtSubjectAltName2() {
+		if (this.hex === null) return null;
+
 		/** @type {string} */ let gnValueHex;
 		/** @type {string} */ let gnValueStr;
 		/** @type {string} */ let gnTag;
 		let info = this.getExtInfo("subjectAltName");
-		if (info === undefined) return undefined;
+		if (info === undefined) return null;
 
 		/** @type {Array<Array<string>>} */ let result = new Array();
 		let h = getTLV(this.hex, info.vidx);
@@ -668,7 +696,7 @@ export class X509 {
 				result.push(["DNS", gnValueStr]);
 			}
 			if (gnTag === "84") { // directoryName [4]
-				gnValueStr = X509.hex2dn(gnValueHex, 0);
+				gnValueStr = hex2dn(gnValueHex, 0);
 				result.push(["DN", gnValueStr]);
 			}
 			if (gnTag === "86") { // uniformResourceIdentifier [6]
@@ -685,7 +713,7 @@ export class X509 {
 
     /**
      * get array of string for fullName URIs in cRLDistributionPoints(CDP) in the certificate
-     * @return {Array<string>} array of fullName URIs of CDP of the certificate
+     * @return {Array<string> | null} array of fullName URIs of CDP of the certificate
      * @description
      * This method will get all fullName URIs of cRLDistributionPoints extension
      * in the certificate as array of URI string.
@@ -700,8 +728,9 @@ export class X509 {
      * ["http://example.com/aaa.crl", "http://example.org/aaa.crl"]
      */
 	getExtCRLDistributionPointsURI() {
+		if (this.hex === null) return null;
 		let info = this.getExtInfo("cRLDistributionPoints");
-		if (info === undefined) return undefined;
+		if (info === undefined) return null;
 
 		/** @type {Array<string>} */ let result = new Array();
 		let a = getChildIdx(this.hex, info.vidx);
@@ -718,7 +747,7 @@ export class X509 {
 
     /**
      * get AuthorityInfoAccess extension value in the certificate as associative array
-     * @return {ExtAIAInfo} associative array of AIA extension properties
+     * @return {ExtAIAInfo | null} associative array of AIA extension properties
      * @description
      * This method will get authority info access value
      * as associate array which has following properties:
@@ -735,8 +764,9 @@ export class X509 {
      *   caissuer: ["http://rep.foo.com/aaa.p8m"] }
      */
 	getExtAIAInfo() {
+		if (this.hex === null) return null;
 		let info = this.getExtInfo("authorityInfoAccess");
-		if (info === undefined) return undefined;
+		if (info === undefined) return null;
 
 		/** @type {ExtAIAInfo} */ let result = { ocsp: [], caissuer: [] };
 		let a = getChildIdx(this.hex, info.vidx);
@@ -756,7 +786,7 @@ export class X509 {
 
     /**
      * get CertificatePolicies extension value in the certificate as array
-     * @return {Array<ExtCertificatePolicie>} array of PolicyInformation JSON object
+     * @return {Array<ExtCertificatePolicie> | null} array of PolicyInformation JSON object
      * @description
      * This method will get certificate policies value
      * as an array of JSON object which has following properties:
@@ -776,8 +806,9 @@ export class X509 {
      *    unotice: "explicit text" }]
      */
 	getExtCertificatePolicies() {
+		if (this.hex === null) return null;
 		let info = this.getExtInfo("certificatePolicies");
-		if (info === undefined) return undefined;
+		if (info === undefined) return null;
 
 		let hExt = getTLV(this.hex, info.vidx);
 		/** @type {Array<ExtCertificatePolicie>} */ let result = [];
@@ -1034,7 +1065,7 @@ export function hex2attrTypeValue(hex, idx) {
 
 	let aIdx = getChildIdx(hex, idx);
 	if (aIdx.length !== 2 || hex.substr(aIdx[0], 2) !== "06")
-		"malformed attribute type and value";
+		throw "malformed attribute type and value";
 
 	let oidHex = getV(hex, aIdx[0]);
 	let oidInt = oidHexToInt(oidHex);
@@ -1079,7 +1110,7 @@ export function getPublicKeyFromCertPEM(sCertPEM) {
 /**
  * get public key information from PEM certificate
  * @param {string} sCertPEM string of PEM formatted certificate
- * @return {KeyInfoProp} hash of information for public key
+ * @return {KeyInfoProp | null} hash of information for public key
  * @description
  * Resulted associative array has following properties:<br/>
  * <ul>
@@ -1090,13 +1121,13 @@ export function getPublicKeyFromCertPEM(sCertPEM) {
  * NOTE: X509v1 certificate is also supported since x509.js 1.1.9.
  */
 export function getPublicKeyInfoPropOfCertPEM(sCertPEM) {
-	let x, hSPKI, pubkey;
 	/** @type {string | null} */ let algparam = null;
 
-	x = new X509();
+	let x = new X509();
 	x.readCertPEM(sCertPEM);
 
-	hSPKI = x.getPublicKeyHex();
+	let hSPKI = x.getPublicKeyHex();
+	if (hSPKI === null) return null;
 	let keyhex = getVbyList(hSPKI, 0, [1], "03").substr(2);
 	let algoid = getVbyList(hSPKI, 0, [0, 0], "06");
 

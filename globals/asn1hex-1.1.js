@@ -17,7 +17,7 @@ import { oidHexToInt, ASN1Object } from "./asn1-1.0.js"
 import { isHex, hextoutf8 } from "./base64x-1.1.js"
 import { oid2name } from "./asn1oid.js"
 import { BigInteger } from "./../../js-bn/modules/jsbn.js"
-import { isNumber } from "./../../../include/type.js"
+import { Dictionary, isNumber } from "./../../../include/type.js"
 
 /*
  * MEMO:
@@ -395,7 +395,7 @@ function skipLongHex(hex, limitNumOctet) {
 /**
  * get string of simple ASN.1 dump from hexadecimal ASN.1 data<br/>
  * @param {string | ASN1Object} hexOrObj hexadecmal string of ASN.1 data or ASN1Object object
- * @param {Object<string,*>=} flags associative array of flags for dump (OPTION)
+ * @param {Dictionary=} flags associative array of flags for dump (OPTION)
  * @param {number=} idx string index for starting dump (OPTION)
  * @param {string=} indent indent string (OPTION)
  * @return {string} string of simple ASN.1 dump
@@ -465,7 +465,7 @@ function skipLongHex(hex, limitNumOctet) {
 export function dump(hexOrObj, flags, idx, indent) {
 	let hex = (hexOrObj instanceof ASN1Object) ? hexOrObj.getEncodedHex() : hexOrObj;
 
-	if (flags === undefined) flags = { "ommit_long_octet": 32 };
+	if (flags === undefined) flags = /** @type {Dictionary} */ ( { "ommit_long_octet": 32 } );
 	if (idx === undefined) idx = 0;
 	if (indent === undefined) indent = "";
 	let skipLongHexOctets = isNumber(flags['ommit_long_octet']) ? /** @type {number} */ ( flags['ommit_long_octet'] ) : 32;
@@ -536,14 +536,14 @@ export function dump(hexOrObj, flags, idx, indent) {
 		let s = indent + "SEQUENCE\n";
 		let aIdx = getChildIdx(hex, idx);
 
-		/** @type {Object<string,*>} */ let flagsTemp = flags;
+		/** @type {Dictionary} */ let flagsTemp = flags;
 
 		if ((aIdx.length == 2 || aIdx.length == 3) &&
 			hex.substr(aIdx[0], 2) == "06" &&
 			hex.substr(aIdx[aIdx.length - 1], 2) == "04") { // supposed X.509v3 extension
 			let oidName = oidname(getV(hex, aIdx[0]));
-			let flagsClone = /** @type {Object<string,*>} */ ( JSON.parse(JSON.stringify(flags)) );
-			flagsClone.x509ExtName = oidName;
+			let flagsClone = /** @type {Dictionary} */ ( JSON.parse(JSON.stringify(flags)) );
+			flagsClone['x509ExtName'] = oidName;
 			flagsTemp = flagsClone;
 		}
 

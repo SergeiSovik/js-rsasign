@@ -17,6 +17,7 @@ import { jsonToASN1HEX } from "./asn1-1.0.js"
 import { getRandomBigIntegerMinToMax, Signature } from "./crypto-1.1.js"
 import { getVbyList, isASN1HEX } from "./asn1hex-1.1.js"
 import { BigInteger } from "./../../js-bn/modules/jsbn.js"
+import { Dictionary } from "./../../../include/type.js"
 
 /**
  * class for DSA signing and verification
@@ -144,9 +145,9 @@ export class DSA {
 		let s = (k.modInverse(q).multiply(z.add(x.multiply(r)))).mod(q);
 
 		// 5. signature (r, s)
-		return jsonToASN1HEX({
+		return jsonToASN1HEX(/** @type {Dictionary} */ ( {
 			"seq": [{ "int": { "bigint": r } }, { "int": { "bigint": s } }]
-		});
+		} ));
 	}
 
     /**

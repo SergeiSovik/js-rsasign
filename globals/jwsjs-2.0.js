@@ -13,6 +13,8 @@
 
 "use strict";
 
+import { Dictionary } from "./../../../include/type.js"
+
 /**
  * @fileOverview
  * @name jwsjs-2.0.js
@@ -108,8 +110,8 @@ KJUR.jws.JWSJS = function() {
     /**
      * add a signature to existing JWS-JS by algorithm, header and key.<br/>
      * @param {string} alg JWS algorithm. If null, alg in header will be used.
-     * @param {Object<string,*>} spHead string or object of JWS Header to add.
-     * @param {Object<string,*>} key JWS key to sign. key object, PEM private key or HMAC key
+     * @param {Dictionary} spHead string or object of JWS Header to add.
+     * @param {Dictionary} key JWS key to sign. key object, PEM private key or HMAC key
      * @param {string} pass optional password for encrypted PEM private key
      * @throw if signature append failed.
      * @example
@@ -177,7 +179,7 @@ KJUR.jws.JWSJS = function() {
     /**
      * verify Nth signature of JWS-JS object by key and acceptAlgs.<br/>
      * @param {number} idx nth index of JWS-JS signature to verify
-     * @param {Object<string,*>} key key to verify
+     * @param {Dictionary} key key to verify
      * @param {array of String} acceptAlgs array of acceptable signature algorithms
      * @return true if signature is valid otherwise false
      * @example
@@ -203,7 +205,7 @@ KJUR.jws.JWSJS = function() {
 
     /**
      * read JWS-JS string or object<br/>
-     * @param {Object<string,*>} spJWSJS string or JSON object of JWS-JS to load.
+     * @param {Dictionary} spJWSJS string or JSON object of JWS-JS to load.
      * @throw if sJWSJS is malformed or not JSON string.
      * @description
      * NOTE: Loading from JSON object is suppored from 

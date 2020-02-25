@@ -22,7 +22,7 @@ import { ECDSA } from "./ecdsa-modified-1.0.js"
 import { KeyObject, getKey } from "./keyutil-1.0.js"
 import { RSAKeyEx } from "./rsaex.js"
 import { Signature } from "./crypto-1.1.js"
-import { isBoolean, isNumber, isListOfDictionaries, isDictionary, isString } from "./../../../include/type.js"
+import { Dictionary, isBoolean, isNumber, isListOfDictionaries, isDictionary, isString } from "./../../../include/type.js"
 
 /**
  * ASN.1 module for X.509 certificate
@@ -92,7 +92,7 @@ import { isBoolean, isNumber, isListOfDictionaries, isDictionary, isString } fro
  */
 export class Certificate extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'tbscertobj': obj, 'prvkeyobj': key})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {'tbscertobj': obj, 'prvkeyobj': key})
 	 */
 	constructor(params) {
 		super();
@@ -124,14 +124,14 @@ export class Certificate extends ASN1Object {
 	sign() {
 		this.asn1SignatureAlg = this.asn1TBSCert.asn1SignatureAlg;
 
-		let sig = new Signature({ 'alg': this.asn1SignatureAlg.nameAlg });
+		let sig = new Signature(/** @type {Dictionary} */ ( { 'alg': this.asn1SignatureAlg.nameAlg } ));
 		sig.init(this.prvKey);
 		sig.updateHex(this.asn1TBSCert.getEncodedHex());
 		this.hexSig = sig.sign();
 
-		this.asn1Sig = new DERBitString({ 'hex': '00' + this.hexSig });
+		this.asn1Sig = new DERBitString(/** @type {Dictionary} */ ( { 'hex': '00' + this.hexSig } ));
 
-		let seq = new DERSequence({ 'array': [this.asn1TBSCert, this.asn1SignatureAlg, this.asn1Sig] });
+		let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': [this.asn1TBSCert, this.asn1SignatureAlg, this.asn1Sig] } ));
 		this.hTLV = seq.getEncodedHex();
 		this.isModified = false;
 	}
@@ -147,13 +147,13 @@ export class Certificate extends ASN1Object {
 	setSignatureHex(sigHex) {
 		this.asn1SignatureAlg = this.asn1TBSCert.asn1SignatureAlg;
 		this.hexSig = sigHex;
-		this.asn1Sig = new DERBitString({ 'hex': '00' + this.hexSig });
+		this.asn1Sig = new DERBitString(/** @type {Dictionary} */ ( { 'hex': '00' + this.hexSig } ));
 
-		let seq = new DERSequence({
+		let seq = new DERSequence(/** @type {Dictionary} */ ( {
 			'array': [this.asn1TBSCert,
 			this.asn1SignatureAlg,
 			this.asn1Sig]
-		});
+		} ));
 		this.hTLV = seq.getEncodedHex();
 		this.isModified = false;
 	}
@@ -203,14 +203,14 @@ export class Certificate extends ASN1Object {
  */
 export class TBSCertificate extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {})
 	 */
 	constructor(params) {
 		super();
 
 		/** @type {Array<ASN1Object>} */ this.asn1Array = new Array();
 
-		/** @type {DERTaggedObject} */ this.asn1Version = new DERTaggedObject({ 'obj': new DERInteger({ 'int': 2 }) });
+		/** @type {DERTaggedObject} */ this.asn1Version = new DERTaggedObject(/** @type {Dictionary} */ ( { 'obj': new DERInteger(/** @type {Dictionary} */ ( { 'int': 2 } )) } ));
 		/** @type {DERInteger | null} */ this.asn1SerialNumber = null;
 		/** @type {AlgorithmIdentifier | null} */ this.asn1SignatureAlg = null;
 		/** @type {X500Name | null} */ this.asn1Issuer = null;
@@ -223,7 +223,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set serial number field by parameter
-     * @param {Object<string,*> | number} intParam DERInteger param
+     * @param {Dictionary | number} intParam DERInteger param
      * @description
      * @example
      * tbsc.setSerialNumberByParam({'int': 3});
@@ -234,7 +234,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set signature algorithm field by parameter
-     * @param {Object<string,*>} algIdParam AlgorithmIdentifier parameter
+     * @param {Dictionary} algIdParam AlgorithmIdentifier parameter
      * @description
      * @example
      * tbsc.setSignatureAlgByParam({'name': 'SHA1withRSA'});
@@ -245,7 +245,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set issuer name field by parameter
-     * @param {Object<string,*>} x500NameParam X500Name parameter
+     * @param {Dictionary} x500NameParam X500Name parameter
      * @description
      * @example
      * tbsc.setIssuerParam({'str': '/C=US/CN=b'});
@@ -256,7 +256,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set notBefore field by parameter
-     * @param {Object<string,*>} timeParam Time parameter
+     * @param {Dictionary} timeParam Time parameter
      * @description
      * @example
      * tbsc.setNotBeforeByParam({'str': '130508235959Z'});
@@ -267,7 +267,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set notAfter field by parameter
-     * @param {Object<string,*>} timeParam Time parameter
+     * @param {Dictionary} timeParam Time parameter
      * @description
      * @example
      * tbsc.setNotAfterByParam({'str': '130508235959Z'});
@@ -278,7 +278,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set subject name field by parameter
-     * @param {Object<string,*>} x500NameParam X500Name parameter
+     * @param {Dictionary} x500NameParam X500Name parameter
      * @description
      * @example
      * tbsc.setSubjectParam({'str': '/C=US/CN=b'});
@@ -300,7 +300,7 @@ export class TBSCertificate extends ASN1Object {
 
     /**
      * set subject public key info by RSA/ECDSA/DSA key parameter
-     * @param {string | RSAKeyEx | DSA | ECDSA | Object<string,*>} keyParam public key parameter which passed to {@link getKey} argument
+     * @param {string | RSAKeyEx | DSA | ECDSA | Dictionary} keyParam public key parameter which passed to {@link getKey} argument
      * @description
      * @example
      * tbsc.setSubjectPublicKeyByGetKeyParam(certPEMString); // or
@@ -327,7 +327,7 @@ export class TBSCertificate extends ASN1Object {
     /**
      * append X.509v3 extension to this object by name and parameters
      * @param {string} name name of X.509v3 Extension object
-     * @param {Object<string,*>} extParams parameters as argument of Extension constructor.
+     * @param {Dictionary} extParams parameters as argument of Extension constructor.
      * @description
      * This method adds a X.509v3 extension specified by name 
      * and extParams to internal extension array of X.509v3 extension objects.
@@ -365,7 +365,7 @@ export class TBSCertificate extends ASN1Object {
 		if (this.asn1NotBefore == null || this.asn1NotAfter == null)
 			throw "notBefore and/or notAfter not set";
 		let asn1Validity =
-			new DERSequence({ 'array': [this.asn1NotBefore, this.asn1NotAfter] });
+			new DERSequence(/** @type {Dictionary} */ ( { 'array': [this.asn1NotBefore, this.asn1NotAfter] } ));
 
 		this.asn1Array = new Array();
 
@@ -378,16 +378,16 @@ export class TBSCertificate extends ASN1Object {
 		this.asn1Array.push(this.asn1SubjPKey);
 
 		if (this.extensionsArray.length > 0) {
-			let extSeq = new DERSequence({ "array": this.extensionsArray });
-			let extTagObj = new DERTaggedObject({
+			let extSeq = new DERSequence(/** @type {Dictionary} */ ( { "array": this.extensionsArray } ));
+			let extTagObj = new DERTaggedObject(/** @type {Dictionary} */ ( {
 				'explicit': true,
 				'tag': 'a3',
 				'obj': extSeq
-			});
+			} ));
 			this.asn1Array.push(extTagObj);
 		}
 
-		let o = new DERSequence({ "array": this.asn1Array });
+		let o = new DERSequence(/** @type {Dictionary} */ ( { "array": this.asn1Array } ));
 		this.hTLV = o.getEncodedHex();
 		this.isModified = false;
 		return /** @type {string} */ ( this.hTLV );
@@ -406,7 +406,7 @@ export class TBSCertificate extends ASN1Object {
  */
 export class X500Extension extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'critical': true})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {'critical': true})
 	 */
 	constructor(params) {
 		super();
@@ -427,22 +427,22 @@ export class X500Extension extends ASN1Object {
 	 * @returns {string}
 	 */
 	getEncodedHex() {
-		let asn1Oid = new DERObjectIdentifier({ 'oid': this.oid });
-		let asn1EncapExtnValue = new DEROctetString({ 'hex': this.getExtnValueHex() });
+		let asn1Oid = new DERObjectIdentifier(/** @type {Dictionary} */ ( { 'oid': this.oid } ));
+		let asn1EncapExtnValue = new DEROctetString(/** @type {Dictionary} */ ( { 'hex': this.getExtnValueHex() } ));
 
 		/** @type {Array<ASN1Object>} */ let asn1Array = new Array();
 		asn1Array.push(asn1Oid);
 		if (this.critical) asn1Array.push(new DERBoolean());
 		asn1Array.push(asn1EncapExtnValue);
 
-		let asn1Seq = new DERSequence({ 'array': asn1Array });
+		let asn1Seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': asn1Array } ));
 		return asn1Seq.getEncodedHex();
 	}
 
 	/**
 	 * append X.509v3 extension to any specified array<br/>
 	 * @param {string} name X.509v3 extension name
-	 * @param {Object<string,*>} extParams associative array of extension parameters
+	 * @param {Dictionary} extParams associative array of extension parameters
 	 * @param {Array<ASN1Object>} a array to add specified extension
 	 * @description
 	 * This static function add a X.509v3 extension specified by name and extParams to
@@ -518,7 +518,7 @@ export class X500Extension extends ASN1Object {
  */
 export class KeyUsage extends X500Extension {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'bin': '11', 'critical': true})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {'bin': '11', 'critical': true})
 	 */
 	constructor(params) {
 		super(params);
@@ -541,7 +541,7 @@ export class KeyUsage extends X500Extension {
 						}
 					}
 				}
-				this.asn1ExtnValue = new DERBitString({ 'bin': s });
+				this.asn1ExtnValue = new DERBitString(/** @type {Dictionary} */ ( { 'bin': s } ));
 			}
 		}
 	}
@@ -561,7 +561,7 @@ export class KeyUsage extends X500Extension {
  */
 export class BasicConstraints extends X500Extension {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'cA': true, 'critical': true})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {'cA': true, 'critical': true})
 	 */
 	constructor(params) {
 		super(params);
@@ -589,8 +589,8 @@ export class BasicConstraints extends X500Extension {
 		/** @type {Array<ASN1Object>} */ let asn1Array = new Array();
 		if (this.cA) asn1Array.push(new DERBoolean());
 		if (this.pathLen > -1)
-			asn1Array.push(new DERInteger({ 'int': this.pathLen }));
-		let asn1Seq = new DERSequence({ 'array': asn1Array });
+			asn1Array.push(new DERInteger(/** @type {Dictionary} */ ( { 'int': this.pathLen }) ));
+		let asn1Seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': asn1Array } ));
 		this.asn1ExtnValue = asn1Seq;
 		return this.asn1ExtnValue.getEncodedHex();
 	}
@@ -628,7 +628,7 @@ export class BasicConstraints extends X500Extension {
  */
 export class CRLDistributionPoints extends X500Extension {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'uri': 'http://a.com/', 'critical': true})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {'uri': 'http://a.com/', 'critical': true})
 	 */
 	constructor(params) {
 		super(params);
@@ -651,13 +651,13 @@ export class CRLDistributionPoints extends X500Extension {
 	}
 
 	setByDPArray(dpArray) {
-		this.asn1ExtnValue = new DERSequence({ 'array': dpArray });
+		this.asn1ExtnValue = new DERSequence(/** @type {Dictionary} */ ( { 'array': dpArray } ));
 	}
 
 	setByOneURI(uri) {
 		let gn1 = new GeneralNames([{ 'uri': uri }]);
 		let dpn1 = new DistributionPointName(gn1);
-		let dp1 = new DistributionPoint({ 'dpobj': dpn1 });
+		let dp1 = new DistributionPoint(/** @type {Dictionary} */ ( { 'dpobj': dpn1 } ));
 		this.setByDPArray([dp1]);
 	}
 }
@@ -679,7 +679,7 @@ export class CRLDistributionPoints extends X500Extension {
  */
 export class ExtKeyUsage extends X500Extension {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters
+	 * @param {Dictionary=} params dictionary of parameters
 	 */
 	constructor(params) {
 		super(params);
@@ -689,13 +689,13 @@ export class ExtKeyUsage extends X500Extension {
 		this.oid = "2.5.29.37";
 		if (params !== undefined) {
 			if (isListOfDictionaries(params['array'])) {
-				this.setPurposeArray(/** @type {Array<Object<string,*>>} */ ( params['array'] ));
+				this.setPurposeArray(/** @type {Array<Dictionary>} */ ( params['array'] ));
 			}
 		}
 	}
 
 	/**
-	 * @param {Array<Object<string,*>>} purposeArray 
+	 * @param {Array<Dictionary>} purposeArray 
 	 */
 	setPurposeArray(purposeArray) {
 		this.asn1ExtnValue = new DERSequence();
@@ -734,7 +734,7 @@ export class ExtKeyUsage extends X500Extension {
  */
 export class AuthorityKeyIdentifier extends X500Extension {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'uri': 'http://a.com/', 'critical': true})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {'uri': 'http://a.com/', 'critical': true})
 	 */
 	constructor(params) {
 		super(params);
@@ -748,13 +748,13 @@ export class AuthorityKeyIdentifier extends X500Extension {
 		this.oid = "2.5.29.35";
 		if (params !== undefined) {
 			if (isDictionary(params['kid'])) {
-				this.setKIDByParam(/** @type {Object<string,*>} */ ( params['kid'] ));
+				this.setKIDByParam(/** @type {Dictionary} */ ( params['kid'] ));
 			}
 			if (isDictionary(params['issuer'])) {
-				this.setCertIssuerByParam(/** @type {Object<string,*>} */ ( params['issuer'] ));
+				this.setCertIssuerByParam(/** @type {Dictionary} */ ( params['issuer'] ));
 			}
 			if (isDictionary(params['sn'])) {
-				this.setCertSNByParam(/** @type {Object<string,*>} */ ( params['sn'] ));
+				this.setCertSNByParam(/** @type {Dictionary} */ ( params['sn'] ));
 			}
 		}	
 	}
@@ -765,32 +765,32 @@ export class AuthorityKeyIdentifier extends X500Extension {
 	getExtnValueHex() {
 		/** @type {Array<ASN1Object>} */ let a = new Array();
 		if (this.asn1KID)
-			a.push(new DERTaggedObject({
+			a.push(new DERTaggedObject(/** @type {Dictionary} */ ( {
 				'explicit': false,
 				'tag': '80',
 				'obj': this.asn1KID
-			}));
+			} )));
 		if (this.asn1CertIssuer)
-			a.push(new DERTaggedObject({
+			a.push(new DERTaggedObject(/** @type {Dictionary} */ ( {
 				'explicit': false,
 				'tag': 'a1',
 				'obj': this.asn1CertIssuer
-			}));
+			} )));
 		if (this.asn1CertSN)
-			a.push(new DERTaggedObject({
+			a.push(new DERTaggedObject(/** @type {Dictionary} */ ( {
 				'explicit': false,
 				'tag': '82',
 				'obj': this.asn1CertSN
-			}));
+			} )));
 
-		let asn1Seq = new DERSequence({ 'array': a });
+		let asn1Seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': a } ));
 		this.asn1ExtnValue = asn1Seq;
 		return this.asn1ExtnValue.getEncodedHex();
 	}
 
     /**
      * set keyIdentifier value by DERInteger parameter
-     * @param {Object<string,*>} param array of {@link DERInteger} parameter
+     * @param {Dictionary} param array of {@link DERInteger} parameter
      * @description
      * NOTE: Automatic keyIdentifier value calculation by an issuer
      * public key will be supported in future version.
@@ -801,7 +801,7 @@ export class AuthorityKeyIdentifier extends X500Extension {
 
     /**
      * set authorityCertIssuer value by X500Name parameter
-     * @param {Object<string,*>} param array of {@link X500Name} parameter
+     * @param {Dictionary} param array of {@link X500Name} parameter
      * @description
      * NOTE: Automatic authorityCertIssuer name setting by an issuer
      * certificate will be supported in future version.
@@ -812,7 +812,7 @@ export class AuthorityKeyIdentifier extends X500Extension {
 
     /**
      * set authorityCertSerialNumber value by DERInteger parameter
-     * @param {Object<string,*>} param array of {@link DERInteger} parameter
+     * @param {Dictionary} param array of {@link DERInteger} parameter
      * @description
      * NOTE: Automatic authorityCertSerialNumber setting by an issuer
      * certificate will be supported in future version.
@@ -847,7 +847,7 @@ export class AuthorityKeyIdentifier extends X500Extension {
  */
 export class AuthorityInfoAccess extends X500Extension {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters
+	 * @param {Dictionary=} params dictionary of parameters
 	 */
 	constructor(params) {
 		super(params);
@@ -857,13 +857,13 @@ export class AuthorityInfoAccess extends X500Extension {
 		this.oid = "1.3.6.1.5.5.7.1.1";		
 		if (params !== undefined) {
 			if (isListOfDictionaries(params['array'])) {
-				this.setAccessDescriptionArray(/** @type {Array<Object<string,*>>} */ ( params['array'] ));
+				this.setAccessDescriptionArray(/** @type {Array<Dictionary>} */ ( params['array'] ));
 			}
 		}
 	}
 	
 	/**
-	 * @param {Array<Object<string,*>>} accessDescriptionArray 
+	 * @param {Array<Dictionary>} accessDescriptionArray 
 	 */
 	setAccessDescriptionArray(accessDescriptionArray) {
 		/** @type {Array<DERSequence>} */ let array = new Array();
@@ -872,13 +872,13 @@ export class AuthorityInfoAccess extends X500Extension {
 			let accessMethod = accessDescriptionArray[i]['accessMethod'];
 			let accessLocation = accessDescriptionArray[i]['accessLocation'];
 			if ((isString(accessMethod) || isDictionary(accessMethod)) && isDictionary(accessLocation)) {
-				let o = new DERObjectIdentifier(/** @type {string | Object<string,*>} */ ( accessMethod ));
-				let gn = new GeneralName(/** @type {Object<string,*>} */ ( accessLocation ));
-				let accessDescription = new DERSequence({ 'array': [o, gn] });
+				let o = new DERObjectIdentifier(/** @type {string | Dictionary} */ ( accessMethod ));
+				let gn = new GeneralName(/** @type {Dictionary} */ ( accessLocation ));
+				let accessDescription = new DERSequence(/** @type {Dictionary} */ ( { 'array': [o, gn] } ));
 				array.push(accessDescription);
 			}
 		}
-		this.asn1ExtnValue = new DERSequence({ 'array': array });
+		this.asn1ExtnValue = new DERSequence(/** @type {Dictionary} */ ( { 'array': array } ));
 	}
 
 	/**
@@ -916,7 +916,7 @@ export class AuthorityInfoAccess extends X500Extension {
  */
 export class SubjectAltName extends X500Extension {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters
+	 * @param {Dictionary=} params dictionary of parameters
 	 */
 	constructor(params) {
 		super(params);
@@ -926,13 +926,13 @@ export class SubjectAltName extends X500Extension {
 		this.oid = "2.5.29.17";
 		if (params !== undefined) {
 			if (isListOfDictionaries(params['array'])) {
-				this.setNameArray(/** @type {Array<Object<string,*>>} */ ( params['array'] ));
+				this.setNameArray(/** @type {Array<Dictionary>} */ ( params['array'] ));
 			}
 		}	
 	}
 
 	/**
-	 * @param {Array<Object<string,*>>} paramsArray 
+	 * @param {Array<Dictionary>} paramsArray 
 	 */
 	setNameArray(paramsArray) {
 		this.asn1ExtnValue = new GeneralNames(paramsArray);
@@ -973,7 +973,7 @@ export class SubjectAltName extends X500Extension {
  */
 export class IssuerAltName extends X500Extension {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters
+	 * @param {Dictionary=} params dictionary of parameters
 	 */
 	constructor(params) {
 		super(params);
@@ -983,13 +983,13 @@ export class IssuerAltName extends X500Extension {
 		this.oid = "2.5.29.18";
 		if (params !== undefined) {
 			if (isListOfDictionaries(params['array'])) {
-				this.setNameArray(/** @type {Array<Object<string,*>>} */ ( params['array'] ));
+				this.setNameArray(/** @type {Array<Dictionary>} */ ( params['array'] ));
 			}
 		}
 	}
 		
 	/**
-	 * @param {Array<Object<string,*>>} paramsArray 
+	 * @param {Array<Dictionary>} paramsArray 
 	 */
 	setNameArray(paramsArray) {
 		this.asn1ExtnValue = new GeneralNames(paramsArray);
@@ -1029,7 +1029,7 @@ export class IssuerAltName extends X500Extension {
  */
 export class CRL extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'tbsobj': obj, 'rsaprvkey': key})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {'tbsobj': obj, 'rsaprvkey': key})
 	 */
 	constructor(params) {
 		super();
@@ -1061,18 +1061,18 @@ export class CRL extends ASN1Object {
 	sign() {
 		this.asn1SignatureAlg = this.asn1TBSCertList.asn1SignatureAlg;
 
-		let sig = new Signature({ 'alg': 'SHA1withRSA', 'prov': 'cryptojs/jsrsa' });
+		let sig = new Signature(/** @type {Dictionary} */ ( { 'alg': 'SHA1withRSA', 'prov': 'cryptojs/jsrsa' } ));
 		sig.init(this.prvKey);
 		sig.updateHex(this.asn1TBSCertList.getEncodedHex());
 		this.hexSig = sig.sign();
 
-		this.asn1Sig = new DERBitString({ 'hex': '00' + this.hexSig });
+		this.asn1Sig = new DERBitString(/** @type {Dictionary} */ ( { 'hex': '00' + this.hexSig } ));
 
-		let seq = new DERSequence({
+		let seq = new DERSequence(/** @type {Dictionary} */ ( {
 			'array': [this.asn1TBSCertList,
 			this.asn1SignatureAlg,
 			this.asn1Sig]
-		});
+		} ));
 		this.hTLV = seq.getEncodedHex();
 		this.isModified = false;
 	}
@@ -1134,7 +1134,7 @@ export class CRL extends ASN1Object {
  */
 export class TBSCertList extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {})
 	 */
 	constructor(params) {
 		super();
@@ -1150,7 +1150,7 @@ export class TBSCertList extends ASN1Object {
 
     /**
      * set signature algorithm field by parameter
-     * @param {Object<string,*>} algIdParam AlgorithmIdentifier parameter
+     * @param {Dictionary} algIdParam AlgorithmIdentifier parameter
      * @description
      * @example
      * tbsc.setSignatureAlgByParam({'name': 'SHA1withRSA'});
@@ -1161,7 +1161,7 @@ export class TBSCertList extends ASN1Object {
 
     /**
      * set issuer name field by parameter
-     * @param {Object<string,*>} x500NameParam X500Name parameter
+     * @param {Dictionary} x500NameParam X500Name parameter
      * @description
      * @example
      * tbsc.setIssuerParam({'str': '/C=US/CN=b'});
@@ -1172,7 +1172,7 @@ export class TBSCertList extends ASN1Object {
 
     /**
      * set thisUpdate field by parameter
-     * @param {Object<string,*>} timeParam Time parameter
+     * @param {Dictionary} timeParam Time parameter
      * @description
      * @example
      * tbsc.setThisUpdateByParam({'str': '130508235959Z'});
@@ -1183,7 +1183,7 @@ export class TBSCertList extends ASN1Object {
 
     /**
      * set nextUpdate field by parameter
-     * @param {Object<string,*>} timeParam Time parameter
+     * @param {Dictionary} timeParam Time parameter
      * @description
      * @example
      * tbsc.setNextUpdateByParam({'str': '130508235959Z'});
@@ -1194,14 +1194,14 @@ export class TBSCertList extends ASN1Object {
 
     /**
      * add revoked certificate by parameter
-     * @param {Object<string,*>} snParam DERInteger parameter for certificate serial number
-     * @param {Object<string,*>} timeParam Time parameter for revocation date
+     * @param {Dictionary} snParam DERInteger parameter for certificate serial number
+     * @param {Dictionary} timeParam Time parameter for revocation date
      * @description
      * @example
      * tbsc.addRevokedCert({'int': 3}, {'str': '130508235959Z'});
      */
 	addRevokedCert(snParam, timeParam) {
-		/** @dict */ let param = {};
+		let param = /** @type {Dictionary} */ ( {} );
 		if (snParam != undefined && snParam != null)
 			param['sn'] = snParam;
 		if (timeParam != undefined && timeParam != null)
@@ -1224,11 +1224,11 @@ export class TBSCertList extends ASN1Object {
 		if (this.asn1NextUpdate != null) this.asn1Array.push(this.asn1NextUpdate);
 
 		if (this.aRevokedCert.length > 0) {
-			let seq = new DERSequence({ 'array': this.aRevokedCert });
+			let seq = new DERSequence(/** @type {Dictionary} */ ( { 'array': this.aRevokedCert } ));
 			this.asn1Array.push(seq);
 		}
 
-		let o = new DERSequence({ "array": this.asn1Array });
+		let o = new DERSequence(/** @type {Dictionary} */ ( { "array": this.asn1Array } ));
 		this.hTLV = o.getEncodedHex();
 		this.isModified = false;
 		return /** @type {string} */ ( this.hTLV );
@@ -1249,7 +1249,7 @@ export class TBSCertList extends ASN1Object {
  */
 export class CRLEntry extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {})
 	 */
 	constructor(params) {
 		super();
@@ -1260,17 +1260,17 @@ export class CRLEntry extends ASN1Object {
 
 		if (params !== undefined) {
 			if (isDictionary(params['time'])) {
-				this.setRevocationDate(/** @type {Object<string,*>} */ ( params['time'] ));
+				this.setRevocationDate(/** @type {Dictionary} */ ( params['time'] ));
 			}
 			if (isNumber(params['sn']) || isDictionary(params['sn'])) {
-				this.setCertSerial(/** @type {number | Object<string,*>} */ ( params['sn'] ));
+				this.setCertSerial(/** @type {number | Dictionary} */ ( params['sn'] ));
 			}
 		}
 	}
 
     /**
      * set DERInteger parameter for serial number of revoked certificate
-     * @param {number | Object<string,*>} intParam DERInteger parameter for certificate serial number
+     * @param {number | Dictionary} intParam DERInteger parameter for certificate serial number
      * @description
      * @example
      * entry.setCertSerial({'int': 3});
@@ -1281,7 +1281,7 @@ export class CRLEntry extends ASN1Object {
 
     /**
      * set Time parameter for revocation date
-     * @param {Object<string,*>} timeParam Time parameter for revocation date
+     * @param {Dictionary} timeParam Time parameter for revocation date
      * @description
      * @example
      * entry.setRevocationDate({'str': '130508235959Z'});
@@ -1295,7 +1295,7 @@ export class CRLEntry extends ASN1Object {
 	 * @returns {string}
 	 */
 	getEncodedHex() {
-		let o = new DERSequence({ "array": [this.sn, this.time] });
+		let o = new DERSequence(/** @type {Dictionary} */ ( { "array": [this.sn, this.time] } ));
 		this.TLV = o.getEncodedHex();
 		return this.TLV;
 	}
@@ -1332,7 +1332,7 @@ export class CRLEntry extends ASN1Object {
  */
 export class X500Name extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'str': '/C=US/O=a'})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {'str': '/C=US/O=a'})
 	 */
 	constructor(params) {
 		super();
@@ -1393,7 +1393,7 @@ export class X500Name extends ASN1Object {
 		}
 
 		for (let i = 0; i < a1.length; i++) {
-			this.asn1Array.push(new RDN({ 'str': a1[i] }));
+			this.asn1Array.push(new RDN(/** @type {Dictionary} */ ( { 'str': a1[i] } )));
 		}
 	}
 
@@ -1412,7 +1412,7 @@ export class X500Name extends ASN1Object {
 
     /**
      * set DN by associative array<br/>
-     * @param {Object<string,*>} dnObj associative array of DN (ex. {'C': "US", 'O': "aaa"})
+     * @param {Dictionary} dnObj associative array of DN (ex. {'C': "US", 'O': "aaa"})
      * @description
      * @example
      * name = new X500Name();
@@ -1421,9 +1421,8 @@ export class X500Name extends ASN1Object {
 	setByObject(dnObj) {
 		// Get all the dnObject attributes and stuff them in the ASN.1 array.
 		for (let x in dnObj) {
-			if (dnObj.hasOwnProperty(x)) {
-				let newRDN = new RDN(
-					{ 'str': x + '=' + dnObj[x] });
+			if (/** @type {Object} */ ( dnObj ).hasOwnProperty(x)) {
+				let newRDN = new RDN(/** @type {Dictionary} */ ( { 'str': x + '=' + dnObj[x] } ));
 				// Initialize or push into the ANS1 array.
 				this.asn1Array ? this.asn1Array.push(newRDN)
 					: this.asn1Array = [newRDN];
@@ -1437,7 +1436,7 @@ export class X500Name extends ASN1Object {
 	 */
 	getEncodedHex() {
 		if (typeof this.hTLV == "string") return /** @type {string} */ ( this.hTLV );
-		let o = new DERSequence({ "array": this.asn1Array });
+		let o = new DERSequence(/** @type {Dictionary} */ ( { "array": this.asn1Array } ));
 		this.hTLV = o.getEncodedHex();
 		return /** @type {string} */ ( this.hTLV );
 	}
@@ -1528,7 +1527,7 @@ export class X500Name extends ASN1Object {
  */
 export class RDN extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'str': 'C=US'})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {'str': 'C=US'})
 	 */
 	constructor(params) {
 		super();
@@ -1554,7 +1553,7 @@ export class RDN extends ASN1Object {
      * rdn.addByString("serialNumber=1234"); // for multi-valued RDN
      */
 	addByString(s) {
-		this.asn1Array.push(new AttributeTypeAndValue({ 'str': s }));
+		this.asn1Array.push(new AttributeTypeAndValue(/** @type {Dictionary} */ ( { 'str': s } )));
 	}
 
     /**
@@ -1580,7 +1579,7 @@ export class RDN extends ASN1Object {
 	 * @returns {string}
 	 */
 	getEncodedHex() {
-		let o = new DERSet({ "array": this.asn1Array });
+		let o = new DERSet(/** @type {Dictionary} */ ( { "array": this.asn1Array } ));
 		this.hTLV = o.getEncodedHex();
 		return /** @type {string} */ ( this.hTLV );
 	}
@@ -1659,7 +1658,7 @@ const defaultDSType = "utf8";
  */
 export class AttributeTypeAndValue extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'str': 'C=US'})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {'str': 'C=US'})
 	 */
 	constructor(params) {
 		super();
@@ -1704,10 +1703,10 @@ export class AttributeTypeAndValue extends ASN1Object {
 	 * @returns {DERAbstractString}
 	 */
 	getValueObj(dsType, valueStr) {
-		if (dsType == "utf8") return new DERUTF8String({ "str": valueStr });
-		if (dsType == "prn") return new DERPrintableString({ "str": valueStr });
-		if (dsType == "tel") return new DERTeletexString({ "str": valueStr });
-		if (dsType == "ia5") return new DERIA5String({ "str": valueStr });
+		if (dsType == "utf8") return new DERUTF8String(/** @type {Dictionary} */ ( { "str": valueStr } ));
+		if (dsType == "prn") return new DERPrintableString(/** @type {Dictionary} */ ( { "str": valueStr } ));
+		if (dsType == "tel") return new DERTeletexString(/** @type {Dictionary} */ ( { "str": valueStr } ));
+		if (dsType == "ia5") return new DERIA5String(/** @type {Dictionary} */ ( { "str": valueStr } ));
 		throw "unsupported directory string type: type=" + dsType + " value=" + valueStr;
 	}
 
@@ -1716,7 +1715,7 @@ export class AttributeTypeAndValue extends ASN1Object {
 	 * @returns {string}
 	 */
 	getEncodedHex() {
-		let o = new DERSequence({ "array": [this.typeObj, this.valueObj] });
+		let o = new DERSequence(/** @type {Dictionary} */ ( { "array": [this.typeObj, this.valueObj] } ));
 		this.hTLV = o.getEncodedHex();
 		return /** @type {string} */ ( this.hTLV );
 	}
@@ -1762,10 +1761,10 @@ export class SubjectPublicKeyInfo extends ASN1Object {
 	getASN1Object() {
 		if (this.asn1AlgId == null || this.asn1SubjPKey == null)
 			throw "algId and/or subjPubKey not set";
-		let o = new DERSequence({
+		let o = new DERSequence(/** @type {Dictionary} */ ( {
 			'array':
 				[this.asn1AlgId, this.asn1SubjPKey]
-		});
+		} ));
 		return o;
 	}
 
@@ -1790,42 +1789,42 @@ export class SubjectPublicKeyInfo extends ASN1Object {
 	setPubKey(key) {
 		try {
 			if (key instanceof RSAKeyEx) {
-				let asn1RsaPub = newObject({
+				let asn1RsaPub = newObject(/** @type {Dictionary} */ ( {
 					'seq': [{ 'int': { 'bigint': key.n } }, { 'int': { 'int': key.e } }]
-				});
+				} ));
 				let rsaKeyHex = asn1RsaPub.getEncodedHex();
-				this.asn1AlgId = new AlgorithmIdentifier({ 'name': 'rsaEncryption' });
-				this.asn1SubjPKey = new DERBitString({ 'hex': '00' + rsaKeyHex });
+				this.asn1AlgId = new AlgorithmIdentifier(/** @type {Dictionary} */ ( { 'name': 'rsaEncryption' } ));
+				this.asn1SubjPKey = new DERBitString(/** @type {Dictionary} */ ( { 'hex': '00' + rsaKeyHex } ));
 			}
 		} catch (ex) { };
 
 		try {
 			if (key instanceof ECDSA) {
-				let asn1Params = new DERObjectIdentifier({ 'name': key.curveName });
+				let asn1Params = new DERObjectIdentifier(/** @type {Dictionary} */ ( { 'name': key.curveName } ));
 				this.asn1AlgId =
-					new AlgorithmIdentifier({
+					new AlgorithmIdentifier(/** @type {Dictionary} */ ( {
 						'name': 'ecPublicKey',
 						'asn1params': asn1Params
-					});
-				this.asn1SubjPKey = new DERBitString({ 'hex': '00' + key.pubKeyHex });
+					} ));
+				this.asn1SubjPKey = new DERBitString(/** @type {Dictionary} */ ( { 'hex': '00' + key.pubKeyHex } ));
 			}
 		} catch (ex) { };
 
 		try {
 			if (key instanceof DSA) {
-				let asn1Params = newObject({
+				let asn1Params = newObject(/** @type {Dictionary} */ ( {
 					'seq': [{ 'int': { 'bigint': key.p } },
 					{ 'int': { 'bigint': key.q } },
 					{ 'int': { 'bigint': key.g } }]
-				});
+				} ));
 				this.asn1AlgId =
-					new AlgorithmIdentifier({
+					new AlgorithmIdentifier(/** @type {Dictionary} */ ( {
 						'name': 'dsa',
 						'asn1params': asn1Params
-					});
-				let pubInt = new DERInteger({ 'bigint': key.y });
+					} ));
+				let pubInt = new DERInteger(/** @type {Dictionary} */ ( { 'bigint': key.y } ));
 				this.asn1SubjPKey =
-					new DERBitString({ 'hex': '00' + pubInt.getEncodedHex() });
+					new DERBitString(/** @type {Dictionary} */ ( { 'hex': '00' + pubInt.getEncodedHex() } ));
 			}
 		} catch (ex) { };
 	}
@@ -1842,13 +1841,13 @@ export class SubjectPublicKeyInfo extends ASN1Object {
  */
 export class Time extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'str': '130508235959Z'})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {'str': '130508235959Z'})
 	 */
 	constructor(params) {
 		super();
 
 		/** @type {string | null} */ this.type = null;
-		/** @type {Object<string,*> | null} */ this.timeParams = null;
+		/** @type {Dictionary | null} */ this.timeParams = null;
 		/** @type {string | null} */ this.hTLV = null;
 
 		this.type = "utc";
@@ -1867,7 +1866,7 @@ export class Time extends ASN1Object {
 	}
 
 	/**
-	 * @param {Object<string,*>} timeParams 
+	 * @param {Dictionary} timeParams 
 	 */
 	setTimeParams(timeParams) {
 		this.timeParams = timeParams;
@@ -1924,7 +1923,7 @@ export class Time extends ASN1Object {
  */
 export class AlgorithmIdentifier extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params dictionary of parameters (ex. {'name': 'SHA1withRSA'})
+	 * @param {Dictionary=} params dictionary of parameters (ex. {'name': 'SHA1withRSA'})
 	 */
 	constructor(params) {
 		super();
@@ -1973,7 +1972,7 @@ export class AlgorithmIdentifier extends ASN1Object {
 		let a = [this.asn1Alg];
 		if (this.asn1Params !== null) a.push(this.asn1Params);
 
-		let o = new DERSequence({ 'array': a });
+		let o = new DERSequence(/** @type {Dictionary} */ ( { 'array': a } ));
 		this.hTLV = o.getEncodedHex();
 		return /** @type {string} */ ( this.hTLV );
 	}
@@ -2029,7 +2028,7 @@ const pTag = { 'rfc822': '81', 'dns': '82', 'dn': 'a4', 'uri': '86', 'ip': '87' 
  */
 export class GeneralName extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params 
+	 * @param {Dictionary=} params 
 	 */
 	constructor(params) {
 		super();
@@ -2045,7 +2044,7 @@ export class GeneralName extends ASN1Object {
 	}
 
 	/**
-	 * @param {Object<string,*>} params 
+	 * @param {Dictionary} params 
 	 */
 	setByParam(params) {
 		/** @type {ASN1Object | null} */ let v = null;
@@ -2054,29 +2053,29 @@ export class GeneralName extends ASN1Object {
 
 		if (params['rfc822'] !== undefined) {
 			this.type = 'rfc822';
-			v = new DERIA5String({ 'str': params[this.type] });
+			v = new DERIA5String(/** @type {Dictionary} */ ( { 'str': params[this.type] } ));
 		}
 
 		if (params['dns'] !== undefined) {
 			this.type = 'dns';
-			v = new DERIA5String({ 'str': params[this.type] });
+			v = new DERIA5String(/** @type {Dictionary} */ ( { 'str': params[this.type] } ));
 		}
 
 		if (params['uri'] !== undefined) {
 			this.type = 'uri';
-			v = new DERIA5String({ 'str': params[this.type] });
+			v = new DERIA5String(/** @type {Dictionary} */ ( { 'str': params[this.type] } ));
 		}
 
 		if (params['dn'] !== undefined) {
 			this.type = 'dn';
 			this.explicit = true;
-			v = new X500Name({ 'str': params['dn'] });
+			v = new X500Name(/** @type {Dictionary} */ ( { 'str': params['dn'] } ));
 		}
 
 		if (params['ldapdn'] !== undefined) {
 			this.type = 'dn';
 			this.explicit = true;
-			v = new X500Name({ 'ldapstr': params['ldapdn'] });
+			v = new X500Name(/** @type {Dictionary} */ ( { 'ldapstr': params['ldapdn'] } ));
 		}
 
 		if (isString(params['certissuer'])) {
@@ -2136,17 +2135,17 @@ export class GeneralName extends ASN1Object {
 			} else {
 				throw malformedIPMsg;
 			}
-			v = new DEROctetString({ 'hex': hIP });
+			v = new DEROctetString(/** @type {Dictionary} */ ( { 'hex': hIP } ));
 		}
 
 		if (this.type == null)
 			throw "unsupported type in params=" + params;
 
-		this.asn1Obj = new DERTaggedObject({
+		this.asn1Obj = new DERTaggedObject(/** @type {Dictionary} */ ( {
 			'explicit': this.explicit,
 			'tag': pTag[this.type],
 			'obj': v
-		});
+		} ));
 	}
 
 	/**
@@ -2169,7 +2168,7 @@ export class GeneralName extends ASN1Object {
  */
 export class GeneralNames extends ASN1Object {
 	/**
-	 * @param {Array<Object<string,*>>=} paramsArray 
+	 * @param {Array<Dictionary>=} paramsArray 
 	 */
 	constructor(paramsArray) {
 		super();
@@ -2183,7 +2182,7 @@ export class GeneralNames extends ASN1Object {
 
     /**
      * set a array of {@link GeneralName} parameters<br/>
-     * @param {Array<Object<string,*>>} paramsArray Array of {@link GeneralNames}
+     * @param {Array<Dictionary>} paramsArray Array of {@link GeneralNames}
      * @description
      * <br/>
      * <h4>EXAMPLES</h4>
@@ -2203,7 +2202,7 @@ export class GeneralNames extends ASN1Object {
 	 * @returns {string}
 	 */
 	getEncodedHex() {
-		let o = new DERSequence({ 'array': this.asn1Array });
+		let o = new DERSequence(/** @type {Dictionary} */ ( { 'array': this.asn1Array } ));
 		return o.getEncodedHex();
 	}
 }
@@ -2235,7 +2234,7 @@ export class GeneralNames extends ASN1Object {
  */
 export class DistributionPointName extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} gnOrRdn 
+	 * @param {GeneralNames=} gnOrRdn 
 	 */
 	constructor(gnOrRdn) {
 		super();
@@ -2263,11 +2262,11 @@ export class DistributionPointName extends ASN1Object {
 	getEncodedHex() {
 		if (this.type != "full")
 			throw "currently type shall be 'full': " + this.type;
-		this.asn1Obj = new DERTaggedObject({
+		this.asn1Obj = new DERTaggedObject(/** @type {Dictionary} */ ( {
 			'explicit': false,
 			'tag': this.tag,
 			'obj': this.asn1V
-		});
+		} ));
 		this.hTLV = this.asn1Obj.getEncodedHex();
 		return /** @type {string} */ ( this.hTLV );
 	}
@@ -2300,7 +2299,7 @@ export class DistributionPointName extends ASN1Object {
  */
 export class DistributionPoint extends ASN1Object {
 	/**
-	 * @param {Object<string,*>=} params 
+	 * @param {Dictionary=} params 
 	 */
 	constructor(params) {
 		super();
@@ -2321,11 +2320,11 @@ export class DistributionPoint extends ASN1Object {
 	getEncodedHex() {
 		let seq = new DERSequence();
 		if (this.asn1DP != null) {
-			let o1 = new DERTaggedObject({
+			let o1 = new DERTaggedObject(/** @type {Dictionary} */ ( {
 				'explicit': true,
 				'tag': 'a0',
 				'obj': this.asn1DP
-			});
+			} ));
 			seq.appendASN1Object(o1);
 		}
 		this.hTLV = seq.getEncodedHex();
@@ -2336,7 +2335,7 @@ export class DistributionPoint extends ASN1Object {
 /**
  * issue a certificate in PEM format
  * @name newCertPEM
- * @param {Object<string,*>} param parameter to issue a certificate
+ * @param {Dictionary} param parameter to issue a certificate
  * @description
  * This method can issue a certificate by a simple
  * JSON object.
@@ -2406,48 +2405,48 @@ export function newCertPEM(param) {
 	let o = new TBSCertificate();
 
 	if (isNumber(param['serial']) || isDictionary(param['serial']))
-		o.setSerialNumberByParam(/** @type {number | Object<string,*> } */ ( param['serial'] ));
+		o.setSerialNumberByParam(/** @type {number | Dictionary } */ ( param['serial'] ));
 	else
 		throw "serial number undefined.";
 
 	if (isDictionary(param['sigalg']) && isString(param['sigalg']['name']))
-		o.setSignatureAlgByParam(/** @type {Object<string,*>} */ ( param['sigalg'] ));
+		o.setSignatureAlgByParam(/** @type {Dictionary} */ ( param['sigalg'] ));
 	else
 		throw "unproper signature algorithm name";
 
 	if (isDictionary(param['issuer']))
-		o.setIssuerByParam(/** @type {Object<string,*>} */ ( param['issuer'] ));
+		o.setIssuerByParam(/** @type {Dictionary} */ ( param['issuer'] ));
 	else
 		throw "issuer name undefined.";
 
 	if (isDictionary(param['notbefore']))
-		o.setNotBeforeByParam(/** @type {Object<string,*>} */ ( param['notbefore'] ));
+		o.setNotBeforeByParam(/** @type {Dictionary} */ ( param['notbefore'] ));
 	else
 		throw "notbefore undefined.";
 
 	if (isDictionary(param['notafter']))
-		o.setNotAfterByParam(/** @type {Object<string,*>} */ ( param['notafter'] ));
+		o.setNotAfterByParam(/** @type {Dictionary} */ ( param['notafter'] ));
 	else
 		throw "notafter undefined.";
 
 	if (isDictionary(param['subject']))
-		o.setSubjectByParam(/** @type {Object<string,*>} */ ( param['subject'] ));
+		o.setSubjectByParam(/** @type {Dictionary} */ ( param['subject'] ));
 	else
 		throw "subject name undefined.";
 
 	let sbjpubkey = param['sbjpubkey'];
 	if ((sbjpubkey !== undefined) && (isString(sbjpubkey) || isDictionary(sbjpubkey) || sbjpubkey instanceof RSAKeyEx || sbjpubkey instanceof DSA || sbjpubkey instanceof ECDSA))
-		o.setSubjectPublicKeyByGetKey(/** @type {string | KeyObject | Object<string,*>} */ ( param['sbjpubkey'] ));
+		o.setSubjectPublicKeyByGetKey(/** @type {string | KeyObject | Dictionary} */ ( param['sbjpubkey'] ));
 	else
 		throw "subject public key undefined.";
 
 	if (isListOfDictionaries(param['ext'])) {
-		let aList = /** @type {Array<Object<string,*>>} */ ( param['ext'] );
+		let aList = /** @type {Array<Dictionary>} */ ( param['ext'] );
 		for (let i = 0; i < aList.length; i++) {
 			for (let key in aList[i]) {
 				let oVal = aList[i][key];
 				if (isDictionary(oVal)) {
-					o.appendExtensionByName(key, /** @type {Object<string,*>} */ ( oVal ));
+					o.appendExtensionByName(key, /** @type {Dictionary} */ ( oVal ));
 				}
 			}
 		}
@@ -2465,16 +2464,16 @@ export function newCertPEM(param) {
 		if ((tmpkey instanceof RSAKeyEx || tmpkey instanceof DSA || tmpkey instanceof ECDSA) && (tmpkey.isPrivate === true)) {
 			caKey = tmpkey;
 		} else if (isString(tmpkey) || isDictionary(tmpkey) || tmpkey instanceof RSAKeyEx || tmpkey instanceof DSA || tmpkey instanceof ECDSA) {
-			caKey = getKey(/** @type {string | KeyObject | Object<string,*>} */ ( tmpkey ));
+			caKey = getKey(/** @type {string | KeyObject | Dictionary} */ ( tmpkey ));
 		}
 		if (caKey !== null) {
-			cert = new Certificate({ 'tbscertobj': o, 'prvkeyobj': caKey });
+			cert = new Certificate(/** @type {Dictionary} */ ( { 'tbscertobj': o, 'prvkeyobj': caKey } ));
 			cert.sign();
 		}
 	}
 
 	if (isString(param['sighex'])) {
-		cert = new Certificate({ 'tbscertobj': o });
+		cert = new Certificate(/** @type {Dictionary} */ ( { 'tbscertobj': o } ));
 		cert.setSignatureHex(/** @type {string} */ ( param['sighex'] ));
 	}
 

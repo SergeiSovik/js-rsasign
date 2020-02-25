@@ -18,6 +18,7 @@ import { AlgorithmIdentifier, X500Name, X500Extension, SubjectPublicKeyInfo } fr
 import { getTLVbyList } from "./asn1hex-1.1.js"
 import { getKey } from "./keyutil-1.0.js"
 import { Signature } from "./crypto-1.1.js"
+import { Dictionary } from "./../../../include/type.js"
 
 /**
  * @fileOverview
@@ -54,7 +55,7 @@ if (typeof KJUR.asn1.csr == "undefined" || !KJUR.asn1.csr) KJUR.asn1.csr = {};
 
 /**
  * ASN.1 CertificationRequest structure class
- * @param {Object<string,*>} params dictionary of parameters (ex. {})
+ * @param {Dictionary} params dictionary of parameters (ex. {})
  * @description
  * <br/>
  * @example
@@ -154,7 +155,7 @@ YAHOO.lang.extend(KJUR.asn1.csr.CertificationRequest, KJUR.asn1.ASN1Object);
 
 /**
  * ASN.1 CertificationRequestInfo structure class
- * @param {Object<string,*>} params dictionary of parameters (ex. {})
+ * @param {Dictionary} params dictionary of parameters (ex. {})
  * @description
  * <pre>
  * // -- DEFINITION OF ASN.1 SYNTAX --
@@ -208,7 +209,7 @@ KJUR.asn1.csr.CertificationRequestInfo = function(params) {
 
     /**
      * set subject public key info by RSA/ECDSA/DSA key parameter
-     * @param {string | RSAKeyEx | DSA | ECDSA | Object<string,*>} keyParam public key parameter which passed to {@link getKey} argument
+     * @param {string | RSAKeyEx | DSA | ECDSA | Dictionary} keyParam public key parameter which passed to {@link getKey} argument
      * @description
      * @example
      * csri.setSubjectPublicKeyByGetKeyParam(certPEMString); // or 
@@ -296,7 +297,7 @@ KJUR.asn1.csr.CSRUtil = new function() {
 
 /**
  * generate a PEM format of CSR/PKCS#10 certificate signing request
- * @param {Object<string,*>} param parameter to generate CSR
+ * @param {Dictionary} param parameter to generate CSR
  * @description
  * This method can generate a CSR certificate signing
  * request by a simple JSON object which has following parameters:
@@ -373,7 +374,7 @@ KJUR.asn1.csr.CSRUtil.newCSRPEM = function(param) {
 /**
  * get field values from CSR/PKCS#10 PEM string<br/>
  * @param {string} sPEM PEM string of CSR/PKCS#10
- * @returns {Object<string,*>} JSON object with parsed parameters such as name or public key
+ * @returns {Dictionary} JSON object with parsed parameters such as name or public key
  * @description
  * This method parses PEM CSR/PKCS#1 string and retrieves
  * subject name and public key. Following parameters are available in the

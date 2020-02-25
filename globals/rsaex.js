@@ -574,7 +574,8 @@ export class RSAKeyEx extends RSAKey {
 		let x = new X509();
 		x.readCertHex(h);
 		let hPub = x.getPublicKeyHex();
-		this.readPKCS8PubKeyHex(hPub);
+		if (hPub !== null)
+			this.readPKCS8PubKeyHex(hPub);
 	}
 
 	/**

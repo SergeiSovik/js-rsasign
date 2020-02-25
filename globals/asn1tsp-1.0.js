@@ -17,6 +17,7 @@ import { DERBoolean, DERInteger, DERBitString, DEROctetString, DERObjectIdentifi
 import { oid2name, AlgorithmIdentifier, X500Name } from "./asn1x509-1.0.js"
 import { hashHex } from "./crypto-1.1.js"
 import { getChildIdx, getV, getTLV, hextooidstr, getIdxbyList } from "./asn1hex-1.1.js"
+import { Dictionary } from "./../../../include/type.js"
 
 /**
  * @fileOverview
@@ -67,7 +68,7 @@ if (typeof KJUR.asn1.tsp == "undefined" || !KJUR.asn1.tsp) KJUR.asn1.tsp = {};
 
 /**
  * class for TSP Accuracy ASN.1 object
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * Accuracy ::= SEQUENCE {
@@ -136,7 +137,7 @@ YAHOO.lang.extend(KJUR.asn1.tsp.Accuracy, KJUR.asn1.ASN1Object);
 
 /**
  * class for TSP MessageImprint ASN.1 object
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * MessageImprint ::= SEQUENCE  {
@@ -180,7 +181,7 @@ YAHOO.lang.extend(KJUR.asn1.tsp.MessageImprint, KJUR.asn1.ASN1Object);
 
 /**
  * class for TSP TimeStampReq ASN.1 object
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * TimeStampReq ::= SEQUENCE  {
@@ -252,7 +253,7 @@ YAHOO.lang.extend(KJUR.asn1.tsp.TimeStampReq, KJUR.asn1.ASN1Object);
 
 /**
  * class for TSP TSTInfo ASN.1 object
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * TSTInfo ::= SEQUENCE  {
@@ -364,7 +365,7 @@ YAHOO.lang.extend(KJUR.asn1.tsp.TSTInfo, KJUR.asn1.ASN1Object);
 
 /**
  * class for TSP TimeStampResp ASN.1 object
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * TimeStampResp ::= SEQUENCE  {
@@ -411,7 +412,7 @@ YAHOO.lang.extend(KJUR.asn1.tsp.TimeStampResp, KJUR.asn1.ASN1Object);
 
 /**
  * class for TSP PKIStatusInfo ASN.1 object
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * PKIStatusInfo ::= SEQUENCE {
@@ -464,7 +465,7 @@ YAHOO.lang.extend(KJUR.asn1.tsp.PKIStatusInfo, KJUR.asn1.ASN1Object);
 
 /**
  * class for TSP PKIStatus ASN.1 object
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * PKIStatus ::= INTEGER {
@@ -517,7 +518,7 @@ KJUR.asn1.tsp.PKIStatus.valueList = {
 
 /**
  * class for TSP PKIFreeText ASN.1 object
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * PKIFreeText ::= SEQUENCE {
@@ -555,7 +556,7 @@ YAHOO.lang.extend(KJUR.asn1.tsp.PKIFreeText, KJUR.asn1.ASN1Object);
 
 /**
  * class for TSP PKIFailureInfo ASN.1 object
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * <pre>
  * PKIFailureInfo ::= BIT STRING {
@@ -618,7 +619,7 @@ KJUR.asn1.tsp.PKIFailureInfo.valueList = {
 
 /**
  * abstract class for TimeStampToken generator
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  */
 KJUR.asn1.tsp.export function AbstractTSAAdapter(params) {
@@ -629,7 +630,7 @@ KJUR.asn1.tsp.export function AbstractTSAAdapter(params) {
 
 /**
  * class for simple TimeStampToken generator
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  */
 KJUR.asn1.tsp.export function SimpleTSAAdapter(initParams) {
@@ -669,7 +670,7 @@ YAHOO.lang.extend(KJUR.asn1.tsp.SimpleTSAAdapter,
 
 /**
  * class for fixed TimeStampToken generator
- * @param {Object<string,*>} params dictionary of parameters
+ * @param {Dictionary} params dictionary of parameters
  * @description
  * This class generates fixed TimeStampToken except messageImprint
  * for testing purpose.
@@ -717,7 +718,7 @@ KJUR.asn1.tsp.TSPUtil = new function () {
 };
 /**
  * generate TimeStampToken ASN.1 object specified by JSON parameters
- * @param {Object<string,*>} param JSON parameter to generate TimeStampToken
+ * @param {Dictionary} param JSON parameter to generate TimeStampToken
  * @return {KJUR.asn1.cms.SignedData} object just generated
  * @description
  * @example

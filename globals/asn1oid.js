@@ -12,6 +12,7 @@
 "use strict";
 
 import { DERObjectIdentifier } from "./asn1-1.0.js"
+import { Dictionary } from "./../../../include/type.js"
 
 export const oidhex2name = {
 	'2a864886f70d010101': 'rsaEncryption',
@@ -184,7 +185,7 @@ export function name2obj(name) {
 	if (typeof name2oidList[name] == "undefined")
 		throw "Name of ObjectIdentifier not defined: " + name;
 	let oid = name2oidList[name];
-	let obj = new DERObjectIdentifier({ 'oid': oid });
+	let obj = new DERObjectIdentifier(/** @type {Dictionary} */ ( { 'oid': oid } ));
 	objCache[name] = obj;
 	return obj;
 }
@@ -203,7 +204,7 @@ export function atype2obj(atype) {
 	if (typeof atype2oidList[atype] == "undefined")
 		throw "AttributeType name undefined: " + atype;
 	let oid = atype2oidList[atype];
-	let obj = new DERObjectIdentifier({ 'oid': oid });
+	let obj = new DERObjectIdentifier(/** @type {Dictionary} */ ( { 'oid': oid } ));
 	objCache[atype] = obj;
 	return obj;
 }
