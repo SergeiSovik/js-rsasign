@@ -2,7 +2,7 @@
  * asn1tsp.js - ASN.1 DER encoder classes for RFC 3161 Time Stamp Protocol
  *
  * Original work Copyright (c) 2014-2017 Kenji Urushima (kenji.urushima@gmail.com)
- * Modified work Copyright (c) 2020 Sergio Rando <sergio.rando@yahoo.com>
+ * Modified work Copyright (c) 2020 Sergei Sovik <sergeisovik@yahoo.com>
  *
  * This software is licensed under the terms of the MIT License.
  * https://kjur.github.io/jsrsasign/license

@@ -2,7 +2,7 @@
  * ecdsa-modified.js - modified Bitcoin.ECDSA class
  * 
  * Original work Copyright (c) 2013-2017 Stefan Thomas (github.com/justmoon), Kenji Urushima (kenji.urushima@gmail.com)
- * Modified work Copyright (c) 2020 Sergio Rando <sergio.rando@yahoo.com>
+ * Modified work Copyright (c) 2020 Sergei Sovik <sergeisovik@yahoo.com>
  *
  * LICENSE
  *   https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/LICENSE

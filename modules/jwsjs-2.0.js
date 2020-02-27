@@ -2,7 +2,7 @@
  * jwsjs.js - JSON Web Signature JSON Serialization (JWSJS) Class
  *
  * Original work Copyright (c) 2010-2018 Kenji Urushima (kenji.urushima@gmail.com)
- * Modified work Copyright (c) 2020 Sergio Rando <sergio.rando@yahoo.com>
+ * Modified work Copyright (c) 2020 Sergei Sovik <sergeisovik@yahoo.com>
  *
  * This software is licensed under the terms of the MIT License.
  * https://kjur.github.io/jsrsasign/license/
